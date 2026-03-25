@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../services/auth_api.dart';
+import 'main_navigation_page.dart';
 import 'sign_in_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -15,6 +18,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   bool _agreeToTerms = false;
   bool _obscurePassword = true;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -23,6 +27,67 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _createAccount() async {
+    if (!_agreeToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please agree to the Terms of Service.')),
+      );
+      return;
+    }
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    if (firstName.isEmpty || lastName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter first name and last name.')),
+      );
+      return;
+    }
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter email and password.')),
+      );
+      return;
+    }
+    if (password.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 8 characters.')),
+      );
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await registerUser(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+      );
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+      );
+    } on AuthApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -177,6 +242,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ],
               ),
               const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Email Field
               Column(
@@ -289,8 +355,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   Checkbox(
                     value: _agreeToTerms,
                     onChanged: (value) {
+                      final nextValue = value ?? false;
                       setState(() {
-                        _agreeToTerms = value ?? false;
+                        _agreeToTerms = nextValue;
                       });
                     },
                     shape: RoundedRectangleBorder(
@@ -349,11 +416,24 @@ class _RegisterPageState extends State<RegisterPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: () {},
-                  child: const Text(
-                    'Create Account',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+                  // Prevent submitting before the checkbox state has updated.
+                  onPressed: (_submitting || !_agreeToTerms) ? null : _createAccount,
+                  child: _submitting
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Create Account',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 20),

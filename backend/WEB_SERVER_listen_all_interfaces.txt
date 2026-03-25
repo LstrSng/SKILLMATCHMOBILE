@@ -1,0 +1,7 @@
+Skillmatch web: in routes/server.js (or your main server file), use:
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+This repo's backend/server.js already uses 0.0.0.0.
