@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import MobileUser from "./models/mobile_user.js";
+import Job from "./models/job.js";
+import { normalizeJobDoc } from "./jobNormalize.js";
 
 const PORT = Number(process.env.PORT) || 5000;
 // Some setups use `MONGODB_URI`, others use `MONGO_URI`.
@@ -37,6 +39,26 @@ app.get("/api/health", (_req, res) => {
 
 app.get("/test", (_req, res) => {
   res.send("test");
+});
+
+const JOBS_QUERY_LIMIT = Math.min(
+  Math.max(Number(process.env.JOBS_QUERY_LIMIT) || 100, 1),
+  500
+);
+
+// Jobs stored in MongoDB (collection: JOBS_COLLECTION, default `jobs`)
+app.get("/api/jobs", async (_req, res) => {
+  try {
+    const raw = await Job.find({})
+      .sort({ _id: -1 })
+      .limit(JOBS_QUERY_LIMIT)
+      .lean();
+    const jobs = raw.map((doc) => normalizeJobDoc(doc));
+    return res.json({ jobs });
+  } catch (err) {
+    console.error("Jobs list error:", err);
+    return res.status(500).json({ message: "Could not load jobs." });
+  }
 });
 
 // Same shape as your web app: POST /api/users/register | /login

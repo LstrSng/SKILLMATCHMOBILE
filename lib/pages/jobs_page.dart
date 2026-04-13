@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'job_detail_page.dart';
 import 'settings_page.dart';
+import '../services/jobs_api.dart';
 
 class JobsPage extends StatefulWidget {
   const JobsPage({super.key});
@@ -12,64 +13,59 @@ class JobsPage extends StatefulWidget {
 class _JobsPageState extends State<JobsPage> {
   final _searchController = TextEditingController();
 
-  final List<Job> jobs = [
-    Job(
-      title: 'Senior Frontend Engineer',
-      company: 'TechFlow',
-      location: 'San Francisco, CA (Remote)',
-      salary: '\$140k-\$180k',
-      jobType: 'Full-time',
-      matchPercentage: 94,
-      initial: 'T',
-      initialColor: const Color(0xFF2563EB),
-      matchedSkills: ['React', 'TypeScript', 'Tailwind', 'Next.js'],
-      unmatchedSkills: [],
-      description:
-          'We are looking for a Senior Frontend Engineer to join our team. You will be responsible for building high-quality, scalable web applications using React and TypeScript. You will work closely with our product and design teams to craft delightful user experiences. This role involves leading frontend architecture decisions, mentoring junior developers, and collaborating with backend teams to deliver seamless full-stack solutions.',
-    ),
-    Job(
-      title: 'Full Stack Developer',
-      company: 'Innovate Inc.',
-      location: 'New York, NY',
-      salary: '\$120k-\$160k',
-      jobType: 'Hybrid',
-      matchPercentage: 88,
-      initial: 'I',
-      initialColor: const Color(0xFF9333EA),
-      matchedSkills: ['React', 'Node.js'],
-      unmatchedSkills: [],
-      description:
-          'Join our dynamic team as a Full Stack Developer where you\'ll work on both frontend and backend technologies. You\'ll build responsive web applications using React for the frontend and Node.js for the backend. This role offers the opportunity to work on diverse projects, from customer-facing applications to internal tools, while collaborating with cross-functional teams including product managers, designers, and other developers.',
-    ),
-    Job(
-      title: 'Product Designer',
-      company: 'Creative Studio',
-      location: 'Austin, TX',
-      salary: '\$110k-\$150k',
-      jobType: 'Full-time',
-      matchPercentage: 76,
-      initial: 'C',
-      initialColor: const Color(0xFFEC4899),
-      matchedSkills: ['Figma', 'UI/UX', 'Prototyping'],
-      unmatchedSkills: ['HTML/CSS'],
-      description:
-          'We\'re seeking a talented Product Designer to create intuitive and beautiful user experiences. You\'ll work closely with our product and engineering teams to design user interfaces that solve real problems. Using Figma and other design tools, you\'ll create wireframes, prototypes, and high-fidelity designs. This role involves user research, usability testing, and collaborating with developers to ensure your designs are implemented effectively.',
-    ),
-    Job(
-      title: 'Backend Engineer',
-      company: 'DataSystems',
-      location: 'Remote',
-      salary: '\$130k-\$170k',
-      jobType: 'Contract',
-      matchPercentage: 65,
-      initial: 'D',
-      initialColor: const Color(0xFF22C55E),
-      matchedSkills: ['Python', 'Django'],
-      unmatchedSkills: ['Docker', 'Kubernetes'],
-      description:
-          'We need a skilled Backend Engineer to build robust and scalable server-side applications. You\'ll work with Python and Django to develop RESTful APIs, manage databases, and ensure high performance and security. This contract position offers flexibility to work remotely while contributing to mission-critical systems. You\'ll collaborate with frontend developers and DevOps teams to deliver complete solutions.',
-    ),
-  ];
+  List<Job> _jobs = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadJobs();
+  }
+
+  Future<void> _loadJobs({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final raw = await fetchJobsRaw();
+      final list = raw.map(Job.fromJson).toList();
+      if (!mounted) return;
+      setState(() {
+        _jobs = list;
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  List<Job> get _visibleJobs {
+    final q = _searchController.text.trim().toLowerCase();
+    if (q.isEmpty) return _jobs;
+    bool matches(Job j) {
+      final hay = [
+        j.title,
+        j.company,
+        j.location,
+        j.jobType,
+        j.salary,
+        ...j.matchedSkills,
+        ...j.unmatchedSkills,
+      ].join(' ').toLowerCase();
+      return hay.contains(q);
+    }
+
+    return _jobs.where(matches).toList();
+  }
 
   @override
   void dispose() {
@@ -123,98 +119,141 @@ class _JobsPageState extends State<JobsPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Text(
-              'Find Jobs',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-                fontSize: 28,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => _loadJobs(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  Icons.trending_up,
-                  color: const Color(0xFF10B981),
-                  size: 18,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Top matches for you',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF10B981),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Search Bar
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search roles, skills, companies...',
-                      hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: Color(0xFF9CA3AF),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF2563EB),
-                          width: 2,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+            )
+          : RefreshIndicator(
+              onRefresh: () => _loadJobs(silent: true),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Find Jobs',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                        fontSize: 28,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.trending_up,
+                          color: const Color(0xFF10B981),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Top matches for you',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: const Color(0xFF10B981),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              hintText: 'Search roles, skills, companies...',
+                              hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: Color(0xFF9CA3AF),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF2563EB),
+                                  width: 2,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.tune, color: Colors.black87),
+                            onPressed: () {},
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    if (_visibleJobs.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                          child: Text(
+                            _jobs.isEmpty
+                                ? 'No job postings yet. Add documents to your jobs collection in MongoDB, or set JOBS_COLLECTION in backend/.env if they live in another collection.'
+                                : 'No jobs match your search.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Column(
+                        children: _visibleJobs
+                            .map((job) => _JobCard(job: job))
+                            .toList(),
+                      ),
+                    const SizedBox(height: 100),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.tune, color: Colors.black87),
-                    onPressed: () {},
-                  ),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 24),
-
-            // Job Listings
-            Column(children: jobs.map((job) => _JobCard(job: job)).toList()),
-            const SizedBox(height: 100),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -237,7 +276,7 @@ class _JobCard extends StatelessWidget {
               location: job.location,
               salary: job.salary,
               jobType: job.jobType,
-              postedDate: '2 days ago',
+              postedDate: job.postedDate,
               matchPercentage: job.matchPercentage,
               description: job.description,
               matchedSkills: job.matchedSkills,
@@ -448,6 +487,7 @@ class _SkillChip extends StatelessWidget {
 }
 
 class Job {
+  final String id;
   final String title;
   final String company;
   final String location;
@@ -459,8 +499,10 @@ class Job {
   final List<String> matchedSkills;
   final List<String> unmatchedSkills;
   final String description;
+  final String postedDate;
 
   Job({
+    this.id = '',
     required this.title,
     required this.company,
     required this.location,
@@ -472,5 +514,63 @@ class Job {
     required this.matchedSkills,
     required this.unmatchedSkills,
     required this.description,
+    required this.postedDate,
   });
+
+  factory Job.fromJson(Map<String, dynamic> json) {
+    final company = (json['company'] as String?)?.trim() ?? '';
+    final title = (json['title'] as String?)?.trim() ?? 'Untitled role';
+    final id = (json['id'] as String?)?.trim() ?? '';
+    final posted = (json['postedDate'] as String?)?.trim() ?? '';
+    return Job(
+      id: id,
+      title: title,
+      company: company,
+      location: (json['location'] as String?)?.trim() ?? '',
+      salary: (json['salary'] as String?)?.trim() ?? '',
+      jobType: (json['jobType'] as String?)?.trim() ?? '',
+      matchPercentage: _parseMatchPercent(json['matchPercentage']),
+      initial: _initialFromCompany(company),
+      initialColor: _brandColorForKey(company.isNotEmpty ? company : title),
+      matchedSkills: _stringList(json['matchedSkills']),
+      unmatchedSkills: _stringList(json['unmatchedSkills']),
+      description: (json['description'] as String?)?.trim() ?? '',
+      postedDate: posted.isNotEmpty ? posted : 'Recently posted',
+    );
+  }
+
+  static int _parseMatchPercent(dynamic v) {
+    if (v is int) return v;
+    if (v is double) return v.round();
+    if (v is String) return int.tryParse(v) ?? 0;
+    return 0;
+  }
+
+  static List<String> _stringList(dynamic v) {
+    if (v is! List) return [];
+    return v.map((e) => e.toString()).toList();
+  }
+
+  static String _initialFromCompany(String c) {
+    final t = c.trim();
+    if (t.isEmpty) return '?';
+    return t[0].toUpperCase();
+  }
+
+  static const List<Color> _palette = [
+    Color(0xFF2563EB),
+    Color(0xFF9333EA),
+    Color(0xFFEC4899),
+    Color(0xFF22C55E),
+    Color(0xFF0EA5A5),
+  ];
+
+  static Color _brandColorForKey(String key) {
+    if (key.isEmpty) return _palette[0];
+    var h = 0;
+    for (var i = 0; i < key.length; i++) {
+      h = key.codeUnitAt(i) + ((h << 5) - h);
+    }
+    return _palette[h.abs() % _palette.length];
+  }
 }
