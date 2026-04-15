@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import MobileUser from "./models/mobile_user.js";
 import Job from "./models/job.js";
+import Application from "./models/application.js";
 import { normalizeJobDoc } from "./jobNormalize.js";
 
 const PORT = Number(process.env.PORT) || 5000;
@@ -31,6 +32,46 @@ app.use(express.json());
 
 function generateToken(id) {
   return jwt.sign({ id }, JWT_SECRET, { expiresIn: "30d" });
+}
+
+function getBearerToken(req) {
+  const h = req.headers?.authorization;
+  if (!h || typeof h !== "string") return null;
+  const parts = h.split(" ");
+  if (parts.length === 2 && parts[0].toLowerCase() === "bearer") return parts[1];
+  return null;
+}
+
+async function requireAuth(req, res, next) {
+  try {
+    const token = getBearerToken(req);
+    if (!token) return res.status(401).json({ message: "Missing auth token." });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded?.id).lean();
+    if (!user) return res.status(401).json({ message: "Invalid auth token." });
+    req.user = user;
+    next();
+  } catch (_e) {
+    return res.status(401).json({ message: "Invalid auth token." });
+  }
+}
+
+function userPublic(u) {
+  if (!u) return null;
+  return {
+    _id: u._id,
+    email: u.email,
+    firstName: u.firstName,
+    lastName: u.lastName,
+    headline: u.headline || "",
+    location: u.location || "",
+    phone: u.phone || "",
+    portfolioUrl: u.portfolioUrl || "",
+    bio: u.bio || "",
+    avatarUrl: u.avatarUrl || "",
+    skills: Array.isArray(u.skills) ? u.skills : [],
+    profile: u.profile && typeof u.profile === "object" ? u.profile : {},
+  };
 }
 
 app.get("/api/health", (_req, res) => {
@@ -119,6 +160,134 @@ app.post("/api/users/login", async (req, res) => {
   } catch (err) {
     console.error("Login error:", err);
     return res.status(500).json({ message: "Server error during login." });
+  }
+});
+
+// Current user profile
+app.get("/api/me", requireAuth, async (req, res) => {
+  return res.json({ user: userPublic(req.user) });
+});
+
+app.put("/api/me", requireAuth, async (req, res) => {
+  try {
+    const body = req.body ?? {};
+    const patch = {};
+    for (const k of [
+      "firstName",
+      "lastName",
+      "headline",
+      "location",
+      "phone",
+      "portfolioUrl",
+      "bio",
+      "avatarUrl",
+    ]) {
+      if (body[k] !== undefined) patch[k] = String(body[k] ?? "").trim();
+    }
+    if (body.skills !== undefined) {
+      if (Array.isArray(body.skills)) {
+        patch.skills = body.skills.map((s) => String(s).trim()).filter(Boolean);
+      } else if (typeof body.skills === "string") {
+        patch.skills = body.skills
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+    }
+    if (body.profile !== undefined && body.profile && typeof body.profile === "object") {
+      patch.profile = body.profile;
+    }
+    const updated = await User.findByIdAndUpdate(req.user._id, patch, {
+      new: true,
+    }).lean();
+    return res.json({ user: userPublic(updated) });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    return res.status(500).json({ message: "Could not update profile." });
+  }
+});
+
+// Apply to a job
+app.post("/api/applications", requireAuth, async (req, res) => {
+  try {
+    const { jobId, jobSnapshot } = req.body ?? {};
+    if (!jobId || String(jobId).trim() === "") {
+      return res.status(400).json({ message: "jobId is required." });
+    }
+
+    const snapshot = jobSnapshot && typeof jobSnapshot === "object" ? jobSnapshot : {};
+    const doc = await Application.create({
+      userId: req.user._id,
+      jobId: String(jobId),
+      jobSnapshot: {
+        title: String(snapshot.title ?? ""),
+        company: String(snapshot.company ?? ""),
+        location: String(snapshot.location ?? ""),
+        salary: String(snapshot.salary ?? ""),
+        jobType: String(snapshot.jobType ?? ""),
+        postedDate: String(snapshot.postedDate ?? ""),
+        matchPercentage: Number(snapshot.matchPercentage ?? 0) || 0,
+      },
+      status: "Applied",
+      statusHistory: [{ status: "Applied", at: new Date() }],
+    });
+    return res.status(201).json({ application: doc });
+  } catch (err) {
+    if (err?.code === 11000) {
+      return res.status(409).json({ message: "You already applied to this job." });
+    }
+    console.error("Apply error:", err);
+    return res.status(500).json({ message: "Could not apply to job." });
+  }
+});
+
+app.get("/api/applications", requireAuth, async (req, res) => {
+  try {
+    const apps = await Application.find({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+    return res.json({ applications: apps });
+  } catch (err) {
+    console.error("List applications error:", err);
+    return res.status(500).json({ message: "Could not load applications." });
+  }
+});
+
+app.patch("/api/applications/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body ?? {};
+    const next = String(status ?? "").trim();
+    if (!next) return res.status(400).json({ message: "status is required." });
+
+    const allowed = new Set([
+      "Applied",
+      "Screening",
+      "Interview",
+      "Offer",
+      "Rejected",
+      "Withdrawn",
+    ]);
+    if (!allowed.has(next)) {
+      return res.status(400).json({ message: "Invalid status." });
+    }
+
+    const update = {
+      status: next,
+      $push: { statusHistory: { status: next, at: new Date() } },
+    };
+    if (next === "Withdrawn") update.withdrawnAt = new Date();
+
+    const appDoc = await Application.findOneAndUpdate(
+      { _id: id, userId: req.user._id },
+      update,
+      { new: true }
+    ).lean();
+    if (!appDoc) return res.status(404).json({ message: "Application not found." });
+    return res.json({ application: appDoc });
+  } catch (err) {
+    console.error("Update application error:", err);
+    return res.status(500).json({ message: "Could not update application." });
   }
 });
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'settings_page.dart';
+import '../services/applications_api.dart';
 
 class ApplicationsPage extends StatefulWidget {
   const ApplicationsPage({super.key});
@@ -9,29 +10,35 @@ class ApplicationsPage extends StatefulWidget {
 }
 
 class _ApplicationsPageState extends State<ApplicationsPage> {
-  final List<JobApplication> applications = [
-    JobApplication(
-      jobTitle: 'Senior Frontend Engineer',
-      company: 'TechFlow',
-      dateApplied: 'Feb 28, 2026',
-      currentStatus: 'Interview',
-      appliedDate: DateTime.now().subtract(const Duration(days: 5)),
-    ),
-    JobApplication(
-      jobTitle: 'Full Stack Developer',
-      company: 'Innovate Inc.',
-      dateApplied: 'Feb 25, 2026',
-      currentStatus: 'Screening',
-      appliedDate: DateTime.now().subtract(const Duration(days: 8)),
-    ),
-    JobApplication(
-      jobTitle: 'Product Designer',
-      company: 'Creative Studio',
-      dateApplied: 'Feb 20, 2026',
-      currentStatus: 'Applied',
-      appliedDate: DateTime.now().subtract(const Duration(days: 13)),
-    ),
-  ];
+  bool _loading = true;
+  String? _error;
+  List<JobApplication> applications = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
+    try {
+      final raw = await fetchMyApplications();
+      final list = raw.map(JobApplication.fromJson).toList();
+      if (!mounted) return;
+      setState(() {
+        applications = list;
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,48 +86,89 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Applications',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Track status of your job applications',
-              style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
-            ),
-            const SizedBox(height: 24),
-
-            Column(
-              children: applications
-                  .map(
-                    (app) => Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _ApplicationCard(application: app),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(_error!, textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: () => _load(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
                     ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: 100),
-          ],
-        ),
-      ),
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: () => _load(silent: true),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Applications',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Track status of your job applications',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        if (applications.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Center(
+                              child: Text(
+                                'No applications yet. Apply to a job to see it here.',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          )
+                        else
+                          Column(
+                            children: applications
+                                .map(
+                                  (app) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: _ApplicationCard(
+                                      application: app,
+                                      onChanged: () => _load(silent: true),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+                ),
     );
   }
 }
 
 class _ApplicationCard extends StatelessWidget {
   final JobApplication application;
+  final Future<void> Function() onChanged;
 
-  const _ApplicationCard({required this.application});
+  const _ApplicationCard({required this.application, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -187,7 +235,15 @@ class _ApplicationCard extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF6B7280),
                 ),
-                onPressed: () {},
+                onPressed: application.currentStatus == 'Withdrawn'
+                    ? null
+                    : () async {
+                        await updateApplicationStatus(
+                          applicationId: application.id,
+                          status: 'Withdrawn',
+                        );
+                        await onChanged();
+                      },
                 child: const Text(
                   'Withdraw',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
@@ -333,6 +389,7 @@ class _ApplicationTimeline extends StatelessWidget {
 }
 
 class JobApplication {
+  final String id;
   final String jobTitle;
   final String company;
   final String dateApplied;
@@ -340,10 +397,47 @@ class JobApplication {
   final DateTime appliedDate;
 
   JobApplication({
+    required this.id,
     required this.jobTitle,
     required this.company,
     required this.dateApplied,
     required this.currentStatus,
     required this.appliedDate,
   });
+
+  static String _fmtDate(DateTime d) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+
+  factory JobApplication.fromJson(Map<String, dynamic> json) {
+    final snap = json['jobSnapshot'];
+    final s = snap is Map ? snap : const {};
+    final createdAtRaw = json['createdAt'];
+    DateTime createdAt = DateTime.now();
+    if (createdAtRaw is String) {
+      createdAt = DateTime.tryParse(createdAtRaw) ?? createdAt;
+    }
+    return JobApplication(
+      id: (json['_id'] as String?) ?? '',
+      jobTitle: (s['title'] as String?)?.trim() ?? 'Untitled role',
+      company: (s['company'] as String?)?.trim() ?? '',
+      dateApplied: _fmtDate(createdAt),
+      currentStatus: (json['status'] as String?)?.trim() ?? 'Applied',
+      appliedDate: createdAt,
+    );
+  }
 }

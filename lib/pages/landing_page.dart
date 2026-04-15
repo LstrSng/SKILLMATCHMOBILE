@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'sign_in_page.dart';
 import 'register_page.dart';
+import '../services/session_store.dart';
+import 'main_navigation_page.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -11,6 +13,21 @@ class LandingPage extends StatefulWidget {
 
 class _LandingPageState extends State<LandingPage> {
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // If a session exists, go straight to the app.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (SessionStore.token != null && SessionStore.token!.isNotEmpty) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {

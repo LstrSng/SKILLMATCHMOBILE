@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'company_details_page.dart';
+import '../services/applications_api.dart';
 
 class JobDetailPage extends StatefulWidget {
+  final String jobId;
   final String title;
   final String company;
   final String location;
@@ -15,6 +17,7 @@ class JobDetailPage extends StatefulWidget {
 
   const JobDetailPage({
     super.key,
+    required this.jobId,
     required this.title,
     required this.company,
     required this.location,
@@ -33,6 +36,37 @@ class JobDetailPage extends StatefulWidget {
 
 class _JobDetailPageState extends State<JobDetailPage> {
   bool _isBookmarked = false;
+  bool _applying = false;
+
+  Future<void> _applyNow() async {
+    if (_applying) return;
+    setState(() => _applying = true);
+    try {
+      await applyToJob(
+        jobId: widget.jobId,
+        jobSnapshot: {
+          'title': widget.title,
+          'company': widget.company,
+          'location': widget.location,
+          'salary': widget.salary,
+          'jobType': widget.jobType,
+          'postedDate': widget.postedDate,
+          'matchPercentage': widget.matchPercentage,
+        },
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Application submitted.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _applying = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -241,14 +275,23 @@ class _JobDetailPageState extends State<JobDetailPage> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: () {},
-                          child: const Text(
-                            'Apply Now',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          onPressed: _applying ? null : _applyNow,
+                          child: _applying
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Apply Now',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(width: 12),

@@ -271,6 +271,7 @@ class _JobCard extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => JobDetailPage(
+              jobId: job.id,
               title: job.title,
               company: job.company,
               location: job.location,

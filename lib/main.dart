@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'pages/landing_page.dart';
+import 'services/session_store.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SessionStore.load();
   runApp(const MyApp());
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_api.dart';
+import '../services/session_store.dart';
 import 'main_navigation_page.dart';
 import 'sign_in_page.dart';
 
@@ -60,12 +61,13 @@ class _RegisterPageState extends State<RegisterPage> {
     }
     setState(() => _submitting = true);
     try {
-      await registerUser(
+      final res = await registerUser(
         email: email,
         password: password,
         firstName: firstName,
         lastName: lastName,
       );
+      await SessionStore.save(token: res.token, user: res.user);
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
