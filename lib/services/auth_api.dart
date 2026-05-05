@@ -135,8 +135,8 @@ AuthResult _parseAuthResponse(
     if (status == 404) {
       final where = requestedUri != null ? ' $requestedUri' : '';
       msg =
-          '404$where. Open http://localhost:5000/test on your PC — you should see: test. '
-          'If not, port 5000 is the wrong program. If test works, check authRoutes in Skillmatch or use SKILLMATCHMOBILE/backend (npm start).';
+          '404$where. Your app is reaching a server, but the endpoint was not found. '
+          'Make sure you are running the SKILLMATCHMOBILE backend and that API_BASE_URL / API_PORT matches it.';
     } else if (looksHtml) {
       msg =
           'Server sent a web page instead of JSON ($status). Wrong URL or the API crashed—check API_BASE_URL and that Node is running.';

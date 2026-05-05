@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'settings_page.dart';
+import 'job_detail_page.dart';
 import '../services/applications_api.dart';
+import '../services/jobs_api.dart';
 
 class ApplicationsPage extends StatefulWidget {
   const ApplicationsPage({super.key});
@@ -170,6 +172,67 @@ class _ApplicationCard extends StatelessWidget {
 
   const _ApplicationCard({required this.application, required this.onChanged});
 
+  Future<void> _openDetails(BuildContext context) async {
+    // Prefer loading the full job details from /api/jobs (has description + skills),
+    // but fall back to the application snapshot so the screen always opens.
+    Map<String, dynamic>? full;
+    try {
+      if (application.jobId.trim().isNotEmpty) {
+        final jobs = await fetchJobsRaw();
+        if (!context.mounted) return;
+        for (final j in jobs) {
+          final id = (j['id'] as Object?)?.toString().trim() ?? '';
+          if (id == application.jobId.trim()) {
+            full = j;
+            break;
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore network errors; snapshot fallback below.
+    }
+
+    final snap = application.jobSnapshot;
+    final data = full ?? snap;
+
+    String s(String k) => (data[k] as Object?)?.toString().trim() ?? '';
+    int n(String k) {
+      final v = data[k];
+      if (v is int) return v;
+      if (v is double) return v.round();
+      if (v is String) return int.tryParse(v.trim()) ?? 0;
+      return 0;
+    }
+
+    List<String> list(String k) {
+      final v = data[k];
+      if (v is! List) return const [];
+      return v.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList();
+    }
+
+    if (!context.mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => JobDetailPage(
+          jobId: application.jobId,
+          title: s('title').isEmpty ? application.jobTitle : s('title'),
+          company: s('company').isEmpty ? application.company : s('company'),
+          location: s('location'),
+          salary: s('salary'),
+          jobType: s('jobType'),
+          postedDate: s('postedDate'),
+          matchPercentage: n('matchPercentage'),
+          description: s('description'),
+          matchedSkills: list('matchedSkills'),
+          unmatchedSkills: list('unmatchedSkills'),
+          allowApply: false,
+          backLabel: 'Back to Applications',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -225,7 +288,7 @@ class _ApplicationCard extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF2563EB),
                 ),
-                onPressed: () {},
+                onPressed: () => _openDetails(context),
                 child: const Text(
                   'Details',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
@@ -390,19 +453,23 @@ class _ApplicationTimeline extends StatelessWidget {
 
 class JobApplication {
   final String id;
+  final String jobId;
   final String jobTitle;
   final String company;
   final String dateApplied;
   final String currentStatus;
   final DateTime appliedDate;
+  final Map<String, dynamic> jobSnapshot;
 
   JobApplication({
     required this.id,
+    required this.jobId,
     required this.jobTitle,
     required this.company,
     required this.dateApplied,
     required this.currentStatus,
     required this.appliedDate,
+    required this.jobSnapshot,
   });
 
   static String _fmtDate(DateTime d) {
@@ -426,6 +493,7 @@ class JobApplication {
   factory JobApplication.fromJson(Map<String, dynamic> json) {
     final snap = json['jobSnapshot'];
     final s = snap is Map ? snap : const {};
+    final snapMap = s.map((k, v) => MapEntry(k.toString(), v));
     final createdAtRaw = json['createdAt'];
     DateTime createdAt = DateTime.now();
     if (createdAtRaw is String) {
@@ -433,11 +501,13 @@ class JobApplication {
     }
     return JobApplication(
       id: (json['_id'] as String?) ?? '',
+      jobId: (json['jobId'] as Object?)?.toString().trim() ?? '',
       jobTitle: (s['title'] as String?)?.trim() ?? 'Untitled role',
       company: (s['company'] as String?)?.trim() ?? '',
       dateApplied: _fmtDate(createdAt),
       currentStatus: (json['status'] as String?)?.trim() ?? 'Applied',
       appliedDate: createdAt,
+      jobSnapshot: snapMap,
     );
   }
 }

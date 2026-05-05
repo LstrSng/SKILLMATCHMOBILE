@@ -14,6 +14,8 @@ class JobDetailPage extends StatefulWidget {
   final String description;
   final List<String> matchedSkills;
   final List<String> unmatchedSkills;
+  final bool allowApply;
+  final String backLabel;
 
   const JobDetailPage({
     super.key,
@@ -28,6 +30,8 @@ class JobDetailPage extends StatefulWidget {
     required this.description,
     required this.matchedSkills,
     required this.unmatchedSkills,
+    this.allowApply = true,
+    this.backLabel = 'Back to Jobs',
   });
 
   @override
@@ -121,14 +125,14 @@ class _JobDetailPageState extends State<JobDetailPage> {
             // Back Button with Caption
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.arrow_back, color: Color(0xFF6B7280), size: 20),
-                  SizedBox(width: 4),
+                  const Icon(Icons.arrow_back, color: Color(0xFF6B7280), size: 20),
+                  const SizedBox(width: 4),
                   Text(
-                    'Back to Jobs',
-                    style: TextStyle(
+                    widget.backLabel,
+                    style: const TextStyle(
                       color: Color(0xFF6B7280),
                       fontWeight: FontWeight.w500,
                     ),
@@ -262,62 +266,64 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Apply Now and Bookmark
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2563EB),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                  if (widget.allowApply) ...[
+                    // Apply Now and Bookmark
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2563EB),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                          ),
-                          onPressed: _applying ? null : _applyNow,
-                          child: _applying
-                              ? const SizedBox(
-                                  height: 22,
-                                  width: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
+                            onPressed: _applying ? null : _applyNow,
+                            child: _applying
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Apply Now',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                )
-                              : const Text(
-                                  'Apply Now',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            _isBookmarked
-                                ? Icons.bookmark
-                                : Icons.bookmark_border,
-                            color: _isBookmarked
-                                ? const Color(0xFF2563EB)
-                                : Colors.black87,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _isBookmarked = !_isBookmarked;
-                            });
-                          },
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              _isBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              color: _isBookmarked
+                                  ? const Color(0xFF2563EB)
+                                  : Colors.black87,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isBookmarked = !_isBookmarked;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

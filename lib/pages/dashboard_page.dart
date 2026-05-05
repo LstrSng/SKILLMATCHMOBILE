@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'settings_page.dart';
+import '../services/session_store.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -10,8 +11,20 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  String _greetingName() {
+    final u = SessionStore.user;
+    final first = (u?['firstName'] as Object?)?.toString().trim() ?? '';
+    if (first.isNotEmpty) return first;
+    final last = (u?['lastName'] as Object?)?.toString().trim() ?? '';
+    if (last.isNotEmpty) return last;
+    final email = (u?['email'] as Object?)?.toString().trim() ?? '';
+    if (email.isNotEmpty) return email;
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final name = _greetingName();
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -65,7 +78,7 @@ class _DashboardPageState extends State<DashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome back, John',
+                  name.isEmpty ? 'Welcome back' : 'Welcome back, $name',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: Colors.black,

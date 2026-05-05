@@ -50,6 +50,42 @@ class _ProfilePageState extends State<ProfilePage> {
     return const [];
   }
 
+  List<Map<String, String>> _education() {
+    final v = _user['education'];
+    if (v is! List) return const [];
+    final out = <Map<String, String>>[];
+    for (final it in v) {
+      if (it is! Map) continue;
+      final degree = (it['degree'] as Object?)?.toString().trim() ?? '';
+      final school = (it['school'] as Object?)?.toString().trim() ?? '';
+      final years = (it['years'] as Object?)?.toString().trim() ?? '';
+      if (degree.isEmpty && school.isEmpty && years.isEmpty) continue;
+      out.add({'degree': degree, 'school': school, 'years': years});
+    }
+    return out;
+  }
+
+  List<Map<String, String>> _experience() {
+    final v = _user['experience'];
+    if (v is! List) return const [];
+    final out = <Map<String, String>>[];
+    for (final it in v) {
+      if (it is! Map) continue;
+      final year = (it['year'] as Object?)?.toString().trim() ?? '';
+      final title = (it['title'] as Object?)?.toString().trim() ?? '';
+      final company = (it['company'] as Object?)?.toString().trim() ?? '';
+      final description = (it['description'] as Object?)?.toString().trim() ?? '';
+      if (year.isEmpty && title.isEmpty && company.isEmpty && description.isEmpty) continue;
+      out.add({
+        'year': year,
+        'title': title,
+        'company': company,
+        'description': description,
+      });
+    }
+    return out;
+  }
+
   Future<void> _openEdit() async {
     final initial = Map<String, dynamic>.from(_user);
     final res = await showModalBottomSheet<Map<String, dynamic>>(
@@ -108,6 +144,8 @@ class _ProfilePageState extends State<ProfilePage> {
     final phone = _s('phone');
     final portfolio = _s('portfolioUrl');
     final skills = _skills();
+    final education = _education();
+    final experience = _experience();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -355,32 +393,26 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _ExperienceItem(
-                    year: '2023 - Present',
-                    title: 'Senior Frontend Developer',
-                    company: 'TechCorp Solutions',
-                    description:
-                        'Led the migration of the core platform from Angular to React. Improved performance by 40%.',
-                    isActive: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _ExperienceItem(
-                    year: '2021 - 2023',
-                    title: 'Frontend Developer',
-                    company: 'Creative Agency Inc.',
-                    description:
-                        'Developed responsive websites for various clients using Vue.js and SCSS.',
-                    isActive: false,
-                  ),
-                  const SizedBox(height: 16),
-                  _ExperienceItem(
-                    year: '2019 - 2021',
-                    title: 'Junior Web Developer',
-                    company: 'StartUp Hub',
-                    description:
-                        'Built internal tools using React and Express. Maintained legacy PHP applications.',
-                    isActive: false,
-                  ),
+                  if (experience.isEmpty)
+                    const Text(
+                      'Add experience (Edit)',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                    )
+                  else
+                    ...experience.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final e = entry.value;
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: idx == experience.length - 1 ? 0 : 16),
+                        child: _ExperienceItem(
+                          year: (e['year'] ?? '').isEmpty ? '—' : (e['year'] ?? ''),
+                          title: (e['title'] ?? '').isEmpty ? '—' : (e['title'] ?? ''),
+                          company: (e['company'] ?? '').isEmpty ? '—' : (e['company'] ?? ''),
+                          description: e['description'] ?? '',
+                          isActive: idx == 0,
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),
@@ -406,55 +438,70 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2563EB),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: const Color(0xFF2563EB),
-                            width: 3,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
+                  if (education.isEmpty)
+                    const Text(
+                      'Add education (Edit)',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                    )
+                  else
+                    ...education.map(
+                      (e) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'B.S. Computer Science',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: const Color(0xFF2563EB),
+                                  width: 3,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              'University of Technology',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF6B7280),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '2015 - 2019',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: const Color(0xFF9CA3AF),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    (e['degree'] ?? '').isEmpty ? '—' : (e['degree'] ?? ''),
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  if ((e['school'] ?? '').trim().isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      e['school'] ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF6B7280),
+                                      ),
+                                    ),
+                                  ],
+                                  if ((e['years'] ?? '').trim().isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      e['years'] ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFF9CA3AF),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),
@@ -612,6 +659,39 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       return '';
     })(),
   );
+  late final TextEditingController _education = TextEditingController(
+    text: (() {
+      final v = widget.initial['education'];
+      if (v is! List) return '';
+      final lines = <String>[];
+      for (final it in v) {
+        if (it is! Map) continue;
+        final degree = (it['degree'] as Object?)?.toString().trim() ?? '';
+        final school = (it['school'] as Object?)?.toString().trim() ?? '';
+        final years = (it['years'] as Object?)?.toString().trim() ?? '';
+        if (degree.isEmpty && school.isEmpty && years.isEmpty) continue;
+        lines.add('$degree | $school | $years'.trim());
+      }
+      return lines.join('\n');
+    })(),
+  );
+  late final TextEditingController _experience = TextEditingController(
+    text: (() {
+      final v = widget.initial['experience'];
+      if (v is! List) return '';
+      final lines = <String>[];
+      for (final it in v) {
+        if (it is! Map) continue;
+        final year = (it['year'] as Object?)?.toString().trim() ?? '';
+        final title = (it['title'] as Object?)?.toString().trim() ?? '';
+        final company = (it['company'] as Object?)?.toString().trim() ?? '';
+        final desc = (it['description'] as Object?)?.toString().trim() ?? '';
+        if (year.isEmpty && title.isEmpty && company.isEmpty && desc.isEmpty) continue;
+        lines.add('$year | $title | $company | $desc'.trim());
+      }
+      return lines.join('\n');
+    })(),
+  );
 
   bool _saving = false;
 
@@ -625,7 +705,43 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _portfolio.dispose();
     _bio.dispose();
     _skills.dispose();
+    _education.dispose();
+    _experience.dispose();
     super.dispose();
+  }
+
+  List<Map<String, String>> _parseEducation(String text) {
+    final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final out = <Map<String, String>>[];
+    for (final line in lines) {
+      final parts = line.split('|').map((p) => p.trim()).toList();
+      final degree = (parts.isNotEmpty ? parts[0] : '').trim();
+      final school = (parts.length > 1 ? parts[1] : '').trim();
+      final years = (parts.length > 2 ? parts[2] : '').trim();
+      if (degree.isEmpty && school.isEmpty && years.isEmpty) continue;
+      out.add({'degree': degree, 'school': school, 'years': years});
+    }
+    return out;
+  }
+
+  List<Map<String, String>> _parseExperience(String text) {
+    final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final out = <Map<String, String>>[];
+    for (final line in lines) {
+      final parts = line.split('|').map((p) => p.trim()).toList();
+      final year = (parts.isNotEmpty ? parts[0] : '').trim();
+      final title = (parts.length > 1 ? parts[1] : '').trim();
+      final company = (parts.length > 2 ? parts[2] : '').trim();
+      final description = (parts.length > 3 ? parts[3] : '').trim();
+      if (year.isEmpty && title.isEmpty && company.isEmpty && description.isEmpty) continue;
+      out.add({
+        'year': year,
+        'title': title,
+        'company': company,
+        'description': description,
+      });
+    }
+    return out;
   }
 
   Future<void> _save() async {
@@ -645,6 +761,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
             .map((s) => s.trim())
             .where((s) => s.isNotEmpty)
             .toList(),
+        'education': _parseEducation(_education.text),
+        'experience': _parseExperience(_experience.text),
       });
       if (!mounted) return;
       Navigator.pop(context, user);
@@ -737,6 +855,18 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               TextField(
                 controller: _skills,
                 decoration: _dec('Skills (comma separated)'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _education,
+                decoration: _dec('Education (one per line: Degree | School | Years)'),
+                maxLines: 4,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _experience,
+                decoration: _dec('Experience (one per line: Years | Title | Company | Description)'),
+                maxLines: 5,
               ),
               const SizedBox(height: 12),
               TextField(

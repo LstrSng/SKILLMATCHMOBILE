@@ -1,5 +1,24 @@
 import mongoose from 'mongoose';
 
+const educationItemSchema = new mongoose.Schema(
+    {
+        degree: { type: String, default: "" },
+        school: { type: String, default: "" },
+        years: { type: String, default: "" },
+    },
+    { _id: false }
+);
+
+const experienceItemSchema = new mongoose.Schema(
+    {
+        year: { type: String, default: "" },
+        title: { type: String, default: "" },
+        company: { type: String, default: "" },
+        description: { type: String, default: "" },
+    },
+    { _id: false }
+);
+
 const mobileUserSchema = new mongoose.Schema({
     firstName: {
         type: String,
@@ -30,6 +49,8 @@ const mobileUserSchema = new mongoose.Schema({
     bio: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
     skills: { type: [String], default: [] },
+    education: { type: [educationItemSchema], default: [] },
+    experience: { type: [experienceItemSchema], default: [] },
 
     // Flexible bucket for extra user-defined fields.
     profile: { type: mongoose.Schema.Types.Mixed, default: {} },
