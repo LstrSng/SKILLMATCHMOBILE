@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 import 'sign_in_page.dart';
+import '../main.dart' show themeNotifier;
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  final int initialTab;
+  const SettingsPage({super.key, this.initialTab = 0});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  int _selectedTab = 0;
-  
+  late int _selectedTab;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTab = widget.initialTab;
+  }
+
   // General tab states
-  bool _darkMode = false;
+  bool get _darkMode => themeNotifier.value == ThemeMode.dark;
   String _selectedLanguage = 'English';
 
   // Notifications tab states
@@ -34,9 +42,8 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      // backgroundColor: uses theme
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         title: Row(
           children: [
@@ -52,54 +59,42 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(width: 8),
             const Text(
               'SkillMatch',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ],
         ),
         actions: [
+          IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black87),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black87),
-            onPressed: () {},
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              setState(() => _selectedTab = 1);
+            },
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             const Text(
               'Settings',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
             const Text(
               'Manage your account preferences',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6B7280),
-              ),
+              style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
             ),
             const SizedBox(height: 24),
 
             // Tab Navigation
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -157,7 +152,7 @@ class _SettingsPageState extends State<SettingsPage> {
         // Appearance Section
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
@@ -167,19 +162,12 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               const Text(
                 'Appearance',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
               const Text(
                 'Customize how SkillMatch+ looks',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF6B7280),
-                ),
+                style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
               ),
               const SizedBox(height: 16),
               Row(
@@ -193,7 +181,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
-                          color: Colors.black,
                         ),
                       ),
                       SizedBox(height: 4),
@@ -209,9 +196,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   Switch(
                     value: _darkMode,
                     onChanged: (value) {
-                      setState(() {
-                        _darkMode = value;
-                      });
+                      themeNotifier.value = value
+                          ? ThemeMode.dark
+                          : ThemeMode.light;
+                      setState(() {});
                     },
                     activeThumbColor: const Color(0xFF2563EB),
                   ),
@@ -225,7 +213,7 @@ class _SettingsPageState extends State<SettingsPage> {
         // Language & Region Section
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
@@ -235,20 +223,12 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               const Text(
                 'Language & Region',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Language',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               Container(
@@ -261,11 +241,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   isExpanded: true,
                   underline: const SizedBox(),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  items: ['English', 'Spanish', 'French', 'German']
-                      .map((lang) => DropdownMenuItem(
-                            value: lang,
-                            child: Text(lang),
-                          ))
+                  items: ['English', 'Filipino']
+                      .map(
+                        (lang) =>
+                            DropdownMenuItem(value: lang, child: Text(lang)),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -286,7 +266,6 @@ class _SettingsPageState extends State<SettingsPage> {
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
               foregroundColor: const Color(0xFFDC2626),
               side: const BorderSide(color: Color(0xFFE5E7EB)),
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -307,10 +286,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 SizedBox(width: 8),
                 Text(
                   'Log Out',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -323,7 +299,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildNotificationsTab() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
@@ -333,19 +309,12 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           const Text(
             'Email Notifications',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           const Text(
             'Choose what updates you receive',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
+            style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
           ),
           const SizedBox(height: 20),
 
@@ -358,19 +327,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: const [
                   Text(
                     'Job Matches',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   SizedBox(height: 4),
                   Text(
                     'New jobs matching your profile',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF6B7280),
-                    ),
+                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
                   ),
                 ],
               ),
@@ -398,19 +360,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: const [
                   Text(
                     'Application Updates',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   SizedBox(height: 4),
                   Text(
                     'Status changes on applications',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF6B7280),
-                    ),
+                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
                   ),
                 ],
               ),
@@ -438,19 +393,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: const [
                   Text(
                     'Weekly Digest',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   SizedBox(height: 4),
                   Text(
                     'Weekly summary of activity',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF6B7280),
-                    ),
+                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
                   ),
                 ],
               ),
@@ -473,7 +421,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildSecurityTab() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
@@ -483,30 +431,19 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           const Text(
             'Change Password',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           const Text(
             'Keep your account secure',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
+            style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
           ),
           const SizedBox(height: 20),
 
           // Current Password
           const Text(
             'Current Password',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -538,11 +475,7 @@ class _SettingsPageState extends State<SettingsPage> {
           // New Password
           const Text(
             'New Password',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -586,10 +519,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () {},
               child: const Text(
                 'Update Password',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -617,7 +547,9 @@ class _TabButton extends StatelessWidget {
         onTap: onPressed,
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected
+                ? Theme.of(context).colorScheme.surface
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: isSelected
                 ? Border.all(color: const Color(0xFFE5E7EB))
@@ -631,7 +563,7 @@ class _TabButton extends StatelessWidget {
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               color: isSelected
-                  ? Colors.black
+                  ? Theme.of(context).colorScheme.onSurface
                   : const Color(0xFF6B7280),
             ),
           ),

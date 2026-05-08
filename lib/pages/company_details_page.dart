@@ -17,12 +17,11 @@ class CompanyDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      // backgroundColor: uses theme
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -40,7 +39,6 @@ class CompanyDetailsPage extends StatelessWidget {
             const Text(
               'SkillMatch',
               style: TextStyle(
-                color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -49,7 +47,7 @@ class CompanyDetailsPage extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -74,7 +72,7 @@ class CompanyDetailsPage extends StatelessWidget {
 
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -105,7 +103,7 @@ class CompanyDetailsPage extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black,
+                            
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -114,7 +112,7 @@ class CompanyDetailsPage extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black,
+                            
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -135,7 +133,7 @@ class CompanyDetailsPage extends StatelessWidget {
 
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -148,7 +146,7 @@ class CompanyDetailsPage extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -167,7 +165,7 @@ class CompanyDetailsPage extends StatelessWidget {
 
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -180,7 +178,7 @@ class CompanyDetailsPage extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -225,7 +223,7 @@ class _InfoItem extends StatelessWidget {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.black,
+            
           ),
         ),
       ],

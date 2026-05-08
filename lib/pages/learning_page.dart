@@ -12,9 +12,8 @@ class _LearningPageState extends State<LearningPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      // backgroundColor: uses theme
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         title: Row(
           children: [
@@ -31,7 +30,6 @@ class _LearningPageState extends State<LearningPage> {
             const Text(
               'SkillMatch',
               style: TextStyle(
-                color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -40,7 +38,7 @@ class _LearningPageState extends State<LearningPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black87),
+            icon: const Icon(Icons.settings),
             onPressed: () {
               Navigator.push(
                 context,
@@ -49,14 +47,14 @@ class _LearningPageState extends State<LearningPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black87),
+            icon: const Icon(Icons.notifications),
             onPressed: () {},
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -66,7 +64,7 @@ class _LearningPageState extends State<LearningPage> {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
-                color: Colors.black,
+                
               ),
             ),
             const SizedBox(height: 4),
@@ -82,7 +80,7 @@ class _LearningPageState extends State<LearningPage> {
             // Market Alignment Section
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -95,7 +93,7 @@ class _LearningPageState extends State<LearningPage> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -183,7 +181,7 @@ class _LearningPageState extends State<LearningPage> {
             // Priority Gaps Section
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -196,7 +194,7 @@ class _LearningPageState extends State<LearningPage> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -236,7 +234,7 @@ class _LearningPageState extends State<LearningPage> {
             // Recommended Learning Section
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -249,7 +247,7 @@ class _LearningPageState extends State<LearningPage> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -372,7 +370,7 @@ class _PriorityGapItem extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Colors.black,
+                
               ),
             ),
             Text(
@@ -482,7 +480,7 @@ class _LearningResourceCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                    
                   ),
                 ),
                 const SizedBox(height: 2),

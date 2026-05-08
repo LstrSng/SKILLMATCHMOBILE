@@ -45,9 +45,8 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      // backgroundColor: uses theme
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         title: Row(
           children: [
@@ -64,7 +63,6 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
             const Text(
               'SkillMatch',
               style: TextStyle(
-                color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -73,7 +71,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black87),
+            icon: const Icon(Icons.settings),
             onPressed: () {
               Navigator.push(
                 context,
@@ -82,8 +80,15 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black87),
-            onPressed: () {},
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsPage(initialTab: 1),
+                ),
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -91,77 +96,76 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(_error!, textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: () => _load(),
-                          child: const Text('Retry'),
-                        ),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => _load(),
+                      child: const Text('Retry'),
                     ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: () => _load(silent: true),
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Applications',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Track status of your job applications',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        if (applications.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: Center(
-                              child: Text(
-                                'No applications yet. Apply to a job to see it here.',
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          )
-                        else
-                          Column(
-                            children: applications
-                                .map(
-                                  (app) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: _ApplicationCard(
-                                      application: app,
-                                      onChanged: () => _load(silent: true),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        const SizedBox(height: 100),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () => _load(silent: true),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Applications',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Track status of your job applications',
+                      style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
+                    ),
+                    const SizedBox(height: 24),
+                    if (applications.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                          child: Text(
+                            'No applications yet. Apply to a job to see it here.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
+                    else
+                      Column(
+                        children: applications
+                            .map(
+                              (app) => Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _ApplicationCard(
+                                  application: app,
+                                  onChanged: () => _load(silent: true),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }
@@ -207,7 +211,10 @@ class _ApplicationCard extends StatelessWidget {
     List<String> list(String k) {
       final v = data[k];
       if (v is! List) return const [];
-      return v.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList();
+      return v
+          .map((e) => e.toString())
+          .where((e) => e.trim().isNotEmpty)
+          .toList();
     }
 
     if (!context.mounted) return;
@@ -237,7 +244,7 @@ class _ApplicationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
@@ -258,7 +265,7 @@ class _ApplicationCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                        
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -485,7 +492,7 @@ class JobApplication {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }

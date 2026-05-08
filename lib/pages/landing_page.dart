@@ -40,7 +40,6 @@ class _LandingPageState extends State<LandingPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         title: Row(
           children: [
@@ -57,7 +56,6 @@ class _LandingPageState extends State<LandingPage> {
             const Text(
               'SkillMatch+',
               style: TextStyle(
-                color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),

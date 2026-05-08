@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'company_details_page.dart';
+import 'settings_page.dart';
 import '../services/applications_api.dart';
 
 class JobDetailPage extends StatefulWidget {
@@ -59,14 +60,14 @@ class _JobDetailPageState extends State<JobDetailPage> {
         },
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application submitted.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Application submitted.')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _applying = false);
     }
@@ -75,12 +76,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      // backgroundColor: uses theme
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -98,7 +98,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
             const Text(
               'SkillMatch',
               style: TextStyle(
-                color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -107,18 +106,25 @@ class _JobDetailPageState extends State<JobDetailPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black87),
+            icon: const Icon(Icons.settings),
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black87),
-            onPressed: () {},
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsPage(initialTab: 1),
+                ),
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -128,7 +134,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.arrow_back, color: Color(0xFF6B7280), size: 20),
+                  const Icon(
+                    Icons.arrow_back,
+                    color: Color(0xFF6B7280),
+                    size: 20,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     widget.backLabel,
@@ -145,7 +155,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
             // Job Header Card
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -332,7 +342,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
             // Skill Match Breakdown
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -351,22 +361,26 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   Text(
                     '${widget.matchedSkills.length + widget.unmatchedSkills.length} of ${widget.matchedSkills.length + widget.unmatchedSkills.length} skills matched',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF6B7280),
-                        ),
+                      color: const Color(0xFF6B7280),
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  ...widget.matchedSkills.map((skill) => Column(
-                    children: [
-                      _SkillItem(skill: skill, matched: true),
-                      const SizedBox(height: 12),
-                    ],
-                  )),
-                  ...widget.unmatchedSkills.map((skill) => Column(
-                    children: [
-                      _SkillItem(skill: skill, matched: false),
-                      const SizedBox(height: 12),
-                    ],
-                  )),
+                  ...widget.matchedSkills.map(
+                    (skill) => Column(
+                      children: [
+                        _SkillItem(skill: skill, matched: true),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                  ...widget.unmatchedSkills.map(
+                    (skill) => Column(
+                      children: [
+                        _SkillItem(skill: skill, matched: false),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -423,7 +437,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
             // Job Description
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -457,15 +471,14 @@ class _JobDetailPageState extends State<JobDetailPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => CompanyDetailsPage(
-                      companyName: widget.company,
-                    ),
+                    builder: (context) =>
+                        CompanyDetailsPage(companyName: widget.company),
                   ),
                 );
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFE5E7EB)),
                 ),

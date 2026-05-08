@@ -76,9 +76,8 @@ class _JobsPageState extends State<JobsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      // backgroundColor: uses theme
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         title: Row(
           children: [
@@ -95,7 +94,6 @@ class _JobsPageState extends State<JobsPage> {
             const Text(
               'SkillMatch',
               style: TextStyle(
-                color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -104,7 +102,7 @@ class _JobsPageState extends State<JobsPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black87),
+            icon: const Icon(Icons.settings),
             onPressed: () {
               Navigator.push(
                 context,
@@ -113,8 +111,15 @@ class _JobsPageState extends State<JobsPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black87),
-            onPressed: () {},
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsPage(initialTab: 1),
+                ),
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -146,17 +151,21 @@ class _JobsPageState extends State<JobsPage> {
               onRefresh: () => _loadJobs(silent: true),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Find Jobs',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                        fontSize: 28,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                            fontSize: 28,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Row(
@@ -169,10 +178,11 @@ class _JobsPageState extends State<JobsPage> {
                         const SizedBox(width: 6),
                         Text(
                           'Top matches for you',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF10B981),
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: const Color(0xFF10B981),
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ],
                     ),
@@ -185,7 +195,9 @@ class _JobsPageState extends State<JobsPage> {
                             onChanged: (_) => setState(() {}),
                             decoration: InputDecoration(
                               hintText: 'Search roles, skills, companies...',
-                              hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
+                              hintStyle: const TextStyle(
+                                color: Color(0xFFD1D5DB),
+                              ),
                               prefixIcon: const Icon(
                                 Icons.search,
                                 color: Color(0xFF9CA3AF),
@@ -194,11 +206,15 @@ class _JobsPageState extends State<JobsPage> {
                               fillColor: Colors.white,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFE5E7EB),
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFE5E7EB),
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24),
@@ -221,7 +237,7 @@ class _JobsPageState extends State<JobsPage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.tune, color: Colors.black87),
+                            icon: const Icon(Icons.tune),
                             onPressed: () {},
                           ),
                         ),
@@ -237,9 +253,8 @@ class _JobsPageState extends State<JobsPage> {
                                 ? 'No job postings yet. Add documents to your jobs collection in MongoDB, or set JOBS_COLLECTION in backend/.env if they live in another collection.'
                                 : 'No jobs match your search.',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF6B7280),
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: const Color(0xFF6B7280)),
                           ),
                         ),
                       )
@@ -288,7 +303,7 @@ class _JobCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFE5E7EB)),
         ),

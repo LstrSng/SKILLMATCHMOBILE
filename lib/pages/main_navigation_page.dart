@@ -3,7 +3,6 @@ import 'dashboard_page.dart';
 import 'jobs_page.dart';
 import 'profile_page.dart';
 import 'applications_page.dart';
-import 'learning_page.dart';
 
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
@@ -23,7 +22,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       const DashboardPage(),
       const JobsPage(),
       const ApplicationsPage(),
-      const LearningPage(),
       const ProfilePage(),
     ];
   }
@@ -40,7 +38,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           });
         },
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
         selectedItemColor: const Color(0xFF2563EB),
         unselectedItemColor: const Color(0xFFD1D5DB),
         items: const [
@@ -52,10 +49,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.business_center),
             label: 'Applied',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.flash_on),
-            label: 'Learning',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

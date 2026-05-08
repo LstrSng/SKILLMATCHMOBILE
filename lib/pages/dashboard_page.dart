@@ -26,9 +26,8 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final name = _greetingName();
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      // backgroundColor: uses theme
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         title: Row(
           children: [
@@ -44,17 +43,13 @@ class _DashboardPageState extends State<DashboardPage> {
             const SizedBox(width: 8),
             const Text(
               'SkillMatch',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black87),
+            icon: const Icon(Icons.settings),
             onPressed: () {
               Navigator.push(
                 context,
@@ -63,14 +58,24 @@ class _DashboardPageState extends State<DashboardPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black87),
-            onPressed: () {},
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsPage(initialTab: 1),
+                ),
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
+          vertical: 20,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -98,7 +103,7 @@ class _DashboardPageState extends State<DashboardPage> {
             const SizedBox(height: 24),
 
             GridView.count(
-              crossAxisCount: 2,
+              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 4 : 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 16,
@@ -136,7 +141,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -175,7 +180,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -231,7 +236,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -302,7 +307,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -362,7 +367,7 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),

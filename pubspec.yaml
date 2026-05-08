@@ -9,7 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  file_picker: ^8.1.7
   http: ^1.2.2
+  image_picker: ^1.1.2
   shared_preferences: ^2.3.2
 
 dev_dependencies:

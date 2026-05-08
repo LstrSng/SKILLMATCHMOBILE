@@ -21,6 +21,20 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscurePassword = true;
   bool _submitting = false;
 
+  String? _passwordStandardError(String password) {
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+    }
+    final hasUpper = RegExp(r'[A-Z]').hasMatch(password);
+    final hasLower = RegExp(r'[a-z]').hasMatch(password);
+    final hasNumber = RegExp(r'\d').hasMatch(password);
+    final hasSpecial = RegExp(r'[^A-Za-z0-9]').hasMatch(password);
+    if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+      return 'Password must include uppercase, lowercase, number, and special character.';
+    }
+    return null;
+  }
+
   @override
   void dispose() {
     _firstNameController.dispose();
@@ -53,10 +67,11 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       return;
     }
-    if (password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 8 characters.')),
-      );
+    final passwordError = _passwordStandardError(password);
+    if (passwordError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(passwordError)));
       return;
     }
     setState(() => _submitting = true);
@@ -75,9 +90,9 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -90,6 +105,66 @@ class _RegisterPageState extends State<RegisterPage> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  Future<void> _showTermsOfService() async {
+    await _showLegalDialog(
+      title: 'Terms of Service',
+      sections: const [
+        'By creating an account, you agree to use SkillMatch+ responsibly and only for lawful job-search and career-related activities.',
+        'You are responsible for keeping your login credentials secure and for all activity under your account.',
+        'Do not upload false, misleading, or harmful information in your profile, applications, or messages.',
+        'SkillMatch+ may update features and policies over time. Continued use means you accept the latest terms.',
+      ],
+    );
+  }
+
+  Future<void> _showPrivacyPolicy() async {
+    await _showLegalDialog(
+      title: 'Privacy Policy',
+      sections: const [
+        'We collect basic account details (such as name, email, and profile information) to provide and improve the app.',
+        'Your data is used to personalize recommendations, process applications, and support account security.',
+        'We do not sell your personal information. Data may be shared only with service providers needed to operate the platform.',
+        'You can request account updates or deletion by contacting support through the app settings or support channel.',
+      ],
+    );
+  }
+
+  Future<void> _showLegalDialog({
+    required String title,
+    required List<String> sections,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: sections
+                  .map(
+                    (section) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        '• $section',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -346,6 +421,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Use 8+ characters with uppercase, lowercase, number, and symbol.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF6B7280),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -370,35 +452,50 @@ class _RegisterPageState extends State<RegisterPage> {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: RichText(
-                        text: TextSpan(
-                          text: 'I agree to the ',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: const Color(0xFF6B7280)),
-                          children: [
-                            TextSpan(
-                              text: 'Terms of Service',
+                      child: Wrap(
+                        children: [
+                          Text(
+                            'I agree to the ',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: const Color(0xFF6B7280)),
+                          ),
+                          InkWell(
+                            onTap: _showTermsOfService,
+                            child: Text(
+                              'Terms of Service',
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: const Color(0xFF2563EB),
                                     fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: const Color(0xFF2563EB),
                                   ),
                             ),
-                            TextSpan(
-                              text: ' and ',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: const Color(0xFF6B7280)),
-                            ),
-                            TextSpan(
-                              text: 'Privacy Policy',
+                          ),
+                          Text(
+                            ' and ',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: const Color(0xFF6B7280)),
+                          ),
+                          InkWell(
+                            onTap: _showPrivacyPolicy,
+                            child: Text(
+                              'Privacy Policy',
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: const Color(0xFF2563EB),
                                     fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: const Color(0xFF2563EB),
                                   ),
                             ),
-                          ],
-                        ),
+                          ),
+                          Text(
+                            '.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: const Color(0xFF6B7280)),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -419,7 +516,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                   // Prevent submitting before the checkbox state has updated.
-                  onPressed: (_submitting || !_agreeToTerms) ? null : _createAccount,
+                  onPressed: (_submitting || !_agreeToTerms)
+                      ? null
+                      : _createAccount,
                   child: _submitting
                       ? const SizedBox(
                           height: 22,
@@ -437,71 +536,6 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ),
                 ),
-              ),
-              const SizedBox(height: 20),
-
-              // Divider with text
-              Row(
-                children: [
-                  const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'OR CONTINUE WITH',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF9CA3AF),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Social Sign Up
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        'Google',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        'LinkedIn',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
               ),
               const SizedBox(height: 16),
 

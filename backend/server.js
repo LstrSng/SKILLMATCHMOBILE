@@ -9,7 +9,7 @@ import Job from "./models/job.js";
 import Application from "./models/application.js";
 import { normalizeJobDoc } from "./jobNormalize.js";
 
-const DEFAULT_PORT = 5001;
+const DEFAULT_PORT = 5002;
 const PORT = Number(process.env.PORT) || DEFAULT_PORT;
 // Some setups use `MONGODB_URI`, others use `MONGO_URI`.
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
@@ -29,7 +29,7 @@ const User = MobileUser;
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "8mb" }));
 
 function requireDb(req, res, next) {
   // 1 = connected (https://mongoosejs.com/docs/api/connection.html#Connection.prototype.readyState)

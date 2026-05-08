@@ -46,9 +46,9 @@ class _SignInPageState extends State<SignInPage> {
       );
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -288,71 +288,6 @@ class _SignInPageState extends State<SignInPage> {
                           ),
                         ),
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // Divider with text
-              Row(
-                children: [
-                  const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'OR CONTINUE WITH',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF9CA3AF),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Social Sign In
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        'Google',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        'LinkedIn',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
               ),
               const SizedBox(height: 20),
 
