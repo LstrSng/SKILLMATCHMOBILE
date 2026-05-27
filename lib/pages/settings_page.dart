@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
+import '../services/session_store.dart';
 import 'sign_in_page.dart';
-import '../main.dart' show themeNotifier;
+import '../widgets/notification_bell_button.dart';
 
 class SettingsPage extends StatefulWidget {
   final int initialTab;
@@ -11,38 +13,22 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  late int _selectedTab;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedTab = widget.initialTab;
-  }
-
-  // General tab states
-  bool get _darkMode => themeNotifier.value == ThemeMode.dark;
-  String _selectedLanguage = 'English';
-
-  // Notifications tab states
   bool _jobMatches = true;
   bool _applicationUpdates = true;
   bool _weeklyDigest = false;
 
-  // Security tab states
-  final _currentPasswordController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-
-  @override
-  void dispose() {
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    super.dispose();
+  Future<void> _logOut() async {
+    await SessionStore.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const SignInPage()),
+      (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // backgroundColor: uses theme
       appBar: AppBar(
         elevation: 0,
         title: Row(
@@ -65,66 +51,81 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         actions: [
           IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              setState(() => _selectedTab = 1);
-            },
-          ),
+          const NotificationBellButton(),
           const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16, vertical: 16),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
+          vertical: 16,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             const Text(
               'Settings',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
             const Text(
-              'Manage your account preferences',
+              'Manage your notification preferences',
               style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
             ),
             const SizedBox(height: 24),
-
-            // Tab Navigation
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
-              padding: const EdgeInsets.all(8),
-              child: Row(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _TabButton(
-                    label: 'General',
-                    isSelected: _selectedTab == 0,
-                    onPressed: () {
+                  const Text(
+                    'Notification Preferences',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Manage alerts for jobs and application activity',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                  ),
+                  const SizedBox(height: 20),
+                  _NotificationToggle(
+                    title: 'Job Matches',
+                    subtitle: 'New jobs matching your profile',
+                    value: _jobMatches,
+                    onChanged: (value) {
                       setState(() {
-                        _selectedTab = 0;
+                        _jobMatches = value;
                       });
                     },
                   ),
-                  _TabButton(
-                    label: 'Notifications',
-                    isSelected: _selectedTab == 1,
-                    onPressed: () {
+                  const SizedBox(height: 20),
+                  const Divider(color: Color(0xFFE5E7EB)),
+                  const SizedBox(height: 20),
+                  _NotificationToggle(
+                    title: 'Application Updates',
+                    subtitle: 'Status changes on applications',
+                    value: _applicationUpdates,
+                    onChanged: (value) {
                       setState(() {
-                        _selectedTab = 1;
+                        _applicationUpdates = value;
                       });
                     },
                   ),
-                  _TabButton(
-                    label: 'Security',
-                    isSelected: _selectedTab == 2,
-                    onPressed: () {
+                  const SizedBox(height: 20),
+                  const Divider(color: Color(0xFFE5E7EB)),
+                  const SizedBox(height: 20),
+                  _NotificationToggle(
+                    title: 'Weekly Digest',
+                    subtitle: 'Weekly summary of activity',
+                    value: _weeklyDigest,
+                    onChanged: (value) {
                       setState(() {
-                        _selectedTab = 2;
+                        _weeklyDigest = value;
                       });
                     },
                   ),
@@ -132,443 +133,68 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Tab Content
-            if (_selectedTab == 0) _buildGeneralTab(),
-            if (_selectedTab == 1) _buildNotificationsTab(),
-            if (_selectedTab == 2) _buildSecurityTab(),
-
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _logOut,
+                icon: const Icon(Icons.logout),
+                label: const Text('Log Out'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFDC2626),
+                  side: const BorderSide(color: Color(0xFFFCA5A5)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 100),
           ],
         ),
       ),
     );
   }
-
-  Widget _buildGeneralTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Appearance Section
-        Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Appearance',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Customize how SkillMatch+ looks',
-                style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Dark Mode',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Better viewing at night',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Switch(
-                    value: _darkMode,
-                    onChanged: (value) {
-                      themeNotifier.value = value
-                          ? ThemeMode.dark
-                          : ThemeMode.light;
-                      setState(() {});
-                    },
-                    activeThumbColor: const Color(0xFF2563EB),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // Language & Region Section
-        Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Language & Region',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Language',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButton<String>(
-                  value: _selectedLanguage,
-                  isExpanded: true,
-                  underline: const SizedBox(),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  items: ['English', 'Filipino']
-                      .map(
-                        (lang) =>
-                            DropdownMenuItem(value: lang, child: Text(lang)),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedLanguage = value;
-                      });
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // Log Out Button
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
-              side: const BorderSide(color: Color(0xFFE5E7EB)),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const SignInPage()),
-              );
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.logout, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Log Out',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNotificationsTab() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Email Notifications',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Choose what updates you receive',
-            style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
-          ),
-          const SizedBox(height: 20),
-
-          // Job Matches
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Job Matches',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'New jobs matching your profile',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-                  ),
-                ],
-              ),
-              Switch(
-                value: _jobMatches,
-                onChanged: (value) {
-                  setState(() {
-                    _jobMatches = value;
-                  });
-                },
-                activeThumbColor: const Color(0xFF2563EB),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Divider(color: Color(0xFFE5E7EB)),
-          const SizedBox(height: 20),
-
-          // Application Updates
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Application Updates',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Status changes on applications',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-                  ),
-                ],
-              ),
-              Switch(
-                value: _applicationUpdates,
-                onChanged: (value) {
-                  setState(() {
-                    _applicationUpdates = value;
-                  });
-                },
-                activeThumbColor: const Color(0xFF2563EB),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Divider(color: Color(0xFFE5E7EB)),
-          const SizedBox(height: 20),
-
-          // Weekly Digest
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Weekly Digest',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Weekly summary of activity',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-                  ),
-                ],
-              ),
-              Switch(
-                value: _weeklyDigest,
-                onChanged: (value) {
-                  setState(() {
-                    _weeklyDigest = value;
-                  });
-                },
-                activeThumbColor: const Color(0xFF2563EB),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecurityTab() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Change Password',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Keep your account secure',
-            style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
-          ),
-          const SizedBox(height: 20),
-
-          // Current Password
-          const Text(
-            'Current Password',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _currentPasswordController,
-            obscureText: true,
-            decoration: InputDecoration(
-              hintText: 'Enter current password',
-              hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF2563EB)),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // New Password
-          const Text(
-            'New Password',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _newPasswordController,
-            obscureText: true,
-            decoration: InputDecoration(
-              hintText: 'Enter new password',
-              hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF2563EB)),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Update Password Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: () {},
-              child: const Text(
-                'Update Password',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-class _TabButton extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onPressed;
+class _NotificationToggle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
 
-  const _TabButton({
-    required this.label,
-    required this.isSelected,
-    required this.onPressed,
+  const _NotificationToggle({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Container(
-          decoration: BoxDecoration(
-            color: isSelected
-                ? Theme.of(context).colorScheme.surface
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: isSelected
-                ? Border.all(color: const Color(0xFFE5E7EB))
-                : null,
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected
-                  ? Theme.of(context).colorScheme.onSurface
-                  : const Color(0xFF6B7280),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
-          ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+            ),
+          ],
         ),
-      ),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: const Color(0xFF2563EB),
+        ),
+      ],
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'settings_page.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
+import '../widgets/notification_bell_button.dart';
 
 Widget _profileAvatar({
   required String avatarUrl,
@@ -385,17 +386,7 @@ class _ProfilePageState extends State<ProfilePage> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsPage(initialTab: 1),
-                ),
-              );
-            },
-          ),
+          const NotificationBellButton(),
           const SizedBox(width: 8),
         ],
       ),

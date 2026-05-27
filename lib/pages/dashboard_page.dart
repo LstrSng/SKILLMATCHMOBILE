@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'settings_page.dart';
 import '../services/session_store.dart';
+import '../widgets/notification_bell_button.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -57,17 +58,7 @@ class _DashboardPageState extends State<DashboardPage> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsPage(initialTab: 1),
-                ),
-              );
-            },
-          ),
+          const NotificationBellButton(),
           const SizedBox(width: 8),
         ],
       ),
@@ -139,45 +130,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 24),
 
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Skill Strength',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Your proficiency across key areas',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6B7280),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    height: 250,
-                    child: Center(
-                      child: CustomPaint(
-                        size: const Size(200, 200),
-                        painter: RadarChartPainter(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
+            // Skill Strength removed
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
@@ -234,77 +187,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 24),
 
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Skill Gaps',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Skills to boost your match rate',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: const Color(0xFF6B7280)),
-                          ),
-                        ],
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          'Analyze',
-                          style: TextStyle(
-                            color: Color(0xFF2563EB),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _SkillGapItem(
-                    icon: Icons.code,
-                    title: 'GraphQL',
-                    priority: 'High Priority',
-                    boost: '+15%',
-                  ),
-                  const SizedBox(height: 12),
-                  _SkillGapItem(
-                    icon: Icons.cloud,
-                    title: 'AWS Lambda',
-                    priority: 'Medium Priority',
-                    boost: '+8%',
-                  ),
-                  const SizedBox(height: 12),
-                  _SkillGapItem(
-                    icon: Icons.storage,
-                    title: 'Docker',
-                    priority: 'Low Priority',
-                    boost: '+5%',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
+            // Skill Gaps removed
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,

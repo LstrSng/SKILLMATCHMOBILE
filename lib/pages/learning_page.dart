@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'settings_page.dart';
+import '../widgets/notification_bell_button.dart';
 
 class LearningPage extends StatefulWidget {
   const LearningPage({super.key});
@@ -29,10 +30,7 @@ class _LearningPageState extends State<LearningPage> {
             const SizedBox(width: 8),
             const Text(
               'SkillMatch',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -46,34 +44,27 @@ class _LearningPageState extends State<LearningPage> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {},
-          ),
+          const NotificationBellButton(),
           const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16, vertical: 16),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
+          vertical: 16,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             const Text(
               'Skill Gap Analysis',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                
-              ),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
             const Text(
               'Compare your skills against market demand',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6B7280),
-              ),
+              style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
             ),
             const SizedBox(height: 24),
 
@@ -90,19 +81,12 @@ class _LearningPageState extends State<LearningPage> {
                 children: [
                   const Text(
                     'Market Alignment',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'Your skills vs. top job requirements',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF6B7280),
-                    ),
+                    style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                   ),
                   const SizedBox(height: 16),
                   _SkillComparisonItem(
@@ -191,19 +175,12 @@ class _LearningPageState extends State<LearningPage> {
                 children: [
                   const Text(
                     'Priority Gaps',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'Skills with the highest ROI for your career',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF6B7280),
-                    ),
+                    style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                   ),
                   const SizedBox(height: 16),
                   _PriorityGapItem(
@@ -244,19 +221,12 @@ class _LearningPageState extends State<LearningPage> {
                 children: [
                   const Text(
                     'Recommended Learning',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'Curated resources to close your skill gaps',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF6B7280),
-                    ),
+                    style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                   ),
                   const SizedBox(height: 16),
                   _LearningResourceCard(
@@ -329,7 +299,8 @@ class _SkillComparisonItem extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                width: (myScore / 100) * (MediaQuery.of(context).size.width - 80),
+                width:
+                    (myScore / 100) * (MediaQuery.of(context).size.width - 80),
                 height: 8,
                 decoration: BoxDecoration(
                   color: const Color(0xFF2563EB),
@@ -367,11 +338,7 @@ class _PriorityGapItem extends StatelessWidget {
           children: [
             Text(
               skill,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                
-              ),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             Text(
               'Gap: $gap%',
@@ -464,11 +431,7 @@ class _LearningResourceCard extends StatelessWidget {
               color: const Color(0xFFDEEEFF),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
-              Icons.school,
-              color: Color(0xFF2563EB),
-              size: 20,
-            ),
+            child: const Icon(Icons.school, color: Color(0xFF2563EB), size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -480,7 +443,6 @@ class _LearningResourceCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    
                   ),
                 ),
                 const SizedBox(height: 2),

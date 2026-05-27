@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
+import 'authed_http.dart';
 
 class JobsApiException implements Exception {
   JobsApiException(this.message, {this.statusCode});
@@ -23,15 +25,43 @@ Uri _jobsUri() {
   return Uri.parse('$kApiBaseUrl$path');
 }
 
+String _readErrorMessage(String body) {
+  final raw = body.trim();
+  if (raw.isEmpty) return '';
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is Map<String, dynamic>) {
+      final message = decoded['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message.trim();
+      }
+    }
+  } catch (_) {
+    // Fall back to a generic status error if the body is not JSON.
+  }
+  return '';
+}
+
 Future<List<Map<String, dynamic>>> fetchJobsRaw() async {
   final uri = _jobsUri();
-  final res = await http.get(
-    uri,
-    headers: {'Accept': 'application/json'},
-  );
-  if (res.statusCode < 200 || res.statusCode >= 300) {
+  http.Response res;
+  try {
+    res = await authedGet(uri).timeout(const Duration(seconds: 10));
+  } on TimeoutException {
     throw JobsApiException(
-      'Could not load jobs (${res.statusCode}).',
+      'Request timed out while loading jobs. Make sure the API is running and reachable at $uri.',
+    );
+  } on http.ClientException {
+    throw JobsApiException(
+      'Could not reach the API at $uri. Start the backend and confirm the emulator can access your PC on that port.',
+    );
+  }
+  if (res.statusCode < 200 || res.statusCode >= 300) {
+    final message = _readErrorMessage(res.body);
+    throw JobsApiException(
+      message.isNotEmpty
+          ? '$message (${res.statusCode}).'
+          : 'Could not load jobs (${res.statusCode}).',
       statusCode: res.statusCode,
     );
   }

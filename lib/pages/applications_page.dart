@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'settings_page.dart';
-import 'job_detail_page.dart';
+
 import '../services/applications_api.dart';
 import '../services/jobs_api.dart';
+import '../services/notification_store.dart';
+import '../services/session_store.dart';
+import 'job_detail_page.dart';
+import 'settings_page.dart';
+import '../widgets/notification_bell_button.dart';
 
 class ApplicationsPage extends StatefulWidget {
   const ApplicationsPage({super.key});
@@ -13,8 +17,15 @@ class ApplicationsPage extends StatefulWidget {
 
 class _ApplicationsPageState extends State<ApplicationsPage> {
   bool _loading = true;
+  bool _showWithdrawn = false;
   String? _error;
   List<JobApplication> applications = const [];
+
+  List<JobApplication> get _activeApplications =>
+      applications.where((app) => app.currentStatus != 'Withdrawn').toList();
+
+  List<JobApplication> get _withdrawnApplications =>
+      applications.where((app) => app.currentStatus == 'Withdrawn').toList();
 
   @override
   void initState() {
@@ -26,7 +37,9 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
     if (!silent) setState(() => _loading = true);
     try {
       final raw = await fetchMyApplications();
+      await NotificationStore.syncApplicationUpdatesFromList(raw);
       final list = raw.map(JobApplication.fromJson).toList();
+
       if (!mounted) return;
       setState(() {
         applications = list;
@@ -44,8 +57,13 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final activeApplications = _activeApplications;
+    final withdrawnApplications = _withdrawnApplications;
+    final visibleApplications = _showWithdrawn
+        ? withdrawnApplications
+        : activeApplications;
+
     return Scaffold(
-      // backgroundColor: uses theme
       appBar: AppBar(
         elevation: 0,
         title: Row(
@@ -62,10 +80,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
             const SizedBox(width: 8),
             const Text(
               'SkillMatch',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -79,17 +94,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsPage(initialTab: 1),
-                ),
-              );
-            },
-          ),
+          const NotificationBellButton(),
           const SizedBox(width: 8),
         ],
       ),
@@ -128,7 +133,6 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -136,20 +140,40 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                       'Track status of your job applications',
                       style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
                     ),
+                    if (withdrawnApplications.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _showWithdrawn = !_showWithdrawn;
+                          });
+                        },
+                        icon: Icon(
+                          _showWithdrawn
+                              ? Icons.list_alt
+                              : Icons.visibility_outlined,
+                        ),
+                        label: Text(
+                          _showWithdrawn
+                              ? 'View Active Applications'
+                              : 'View Withdrawn Applications (${withdrawnApplications.length})',
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
-                    if (applications.isEmpty)
+                    if (visibleApplications.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 32),
                         child: Center(
                           child: Text(
-                            'No applications yet. Apply to a job to see it here.',
+                            'No applications to show in this list.',
                             textAlign: TextAlign.center,
                           ),
                         ),
                       )
                     else
                       Column(
-                        children: applications
+                        children: visibleApplications
                             .map(
                               (app) => Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
@@ -176,9 +200,42 @@ class _ApplicationCard extends StatelessWidget {
 
   const _ApplicationCard({required this.application, required this.onChanged});
 
+  Future<void> _confirmWithdraw(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Withdraw application?'),
+          content: const Text(
+            'Are you sure you want to withdraw this application?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+              ),
+              child: const Text('Withdraw'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    await updateApplicationStatus(
+      applicationId: application.id,
+      status: 'Withdrawn',
+    );
+    await onChanged();
+  }
+
   Future<void> _openDetails(BuildContext context) async {
-    // Prefer loading the full job details from /api/jobs (has description + skills),
-    // but fall back to the application snapshot so the screen always opens.
     Map<String, dynamic>? full;
     try {
       if (application.jobId.trim().isNotEmpty) {
@@ -192,14 +249,13 @@ class _ApplicationCard extends StatelessWidget {
           }
         }
       }
-    } catch (_) {
-      // Ignore network errors; snapshot fallback below.
-    }
+    } catch (_) {}
 
     final snap = application.jobSnapshot;
     final data = full ?? snap;
 
     String s(String k) => (data[k] as Object?)?.toString().trim() ?? '';
+
     int n(String k) {
       final v = data[k];
       if (v is int) return v;
@@ -218,11 +274,14 @@ class _ApplicationCard extends StatelessWidget {
     }
 
     if (!context.mounted) return;
+    final applicantId = (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
+        ?.toString();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => JobDetailPage(
           jobId: application.jobId,
+          applicantId: applicantId,
           title: s('title').isEmpty ? application.jobTitle : s('title'),
           company: s('company').isEmpty ? application.company : s('company'),
           location: s('location'),
@@ -254,7 +313,7 @@ class _ApplicationCard extends StatelessWidget {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Column(
@@ -265,7 +324,6 @@ class _ApplicationCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -284,10 +342,8 @@ class _ApplicationCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-
           _ApplicationTimeline(status: application.currentStatus),
           const SizedBox(height: 16),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -307,13 +363,7 @@ class _ApplicationCard extends StatelessWidget {
                 ),
                 onPressed: application.currentStatus == 'Withdrawn'
                     ? null
-                    : () async {
-                        await updateApplicationStatus(
-                          applicationId: application.id,
-                          status: 'Withdrawn',
-                        );
-                        await onChanged();
-                      },
+                    : () => _confirmWithdraw(context),
                 child: const Text(
                   'Withdraw',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
@@ -342,6 +392,8 @@ class _StatusBadge extends StatelessWidget {
         return const Color(0xFFDEEEFF);
       case 'Offer':
         return const Color(0xFFDCFCE7);
+      case 'Rejected':
+        return const Color(0xFFFEF2F2);
       default:
         return const Color(0xFFE5E7EB);
     }
@@ -357,6 +409,8 @@ class _StatusBadge extends StatelessWidget {
         return const Color(0xFF2563EB);
       case 'Offer':
         return const Color(0xFF10B981);
+      case 'Rejected':
+        return const Color(0xFFDC2626);
       default:
         return const Color(0xFF6B7280);
     }
@@ -397,57 +451,61 @@ class _ApplicationTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const stages = ['Applied', 'Screening', 'Interview', 'Offer'];
+    final timelineChildren = <Widget>[];
+
+    for (int i = 0; i < stages.length; i++) {
+      timelineChildren.add(
+        Expanded(
+          child: Center(
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _isCompleted(stages[i])
+                    ? const Color(0xFF00D9A3)
+                    : const Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      if (i < stages.length - 1) {
+        timelineChildren.add(
+          Expanded(
+            child: Container(
+              height: 2,
+              color: _isCompleted(stages[i + 1])
+                  ? const Color(0xFF00D9A3)
+                  : const Color(0xFFE5E7EB),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+          ),
+        );
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            for (int i = 0; i < stages.length; i++)
-              Expanded(
-                child: Row(
-                  children: [
-                    // Circle
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: _isCompleted(stages[i])
-                            ? const Color(0xFF00D9A3)
-                            : const Color(0xFFE5E7EB),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    if (i < stages.length - 1)
-                      Expanded(
-                        child: Container(
-                          height: 2,
-                          color: _isCompleted(stages[i + 1])
-                              ? const Color(0xFF00D9A3)
-                              : const Color(0xFFE5E7EB),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+        Row(children: timelineChildren),
         const SizedBox(height: 8),
-
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: stages
               .map(
-                (stage) => Text(
-                  stage,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: _isCompleted(stage)
-                        ? const Color(0xFF00D9A3)
-                        : const Color(0xFF9CA3AF),
+                (stage) => Expanded(
+                  child: Center(
+                    child: Text(
+                      stage,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _isCompleted(stage)
+                            ? const Color(0xFF00D9A3)
+                            : const Color(0xFF9CA3AF),
+                      ),
+                    ),
                   ),
                 ),
               )
@@ -506,6 +564,7 @@ class JobApplication {
     if (createdAtRaw is String) {
       createdAt = DateTime.tryParse(createdAtRaw) ?? createdAt;
     }
+
     return JobApplication(
       id: (json['_id'] as String?) ?? '',
       jobId: (json['jobId'] as Object?)?.toString().trim() ?? '',

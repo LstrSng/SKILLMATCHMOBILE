@@ -20,6 +20,16 @@ class AuthResult {
   final Map<String, dynamic> user;
 }
 
+class OtpChallengeResult {
+  const OtpChallengeResult({
+    required this.challengeId,
+    required this.message,
+  });
+
+  final String challengeId;
+  final String message;
+}
+
 /// Paths after `kApiBaseUrl`. Defaults match `app.use('/api/users', authRoutes)` + `/register`.
 /// If your Skillmatch server uses different URLs, set e.g.
 /// `--dart-define=AUTH_REGISTER_PATH=/register`
@@ -32,6 +42,22 @@ Uri _registerUri() {
   const p = String.fromEnvironment(
     'AUTH_REGISTER_PATH',
     defaultValue: '/api/users/register',
+  );
+  return _authEndpointUri(p);
+}
+
+Uri _registerOtpRequestUri() {
+  const p = String.fromEnvironment(
+    'AUTH_REGISTER_OTP_REQUEST_PATH',
+    defaultValue: '/api/users/register/otp/request',
+  );
+  return _authEndpointUri(p);
+}
+
+Uri _registerOtpVerifyUri() {
+  const p = String.fromEnvironment(
+    'AUTH_REGISTER_OTP_VERIFY_PATH',
+    defaultValue: '/api/users/register/otp/verify',
   );
   return _authEndpointUri(p);
 }
@@ -110,6 +136,58 @@ Map<String, String> _jsonHeaders() => {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
+
+OtpChallengeResult _parseOtpChallengeResponse(
+  http.Response res, {
+  Uri? requestedUri,
+}) {
+  final raw = res.body;
+  if (raw.trim().isEmpty) {
+    throw AuthApiException(
+      'Empty response from server (${res.statusCode}).',
+      statusCode: res.statusCode,
+    );
+  }
+
+  dynamic decoded;
+  try {
+    decoded = jsonDecode(raw);
+  } catch (_) {
+    final where = requestedUri != null ? ' $requestedUri' : '';
+    throw AuthApiException(
+      'Server did not return valid JSON for OTP request ($where).',
+      statusCode: res.statusCode,
+    );
+  }
+
+  final body = _asMap(decoded);
+  if (body == null) {
+    throw AuthApiException(
+      'Server response was not a JSON object.',
+      statusCode: res.statusCode,
+    );
+  }
+
+  if (res.statusCode >= 200 && res.statusCode < 300) {
+    final challengeId = body['challengeId']?.toString().trim() ?? '';
+    if (challengeId.isEmpty) {
+      throw AuthApiException(
+        'Invalid response from server (missing challengeId).',
+        statusCode: res.statusCode,
+      );
+    }
+    return OtpChallengeResult(
+      challengeId: challengeId,
+      message: (body['message'] as String?) ?? 'OTP sent.',
+    );
+  }
+
+  final err = body['error'] as String? ??
+      body['message'] as String? ??
+      body['msg'] as String? ??
+      'Request failed.';
+  throw AuthApiException(err, statusCode: res.statusCode);
+}
 
 AuthResult _parseAuthResponse(
   http.Response res, {
@@ -202,6 +280,42 @@ Future<AuthResult> registerUser({
       'lastName': lastName,
       'email': email,
       'password': password,
+    }),
+  );
+  return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
+}
+
+Future<OtpChallengeResult> requestRegisterOtp({
+  required String email,
+}) async {
+  final uri = _registerOtpRequestUri();
+  final res = await http.post(
+    uri,
+    headers: _jsonHeaders(),
+    body: jsonEncode({'email': email}),
+  );
+  return _parseOtpChallengeResponse(res, requestedUri: uri);
+}
+
+Future<AuthResult> verifyRegisterOtp({
+  required String email,
+  required String password,
+  required String firstName,
+  required String lastName,
+  required String otp,
+  required String challengeId,
+}) async {
+  final uri = _registerOtpVerifyUri();
+  final res = await http.post(
+    uri,
+    headers: _jsonHeaders(),
+    body: jsonEncode({
+      'firstName': firstName,
+      'lastName': lastName,
+      'email': email,
+      'password': password,
+      'otp': otp,
+      'challengeId': challengeId,
     }),
   );
   return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'job_detail_page.dart';
 import 'settings_page.dart';
 import '../services/jobs_api.dart';
+import '../services/session_store.dart';
+import '../widgets/notification_bell_button.dart';
 
 class JobsPage extends StatefulWidget {
   const JobsPage({super.key});
@@ -93,10 +95,7 @@ class _JobsPageState extends State<JobsPage> {
             const SizedBox(width: 8),
             const Text(
               'SkillMatch',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -110,17 +109,7 @@ class _JobsPageState extends State<JobsPage> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsPage(initialTab: 1),
-                ),
-              );
-            },
-          ),
+          const NotificationBellButton(),
           const SizedBox(width: 8),
         ],
       ),
@@ -280,6 +269,8 @@ class _JobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final applicantId = (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
+        ?.toString();
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -287,6 +278,7 @@ class _JobCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => JobDetailPage(
               jobId: job.id,
+              applicantId: applicantId,
               title: job.title,
               company: job.company,
               location: job.location,
