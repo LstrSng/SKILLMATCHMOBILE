@@ -30,6 +30,16 @@ class OtpChallengeResult {
   final String message;
 }
 
+class PasswordResetConfirmResult {
+  const PasswordResetConfirmResult({
+    required this.resetToken,
+    required this.message,
+  });
+
+  final String resetToken;
+  final String message;
+}
+
 /// Paths after `kApiBaseUrl`. Defaults match `app.use('/api/users', authRoutes)` + `/register`.
 /// If your Skillmatch server uses different URLs, set e.g.
 /// `--dart-define=AUTH_REGISTER_PATH=/register`
@@ -66,6 +76,38 @@ Uri _loginUri() {
   const p = String.fromEnvironment(
     'AUTH_LOGIN_PATH',
     defaultValue: '/api/users/login',
+  );
+  return _authEndpointUri(p);
+}
+
+Uri _loginOtpVerifyUri() {
+  const p = String.fromEnvironment(
+    'AUTH_LOGIN_OTP_VERIFY_PATH',
+    defaultValue: '/api/users/login/otp/verify',
+  );
+  return _authEndpointUri(p);
+}
+
+Uri _passwordResetOtpRequestUri() {
+  const p = String.fromEnvironment(
+    'AUTH_PASSWORD_RESET_OTP_REQUEST_PATH',
+    defaultValue: '/api/users/password/reset/otp/request',
+  );
+  return _authEndpointUri(p);
+}
+
+Uri _passwordResetOtpConfirmUri() {
+  const p = String.fromEnvironment(
+    'AUTH_PASSWORD_RESET_OTP_CONFIRM_PATH',
+    defaultValue: '/api/users/password/reset/otp/confirm',
+  );
+  return _authEndpointUri(p);
+}
+
+Uri _passwordResetCompleteUri() {
+  const p = String.fromEnvironment(
+    'AUTH_PASSWORD_RESET_COMPLETE_PATH',
+    defaultValue: '/api/users/password/reset/complete',
   );
   return _authEndpointUri(p);
 }
@@ -179,6 +221,58 @@ OtpChallengeResult _parseOtpChallengeResponse(
     return OtpChallengeResult(
       challengeId: challengeId,
       message: (body['message'] as String?) ?? 'OTP sent.',
+    );
+  }
+
+  final err = body['error'] as String? ??
+      body['message'] as String? ??
+      body['msg'] as String? ??
+      'Request failed.';
+  throw AuthApiException(err, statusCode: res.statusCode);
+}
+
+PasswordResetConfirmResult _parsePasswordResetConfirmResponse(
+  http.Response res, {
+  Uri? requestedUri,
+}) {
+  final raw = res.body;
+  if (raw.trim().isEmpty) {
+    throw AuthApiException(
+      'Empty response from server (${res.statusCode}).',
+      statusCode: res.statusCode,
+    );
+  }
+
+  dynamic decoded;
+  try {
+    decoded = jsonDecode(raw);
+  } catch (_) {
+    final where = requestedUri != null ? ' $requestedUri' : '';
+    throw AuthApiException(
+      'Server did not return valid JSON for password reset confirmation ($where).',
+      statusCode: res.statusCode,
+    );
+  }
+
+  final body = _asMap(decoded);
+  if (body == null) {
+    throw AuthApiException(
+      'Server response was not a JSON object.',
+      statusCode: res.statusCode,
+    );
+  }
+
+  if (res.statusCode >= 200 && res.statusCode < 300) {
+    final resetToken = body['resetToken']?.toString().trim() ?? '';
+    if (resetToken.isEmpty) {
+      throw AuthApiException(
+        'Invalid response from server (missing resetToken).',
+        statusCode: res.statusCode,
+      );
+    }
+    return PasswordResetConfirmResult(
+      resetToken: resetToken,
+      message: (body['message'] as String?) ?? 'Code confirmed.',
     );
   }
 
@@ -332,4 +426,116 @@ Future<AuthResult> loginUser({
     body: jsonEncode({'email': email, 'password': password}),
   );
   return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
+}
+
+Future<OtpChallengeResult> requestLoginOtp({
+  required String email,
+  required String password,
+}) async {
+  final uri = _loginUri();
+  final res = await http.post(
+    uri,
+    headers: _jsonHeaders(),
+    body: jsonEncode({'email': email, 'password': password}),
+  );
+  return _parseOtpChallengeResponse(res, requestedUri: uri);
+}
+
+Future<AuthResult> verifyLoginOtp({
+  required String email,
+  required String otp,
+  required String challengeId,
+}) async {
+  final uri = _loginOtpVerifyUri();
+  final res = await http.post(
+    uri,
+    headers: _jsonHeaders(),
+    body: jsonEncode({
+      'email': email,
+      'otp': otp,
+      'challengeId': challengeId,
+    }),
+  );
+  return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
+}
+
+Future<OtpChallengeResult> requestPasswordResetOtp({
+  required String email,
+}) async {
+  final uri = _passwordResetOtpRequestUri();
+  final res = await http.post(
+    uri,
+    headers: _jsonHeaders(),
+    body: jsonEncode({'email': email}),
+  );
+  return _parseOtpChallengeResponse(res, requestedUri: uri);
+}
+
+Future<PasswordResetConfirmResult> confirmPasswordResetOtp({
+  required String email,
+  required String otp,
+  required String challengeId,
+}) async {
+  final uri = _passwordResetOtpConfirmUri();
+  final res = await http.post(
+    uri,
+    headers: _jsonHeaders(),
+    body: jsonEncode({
+      'email': email,
+      'otp': otp,
+      'challengeId': challengeId,
+    }),
+  );
+  return _parsePasswordResetConfirmResponse(res, requestedUri: uri);
+}
+
+Future<void> completePasswordReset({
+  required String resetToken,
+  required String newPassword,
+}) async {
+  final uri = _passwordResetCompleteUri();
+  final res = await http.post(
+    uri,
+    headers: _jsonHeaders(),
+    body: jsonEncode({
+      'resetToken': resetToken,
+      'newPassword': newPassword,
+    }),
+  );
+
+  final raw = res.body;
+  if (raw.trim().isEmpty) {
+    throw AuthApiException(
+      'Empty response from server (${res.statusCode}).',
+      statusCode: res.statusCode,
+    );
+  }
+
+  dynamic decoded;
+  try {
+    decoded = jsonDecode(raw);
+  } catch (_) {
+    throw AuthApiException(
+      'Server did not return valid JSON for password reset completion.',
+      statusCode: res.statusCode,
+    );
+  }
+
+  final body = _asMap(decoded);
+  if (body == null) {
+    throw AuthApiException(
+      'Server response was not a JSON object.',
+      statusCode: res.statusCode,
+    );
+  }
+
+  if (res.statusCode >= 200 && res.statusCode < 300) {
+    return;
+  }
+
+  final err = body['error'] as String? ??
+      body['message'] as String? ??
+      body['msg'] as String? ??
+      'Request failed.';
+  throw AuthApiException(err, statusCode: res.statusCode);
 }
