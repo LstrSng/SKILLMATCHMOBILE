@@ -1,51 +1,53 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-let transporterPromise = null;
+let resendClient = null;
 
 function parseBoolean(value, defaultValue = false) {
   if (value === undefined) return defaultValue;
   return String(value).trim().toLowerCase() === "true";
 }
 
-async function getTransporter() {
-  if (transporterPromise) return transporterPromise;
+function getResendClient() {
+  if (resendClient) return resendClient;
 
-  transporterPromise = (async () => {
-    const host = String(process.env.SMTP_HOST || "").trim();
-    const port = Number(process.env.SMTP_PORT || 0);
-    const user = String(process.env.SMTP_USER || "").trim();
-    const pass = String(process.env.SMTP_PASS || "").trim();
+  const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  if (!apiKey) {
+    throw new Error("Missing RESEND_API_KEY in environment.");
+  }
 
-    if (!host || !port || !user || !pass) {
-      throw new Error("Missing SMTP configuration in environment.");
-    }
-
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: parseBoolean(process.env.SMTP_SECURE, port === 465),
-      auth: { user, pass },
-      logger: parseBoolean(process.env.MAIL_DEBUG, false),
-      debug: parseBoolean(process.env.MAIL_DEBUG, false),
-    });
-
-    await transporter.verify();
-    return transporter;
-  })().catch((err) => {
-    transporterPromise = null;
-    throw err;
-  });
-
-  return transporterPromise;
+  resendClient = new Resend(apiKey);
+  return resendClient;
 }
 
 export async function sendMail({ to, subject, text, html }) {
-  const transporter = await getTransporter();
-  return transporter.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
-    to,
+  const resend = getResendClient();
+  const from = String(process.env.MAIL_FROM || "").trim();
+
+  if (!from) {
+    throw new Error("Missing MAIL_FROM in environment.");
+  }
+
+  const payload = {
+    from,
+    to: Array.isArray(to) ? to : [to],
     subject,
-    text,
-    html,
-  });
+  };
+
+  if (text) payload.text = text;
+  if (html) payload.html = html;
+
+  const result = await resend.emails.send(payload);
+  if (result?.error) {
+    throw new Error(result.error.message || "Resend email send failed.");
+  }
+
+  if (parseBoolean(process.env.MAIL_DEBUG, false)) {
+    console.log("[mail] resend accepted", {
+      id: result?.data?.id,
+      to: payload.to,
+      subject,
+    });
+  }
+
+  return result;
 }
