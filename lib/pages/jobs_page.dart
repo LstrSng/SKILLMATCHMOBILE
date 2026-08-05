@@ -18,6 +18,8 @@ class _JobsPageState extends State<JobsPage> {
   List<Job> _jobs = [];
   bool _loading = true;
   String? _error;
+  String? _jobTypeFilter;
+  double _minMatch = 0;
 
   @override
   void initState() {
@@ -52,8 +54,10 @@ class _JobsPageState extends State<JobsPage> {
 
   List<Job> get _visibleJobs {
     final q = _searchController.text.trim().toLowerCase();
-    if (q.isEmpty) return _jobs;
     bool matches(Job j) {
+      if (_jobTypeFilter != null && j.jobType != _jobTypeFilter) return false;
+      if (j.matchPercentage < _minMatch) return false;
+      if (q.isEmpty) return true;
       final hay = [
         j.title,
         j.company,
@@ -67,6 +71,122 @@ class _JobsPageState extends State<JobsPage> {
     }
 
     return _jobs.where(matches).toList();
+  }
+
+  Future<void> _openFilterSheet() async {
+    final jobTypes =
+        _jobs.map((j) => j.jobType).where((t) => t.isNotEmpty).toSet().toList()
+          ..sort();
+    var selectedType = _jobTypeFilter;
+    var selectedMinMatch = _minMatch;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Filter Jobs',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Job type',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('All'),
+                        selected: selectedType == null,
+                        onSelected: (_) =>
+                            setSheetState(() => selectedType = null),
+                      ),
+                      ...jobTypes.map(
+                        (t) => ChoiceChip(
+                          label: Text(t),
+                          selected: selectedType == t,
+                          onSelected: (_) =>
+                              setSheetState(() => selectedType = t),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Minimum match: ${selectedMinMatch.round()}%',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Slider(
+                    value: selectedMinMatch,
+                    min: 0,
+                    max: 100,
+                    divisions: 20,
+                    label: '${selectedMinMatch.round()}%',
+                    activeColor: const Color(0xFF2563EB),
+                    onChanged: (v) => setSheetState(() => selectedMinMatch = v),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => setSheetState(() {
+                            selectedType = null;
+                            selectedMinMatch = 0;
+                          }),
+                          child: const Text('Reset'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _jobTypeFilter = selectedType;
+                              _minMatch = selectedMinMatch;
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Apply'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -222,12 +342,21 @@ class _JobsPageState extends State<JobsPage> {
                         const SizedBox(width: 12),
                         Container(
                           decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                            border: Border.all(
+                              color: (_jobTypeFilter != null || _minMatch > 0)
+                                  ? const Color(0xFF2563EB)
+                                  : const Color(0xFFE5E7EB),
+                            ),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.tune),
-                            onPressed: () {},
+                            icon: Icon(
+                              Icons.tune,
+                              color: (_jobTypeFilter != null || _minMatch > 0)
+                                  ? const Color(0xFF2563EB)
+                                  : null,
+                            ),
+                            onPressed: _openFilterSheet,
                           ),
                         ),
                       ],

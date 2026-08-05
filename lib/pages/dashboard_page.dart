@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'jobs_page.dart';
 import 'settings_page.dart';
 import '../services/session_store.dart';
 import '../widgets/notification_bell_button.dart';
@@ -152,7 +153,14 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const JobsPage(),
+                            ),
+                          );
+                        },
                         child: const Text(
                           'View all',
                           style: TextStyle(

@@ -87,7 +87,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.notifications), onPressed: () {}),
           const SizedBox(width: 8),
         ],
       ),

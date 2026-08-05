@@ -107,7 +107,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
           const NotificationBellButton(),
           const SizedBox(width: 8),
         ],

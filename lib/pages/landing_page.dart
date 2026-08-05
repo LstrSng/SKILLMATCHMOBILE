@@ -35,6 +35,22 @@ class _LandingPageState extends State<LandingPage> {
     super.dispose();
   }
 
+  void _showLegalDialog(BuildContext context, String title, String body) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -367,7 +383,13 @@ class _LandingPageState extends State<LandingPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () => _showLegalDialog(
+                          context,
+                          'Terms of Service',
+                          'By using SkillMatch+, you agree to provide accurate profile '
+                              'information and to use job matches and skill assessments '
+                              'as guidance only, not as a guarantee of employment.',
+                        ),
                         child: Text(
                           'Terms',
                           style: Theme.of(context).textTheme.bodySmall
@@ -381,7 +403,14 @@ class _LandingPageState extends State<LandingPage> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () => _showLegalDialog(
+                          context,
+                          'Privacy Policy',
+                          'SkillMatch+ collects your profile, skills, and application '
+                              'data solely to power job matching and skill-gap '
+                              'recommendations. We do not sell your personal data to '
+                              'third parties.',
+                        ),
                         child: Text(
                           'Privacy',
                           style: Theme.of(context).textTheme.bodySmall
