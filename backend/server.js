@@ -408,15 +408,19 @@ app.post("/api/users/register/otp/verify", requireDb, async (req, res) => {
     const firstName = String(req.body?.firstName || "").trim();
     const lastName = String(req.body?.lastName || "").trim();
     const email = normalizeEmail(req.body?.email);
+    const phone = String(req.body?.phone || "").trim();
     const password = String(req.body?.password || "");
     const otp = String(req.body?.otp || "").trim();
     const challengeId = String(req.body?.challengeId || "").trim();
 
-    if (!firstName || !lastName || !email || !password || !otp || !challengeId) {
+    if (!firstName || !lastName || !email || !phone || !password || !otp || !challengeId) {
       return res.status(400).json({ message: "Missing required fields." });
     }
     if (!isValidEmail(email)) {
       return res.status(400).json({ message: "Please enter a valid email address." });
+    }
+    if (!/^\d{11}$/.test(phone)) {
+      return res.status(400).json({ message: "Contact number must be exactly 11 digits." });
     }
     if (password.length < 8) {
       return res.status(400).json({ message: "Password must be at least 8 characters." });
@@ -438,6 +442,7 @@ app.post("/api/users/register/otp/verify", requireDb, async (req, res) => {
       password: passwordHash,
       firstName,
       lastName,
+      phone,
     });
 
     return res.status(201).json({
@@ -445,6 +450,7 @@ app.post("/api/users/register/otp/verify", requireDb, async (req, res) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
       token: generateToken(user._id),
     });
   } catch (err) {

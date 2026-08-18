@@ -1,5 +1,3 @@
-/// Strips trailing slashes and a trailing `/api` so paths are not doubled
-/// (`.../api` + `/api/users` would break).
 String normalizeApiBaseUrl(String raw) {
   var s = raw.trim();
   while (s.endsWith('/')) {

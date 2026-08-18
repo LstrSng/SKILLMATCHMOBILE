@@ -13,6 +13,8 @@ dependencies:
   http: ^1.2.2
   image_picker: ^1.1.2
   shared_preferences: ^2.3.2
+  url_launcher: ^6.3.1
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -21,3 +23,12 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/data/IT_Job_Roles_Skills.csv
+    - assets/data/career_pathway_links.json
+    - assets/images/app_icon.jpeg
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon.jpeg"

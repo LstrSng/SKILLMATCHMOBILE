@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_api.dart';
+import '../services/notification_store.dart';
 import '../services/session_store.dart';
 import 'sign_in_page.dart';
-import '../widgets/notification_bell_button.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_password_field.dart';
+import '../widgets/app_top_bar.dart';
+import '../widgets/centered_form_width.dart';
+import '../widgets/otp_code_field.dart';
+import '../widgets/resend_code_button.dart';
 
 class SettingsPage extends StatefulWidget {
   final int initialTab;
@@ -14,10 +20,39 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  bool _loadingPrefs = true;
   bool _jobMatches = true;
   bool _applicationUpdates = true;
   bool _weeklyDigest = false;
   bool _requestingPasswordChange = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final jobMatches = await NotificationStore.getPreference(
+      NotificationStore.kPrefJobMatches,
+      defaultValue: true,
+    );
+    final applicationUpdates = await NotificationStore.getPreference(
+      NotificationStore.kPrefApplicationUpdates,
+      defaultValue: true,
+    );
+    final weeklyDigest = await NotificationStore.getPreference(
+      NotificationStore.kPrefWeeklyDigest,
+      defaultValue: false,
+    );
+    if (!mounted) return;
+    setState(() {
+      _jobMatches = jobMatches;
+      _applicationUpdates = applicationUpdates;
+      _weeklyDigest = weeklyDigest;
+      _loadingPrefs = false;
+    });
+  }
 
   String? _passwordStandardError(String password) {
     if (password.length < 8) {
@@ -46,7 +81,11 @@ class _SettingsPageState extends State<SettingsPage> {
     final email = SessionStore.user?['email']?.toString().trim() ?? '';
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not find your account email. Please sign in again.')),
+        const SnackBar(
+          content: Text(
+            'Could not find your account email. Please sign in again.',
+          ),
+        ),
       );
       return;
     }
@@ -58,7 +97,10 @@ class _SettingsPageState extends State<SettingsPage> {
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => _ChangePasswordPage(
-            draft: _PasswordResetDraft(email: email, challengeId: challenge.challengeId),
+            draft: _PasswordResetDraft(
+              email: email,
+              challengeId: challenge.challengeId,
+            ),
             initialMessage: challenge.message,
             passwordValidator: _passwordStandardError,
           ),
@@ -66,7 +108,9 @@ class _SettingsPageState extends State<SettingsPage> {
       );
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,31 +130,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final accountEmail = SessionStore.user?['email']?.toString().trim() ?? '';
 
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2563EB),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.bolt, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'SkillMatch',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        actions: [
-          const NotificationBellButton(),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const AppTopBar(showSettings: false),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
           horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
@@ -129,13 +149,7 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
             ),
             const SizedBox(height: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              padding: const EdgeInsets.all(16),
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -153,11 +167,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: 'Job Matches',
                     subtitle: 'New jobs matching your profile',
                     value: _jobMatches,
-                    onChanged: (value) {
-                      setState(() {
-                        _jobMatches = value;
-                      });
-                    },
+                    onChanged: _loadingPrefs
+                        ? null
+                        : (value) {
+                            setState(() => _jobMatches = value);
+                            NotificationStore.setPreference(
+                              NotificationStore.kPrefJobMatches,
+                              value,
+                            );
+                          },
                   ),
                   const SizedBox(height: 20),
                   const Divider(color: Color(0xFFE5E7EB)),
@@ -166,11 +184,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: 'Application Updates',
                     subtitle: 'Status changes on applications',
                     value: _applicationUpdates,
-                    onChanged: (value) {
-                      setState(() {
-                        _applicationUpdates = value;
-                      });
-                    },
+                    onChanged: _loadingPrefs
+                        ? null
+                        : (value) {
+                            setState(() => _applicationUpdates = value);
+                            NotificationStore.setPreference(
+                              NotificationStore.kPrefApplicationUpdates,
+                              value,
+                            );
+                          },
                   ),
                   const SizedBox(height: 20),
                   const Divider(color: Color(0xFFE5E7EB)),
@@ -179,23 +201,21 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: 'Weekly Digest',
                     subtitle: 'Weekly summary of activity',
                     value: _weeklyDigest,
-                    onChanged: (value) {
-                      setState(() {
-                        _weeklyDigest = value;
-                      });
-                    },
+                    onChanged: _loadingPrefs
+                        ? null
+                        : (value) {
+                            setState(() => _weeklyDigest = value);
+                            NotificationStore.setPreference(
+                              NotificationStore.kPrefWeeklyDigest,
+                              value,
+                            );
+                          },
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              padding: const EdgeInsets.all(16),
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -208,13 +228,18 @@ class _SettingsPageState extends State<SettingsPage> {
                     accountEmail.isEmpty
                         ? 'Verify your identity with a one-time password before changing your password.'
                         : 'We will send a 6-digit OTP to $accountEmail before you can set a new password.',
-                    style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF6B7280),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _requestingPasswordChange ? null : _startChangePassword,
+                      onPressed: _requestingPasswordChange
+                          ? null
+                          : _startChangePassword,
                       icon: _requestingPasswordChange
                           ? const SizedBox(
                               width: 18,
@@ -223,7 +248,9 @@ class _SettingsPageState extends State<SettingsPage> {
                             )
                           : const Icon(Icons.lock_reset_outlined),
                       label: Text(
-                        _requestingPasswordChange ? 'Sending OTP...' : 'Change Password',
+                        _requestingPasswordChange
+                            ? 'Sending OTP...'
+                            : 'Change Password',
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF2563EB),
@@ -264,10 +291,7 @@ class _SettingsPageState extends State<SettingsPage> {
 }
 
 class _PasswordResetDraft {
-  const _PasswordResetDraft({
-    required this.email,
-    required this.challengeId,
-  });
+  const _PasswordResetDraft({required this.email, required this.challengeId});
 
   final String email;
   final String challengeId;
@@ -292,10 +316,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   final _otpController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _obscureNewPassword = true;
-  bool _obscureConfirmPassword = true;
   bool _verifying = false;
-  bool _resending = false;
   String? _infoMessage;
   late _PasswordResetDraft _draft;
 
@@ -328,13 +349,17 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
 
     final passwordError = widget.passwordValidator(newPassword);
     if (passwordError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(passwordError)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(passwordError)));
       return;
     }
 
     if (newPassword != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('New password and confirmation do not match.')),
+        const SnackBar(
+          content: Text('New password and confirmation do not match.'),
+        ),
       );
       return;
     }
@@ -357,7 +382,9 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
       Navigator.of(context).pop();
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -373,7 +400,6 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   }
 
   Future<void> _resendCode() async {
-    setState(() => _resending = true);
     try {
       final challenge = await requestPasswordResetOtp(email: _draft.email);
       if (!mounted) return;
@@ -384,10 +410,14 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
         );
         _infoMessage = challenge.message;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(challenge.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(challenge.message)));
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -397,8 +427,6 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
           ),
         ),
       );
-    } finally {
-      if (mounted) setState(() => _resending = false);
     }
   }
 
@@ -418,264 +446,159 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 64,
-                  height: 64,
+          child: CenteredFormWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDBEAFE),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Icon(
+                      Icons.shield_outlined,
+                      color: Color(0xFF2563EB),
+                      size: 34,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'Confirm it\'s really you',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                    fontSize: 26,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'We sent a 6-digit OTP to ${_draft.email}. Enter the code and your new password below.',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: const Color(0xFF6B7280),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDBEAFE),
-                    borderRadius: BorderRadius.circular(18),
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                  child: const Icon(
-                    Icons.shield_outlined,
-                    color: Color(0xFF2563EB),
-                    size: 34,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-              Text(
-                'Confirm it\'s really you',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                  fontSize: 26,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'We sent a 6-digit OTP to ${_draft.email}. Enter the code and your new password below.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: const Color(0xFF6B7280),
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Verification code',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _otpController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      decoration: InputDecoration(
-                        hintText: 'Enter 6-digit code',
-                        counterText: '',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2563EB),
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 18,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Verification code',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
                         ),
                       ),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        letterSpacing: 8,
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(height: 10),
+                      OtpCodeField(controller: _otpController),
+                      const SizedBox(height: 10),
+                      Text(
+                        _infoMessage ??
+                            'The code expires in 10 minutes. If it does not arrive, resend it.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF64748B),
+                          height: 1.5,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _infoMessage ?? 'The code expires in 10 minutes. If it does not arrive, resend it.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF64748B),
-                        height: 1.5,
+                      const SizedBox(height: 18),
+                      Text(
+                        'New password',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'New password',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _newPasswordController,
-                      obscureText: _obscureNewPassword,
-                      decoration: InputDecoration(
+                      const SizedBox(height: 10),
+                      AppPasswordField(
+                        controller: _newPasswordController,
                         hintText: 'Enter new password',
-                        filled: true,
+                        borderRadius: 14,
                         fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2563EB),
-                            width: 2,
-                          ),
-                        ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 18,
                         ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureNewPassword ? Icons.visibility_off : Icons.visibility,
-                            color: const Color(0xFF6B7280),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureNewPassword = !_obscureNewPassword;
-                            });
-                          },
+                        iconSize: 24,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Use 8+ characters with uppercase, lowercase, number, and symbol.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF64748B),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Use 8+ characters with uppercase, lowercase, number, and symbol.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF64748B),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Confirm new password',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Confirm new password',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _confirmPasswordController,
-                      obscureText: _obscureConfirmPassword,
-                      onSubmitted: (_) => _verifying ? null : _submitPasswordChange(),
-                      decoration: InputDecoration(
+                      const SizedBox(height: 10),
+                      AppPasswordField(
+                        controller: _confirmPasswordController,
                         hintText: 'Re-enter new password',
-                        filled: true,
+                        onSubmitted: (_) =>
+                            _verifying ? null : _submitPasswordChange(),
+                        borderRadius: 14,
                         fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2563EB),
-                            width: 2,
-                          ),
-                        ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 18,
                         ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: const Color(0xFF6B7280),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
-                            });
-                          },
-                        ),
+                        iconSize: 24,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    onPressed: _verifying ? null : _submitPasswordChange,
+                    child: _verifying
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Verify OTP and Change Password',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
-                  onPressed: _verifying ? null : _submitPasswordChange,
-                  child: _verifying
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Verify OTP and Change Password',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              Center(
-                child: TextButton(
-                  onPressed: _resending ? null : _resendCode,
-                  child: _resending
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(
-                          'Resend code',
-                          style: TextStyle(
-                            color: Color(0xFF2563EB),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                Center(child: ResendCodeButton(onResend: _resendCode)),
+              ],
+            ),
           ),
         ),
       ),
@@ -687,7 +610,7 @@ class _NotificationToggle extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   const _NotificationToggle({
     required this.title,

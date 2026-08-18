@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+import '../widgets/app_card.dart';
+
 class CompanyDetailsPage extends StatelessWidget {
   final String? companyName;
   final String? companyType;
@@ -11,7 +14,8 @@ class CompanyDetailsPage extends StatelessWidget {
     this.companyName = 'TechFlow',
     this.companyType = 'Software',
     this.employeeCount = '50-200',
-    this.description = 'TechFlow is a leading provider of innovative software solutions helping teams build better products faster.',
+    this.description =
+        'TechFlow is a leading provider of innovative software solutions helping teams build better products faster.',
   });
 
   @override
@@ -38,16 +42,16 @@ class CompanyDetailsPage extends StatelessWidget {
             const SizedBox(width: 8),
             const Text(
               'SkillMatch',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ],
         ),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16, vertical: 16),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
+          vertical: 16,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -70,13 +74,7 @@ class CompanyDetailsPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              padding: const EdgeInsets.all(16),
+            AppCard(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -84,13 +82,13 @@ class CompanyDetailsPage extends StatelessWidget {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(8),
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Icon(
                       Icons.business,
-                      color: Color(0xFF2563EB),
-                      size: 32,
+                      color: Colors.white,
+                      size: 30,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -103,7 +101,6 @@ class CompanyDetailsPage extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -112,7 +109,6 @@ class CompanyDetailsPage extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -131,23 +127,13 @@ class CompanyDetailsPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              padding: const EdgeInsets.all(16),
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Overview',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -163,28 +149,24 @@ class CompanyDetailsPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              padding: const EdgeInsets.all(16),
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Company Info',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 16),
-                  _InfoItem(label: 'Company Type', value: companyType ?? 'Software'),
+                  _InfoItem(
+                    label: 'Company Type',
+                    value: companyType ?? 'Software',
+                  ),
                   const SizedBox(height: 12),
-                  _InfoItem(label: 'Company Size', value: '$employeeCount employees'),
+                  _InfoItem(
+                    label: 'Company Size',
+                    value: '$employeeCount employees',
+                  ),
                   const SizedBox(height: 12),
                   _InfoItem(label: 'Headquarters', value: 'San Francisco, CA'),
                   const SizedBox(height: 12),
@@ -213,18 +195,11 @@ class _InfoItem extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF6B7280),
-          ),
+          style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
         ),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ],
     );

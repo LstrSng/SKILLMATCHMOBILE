@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'sign_in_page.dart';
 import 'register_page.dart';
 import '../services/session_store.dart';
+import '../theme/app_colors.dart';
+import '../widgets/centered_form_width.dart';
 import 'main_navigation_page.dart';
 
 class LandingPage extends StatefulWidget {
@@ -63,18 +65,15 @@ class _LandingPageState extends State<LandingPage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFF2563EB),
-                borderRadius: BorderRadius.circular(8),
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.bolt, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 8),
             const Text(
               'SkillMatch+',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -111,318 +110,333 @@ class _LandingPageState extends State<LandingPage> {
       ),
       body: SingleChildScrollView(
         controller: _scrollController,
-        child: Column(
-          children: [
-            // Hero Section
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 48),
-              child: Column(
-                children: [
-                  Text(
-                    'Optimize Your Career Through',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                      fontSize: 36,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    'Skill Matching',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF2563EB),
-                      fontSize: 36,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Stop applying blindly. SkillMatch+ uses advanced analytics to match your unique skill profile with roles where you\'ll thrive.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: const Color(0xFF6B7280),
-                      fontSize: 16,
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterPage(),
-                          ),
-                        );
-                      },
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Start Free',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.black87,
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignInPage(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'Sign In',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Features Section Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  Text(
-                    'Career Intelligence, Not Job Boards',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                      fontSize: 24,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Data-driven tools that reveal exactly where you fit and what to learn next.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: const Color(0xFF6B7280),
-                      fontSize: 15,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Feature Cards
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  _FeatureCard(
-                    icon: Icons.trending_up,
-                    title: 'Smart Compatibility',
-                    description:
-                        'Get a precise match score for every job based on your verified skills.',
-                  ),
-                  const SizedBox(height: 16),
-                  _FeatureCard(
-                    icon: Icons.show_chart,
-                    title: 'Skill Gap Analysis',
-                    description:
-                        'Identify exactly what skills you need for your dream role.',
-                  ),
-                  const SizedBox(height: 16),
-                  _FeatureCard(
-                    icon: Icons.verified,
-                    title: 'Verified Credentials',
-                    description:
-                        'Stand out with verified skill assessments and certifications.',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 48),
-
-            // CTA Section
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+        child: CenteredFormWidth(
+          maxWidth: 640,
+          child: Column(
+            children: [
+              // Hero Section
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 48,
                 ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-              child: Column(
-                children: [
-                  Text(
-                    'Ready to take control of your career?',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      fontSize: 24,
+                child: Column(
+                  children: [
+                    Text(
+                      'Optimize Your Career Through',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineLarge?.copyWith(fontSize: 34),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Join thousands of professionals who found their perfect fit with SkillMatch+.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white70,
-                      fontSize: 15,
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  // Features List
-                  Column(
-                    children: [
-                      _CTAFeature('AI-powered job matching'),
-                      const SizedBox(height: 12),
-                      _CTAFeature('Personalized learning paths'),
-                      const SizedBox(height: 12),
-                      _CTAFeature('Career growth tracking'),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  // Stats Grid
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    children: [
-                      _StatCard('94%', 'Match Accuracy'),
-                      _StatCard('15k+', 'Skills Verified'),
-                      _StatCard('2.5k', 'Top Employers'),
-                      _StatCard('30%', 'Salary Increase'),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF2563EB),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                    ShaderMask(
+                      shaderCallback: (bounds) =>
+                          AppColors.primaryGradient.createShader(bounds),
+                      child: Text(
+                        'Skill Matching',
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(fontSize: 34, color: Colors.white),
+                        textAlign: TextAlign.center,
                       ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterPage(),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Stop applying blindly. SkillMatch+ uses advanced analytics to match your unique skill profile with roles where you\'ll thrive.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: const Color(0xFF6B7280),
+                        fontSize: 16,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        );
-                      },
-                      child: const Text(
-                        'Create Free Account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterPage(),
+                            ),
+                          );
+                        },
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Start Free',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward, size: 20),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.black87,
+                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SignInPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Sign In',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 48),
+              const SizedBox(height: 40),
 
-            // Footer
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Column(
-                children: [
-                  Text(
-                    '© 2026 SkillMatch+',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF9CA3AF),
+              // Features Section Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    Text(
+                      'Career Intelligence, Not Job Boards',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                            fontSize: 24,
+                          ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TextButton(
-                        onPressed: () => _showLegalDialog(
-                          context,
-                          'Terms of Service',
-                          'By using SkillMatch+, you agree to provide accurate profile '
-                              'information and to use job matches and skill assessments '
-                              'as guidance only, not as a guarantee of employment.',
-                        ),
-                        child: Text(
-                          'Terms',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: const Color(0xFF6B7280)),
-                        ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Data-driven tools that reveal exactly where you fit and what to learn next.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: const Color(0xFF6B7280),
+                        fontSize: 15,
                       ),
-                      Text(
-                        '|',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFFD1D5DB),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => _showLegalDialog(
-                          context,
-                          'Privacy Policy',
-                          'SkillMatch+ collects your profile, skills, and application '
-                              'data solely to power job matching and skill-gap '
-                              'recommendations. We do not sell your personal data to '
-                              'third parties.',
-                        ),
-                        child: Text(
-                          'Privacy',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: const Color(0xFF6B7280)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 32),
+
+              // Feature Cards
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    _FeatureCard(
+                      icon: Icons.trending_up,
+                      title: 'Smart Compatibility',
+                      description:
+                          'Get a precise match score for every job based on your verified skills.',
+                    ),
+                    const SizedBox(height: 16),
+                    _FeatureCard(
+                      icon: Icons.show_chart,
+                      title: 'Skill Gap Analysis',
+                      description:
+                          'Identify exactly what skills you need for your dream role.',
+                    ),
+                    const SizedBox(height: 16),
+                    _FeatureCard(
+                      icon: Icons.verified,
+                      title: 'Verified Credentials',
+                      description:
+                          'Stand out with verified skill assessments and certifications.',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 48),
+
+              // CTA Section
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 32,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 40,
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Ready to take control of your career?',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontSize: 24,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Join thousands of professionals who found their perfect fit with SkillMatch+.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.white70,
+                        fontSize: 15,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    // Features List
+                    Column(
+                      children: [
+                        _CTAFeature('AI-powered job matching'),
+                        const SizedBox(height: 12),
+                        _CTAFeature('Personalized learning paths'),
+                        const SizedBox(height: 12),
+                        _CTAFeature('Career growth tracking'),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    // Stats Grid
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      children: [
+                        _StatCard('94%', 'Match Accuracy'),
+                        _StatCard('15k+', 'Skills Verified'),
+                        _StatCard('2.5k', 'Top Employers'),
+                        _StatCard('30%', 'Salary Increase'),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF2563EB),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Create Free Account',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 48),
+
+              // Footer
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 24,
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      '© 2026 SkillMatch+',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () => _showLegalDialog(
+                            context,
+                            'Terms of Service',
+                            'By using SkillMatch+, you agree to provide accurate profile '
+                                'information and to use job matches and skill assessments '
+                                'as guidance only, not as a guarantee of employment.',
+                          ),
+                          child: Text(
+                            'Terms',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: const Color(0xFF6B7280)),
+                          ),
+                        ),
+                        Text(
+                          '|',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: const Color(0xFFD1D5DB)),
+                        ),
+                        TextButton(
+                          onPressed: () => _showLegalDialog(
+                            context,
+                            'Privacy Policy',
+                            'SkillMatch+ collects your profile, skills, and application '
+                                'data solely to power job matching and skill-gap '
+                                'recommendations. We do not sell your personal data to '
+                                'third parties.',
+                          ),
+                          child: Text(
+                            'Privacy',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: const Color(0xFF6B7280)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -444,8 +458,10 @@ class _FeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: const [AppColors.cardShadow],
       ),
       padding: const EdgeInsets.all(20),
       child: Row(
@@ -455,30 +471,23 @@ class _FeatureCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(8),
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: const Color(0xFF2563EB), size: 24),
+            child: Icon(icon, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF6B7280),
-                    height: 1.4,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(height: 1.4),
                 ),
               ],
             ),

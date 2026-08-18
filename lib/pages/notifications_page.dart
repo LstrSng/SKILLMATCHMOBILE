@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../services/notification_store.dart';
-import 'settings_page.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_top_bar.dart';
+import '../widgets/centered_form_width.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -57,113 +60,133 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2563EB),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.bolt, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'SkillMatch',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const AppTopBar(showNotifications: false),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
+                padding: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
                   vertical: 16,
                 ),
                 children: [
-                  const Text(
-                    'Notifications',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Application updates for your account',
-                    style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
-                  ),
-                  const SizedBox(height: 24),
-                  if (_notifications.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 32),
-                      child: Center(
-                        child: Text(
-                          'No application updates yet.',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    )
-                  else
-                    ..._notifications.map(
-                      (notification) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE5E7EB)),
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                notification.title,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                notification.message,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF374151),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _formatDate(notification.createdAt),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF9CA3AF),
-                                ),
-                              ),
-                            ],
+                  CenteredFormWidth(
+                    maxWidth: 700,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Notifications',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Application updates for your account',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        if (_notifications.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 48),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 64,
+                                    height: 64,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceMuted,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.notifications_none,
+                                      color: AppColors.textFaint,
+                                      size: 32,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'No application updates yet.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          ..._notifications.map(
+                            (notification) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: AppCard(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: const BoxDecoration(
+                                        gradient: AppColors.primaryGradient,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.notifications,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            notification.title,
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            notification.message,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF374151),
+                                              height: 1.35,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            _formatDate(notification.createdAt),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: AppColors.textFaint,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 100),
+                      ],
                     ),
-                  const SizedBox(height: 100),
+                  ),
                 ],
               ),
             ),

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'pages/landing_page.dart';
 import 'services/session_store.dart';
-
-/// Global theme notifier — toggle anywhere in the app.
-final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+import 'services/theme_store.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SessionStore.load();
+  themeNotifier.value = await ThemeStore.load();
   runApp(const MyApp());
 }
 
@@ -36,12 +36,7 @@ class MyApp extends StatelessWidget {
               child: child!,
             );
           },
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF2563EB),
-            ),
-            useMaterial3: true,
-          ),
+          theme: buildAppTheme(),
           darkTheme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
               seedColor: const Color(0xFF2563EB),

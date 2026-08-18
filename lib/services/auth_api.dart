@@ -396,6 +396,7 @@ Future<AuthResult> verifyRegisterOtp({
   required String password,
   required String firstName,
   required String lastName,
+  required String phone,
   required String otp,
   required String challengeId,
 }) async {
@@ -407,6 +408,7 @@ Future<AuthResult> verifyRegisterOtp({
       'firstName': firstName,
       'lastName': lastName,
       'email': email,
+      'phone': phone,
       'password': password,
       'otp': otp,
       'challengeId': challengeId,

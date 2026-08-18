@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/applications_api.dart';
 import '../services/jobs_api.dart';
 import '../services/notification_store.dart';
 import '../services/session_store.dart';
+import '../theme/app_colors.dart';
 import 'job_detail_page.dart';
-import 'settings_page.dart';
-import '../widgets/notification_bell_button.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_top_bar.dart';
+import '../widgets/centered_form_width.dart';
 
 class ApplicationsPage extends StatefulWidget {
   const ApplicationsPage({super.key});
@@ -46,6 +50,14 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
         _loading = false;
         _error = null;
       });
+      final activeCount = list
+          .where((app) => app.currentStatus != 'Withdrawn')
+          .length;
+      unawaited(
+        NotificationStore.maybeAddWeeklyDigest(
+          activeApplicationCount: activeCount,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -64,40 +76,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
         : activeApplications;
 
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2563EB),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.bolt, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'SkillMatch',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
-              );
-            },
-          ),
-          const NotificationBellButton(),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const AppTopBar(),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -121,72 +100,78 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
               onRefresh: () => _load(silent: true),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
+                padding: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
                   vertical: 16,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Applications',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Track status of your job applications',
-                      style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
-                    ),
-                    if (withdrawnApplications.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _showWithdrawn = !_showWithdrawn;
-                          });
-                        },
-                        icon: Icon(
-                          _showWithdrawn
-                              ? Icons.list_alt
-                              : Icons.visibility_outlined,
-                        ),
-                        label: Text(
-                          _showWithdrawn
-                              ? 'View Active Applications'
-                              : 'View Withdrawn Applications (${withdrawnApplications.length})',
+                child: CenteredFormWidth(
+                  maxWidth: 700,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Applications',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ],
-                    const SizedBox(height: 24),
-                    if (visibleApplications.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 32),
-                        child: Center(
-                          child: Text(
-                            'No applications to show in this list.',
-                            textAlign: TextAlign.center,
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Track status of your job applications',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                      if (withdrawnApplications.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _showWithdrawn = !_showWithdrawn;
+                            });
+                          },
+                          icon: Icon(
+                            _showWithdrawn
+                                ? Icons.list_alt
+                                : Icons.visibility_outlined,
+                          ),
+                          label: Text(
+                            _showWithdrawn
+                                ? 'View Active Applications'
+                                : 'View Withdrawn Applications (${withdrawnApplications.length})',
                           ),
                         ),
-                      )
-                    else
-                      Column(
-                        children: visibleApplications
-                            .map(
-                              (app) => Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: _ApplicationCard(
-                                  application: app,
-                                  onChanged: () => _load(silent: true),
+                      ],
+                      const SizedBox(height: 24),
+                      if (visibleApplications.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: Center(
+                            child: Text(
+                              'No applications to show in this list.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        )
+                      else
+                        Column(
+                          children: visibleApplications
+                              .map(
+                                (app) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: _ApplicationCard(
+                                    application: app,
+                                    onChanged: () => _load(silent: true),
+                                  ),
                                 ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    const SizedBox(height: 100),
-                  ],
+                              )
+                              .toList(),
+                        ),
+                      const SizedBox(height: 100),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -228,11 +213,22 @@ class _ApplicationCard extends StatelessWidget {
 
     if (confirmed != true) return;
 
-    await updateApplicationStatus(
-      applicationId: application.id,
-      status: 'Withdrawn',
-    );
-    await onChanged();
+    try {
+      await updateApplicationStatus(
+        applicationId: application.id,
+        status: 'Withdrawn',
+      );
+      await onChanged();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Application withdrawn.')));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not withdraw: $e')));
+    }
   }
 
   Future<void> _openDetails(BuildContext context) async {
@@ -301,13 +297,7 @@ class _ApplicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      padding: const EdgeInsets.all(16),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -344,27 +334,39 @@ class _ApplicationCard extends StatelessWidget {
           const SizedBox(height: 16),
           _ApplicationTimeline(status: application.currentStatus),
           const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              TextButton(
+              TextButton.icon(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
+                  foregroundColor: AppColors.primary,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () => _openDetails(context),
-                child: const Text(
+                icon: const Icon(Icons.visibility_outlined, size: 16),
+                label: const Text(
                   'Details',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
               ),
-              TextButton(
+              TextButton.icon(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF6B7280),
+                  foregroundColor: application.currentStatus == 'Withdrawn'
+                      ? AppColors.textFaint
+                      : AppColors.danger,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: application.currentStatus == 'Withdrawn'
                     ? null
                     : () => _confirmWithdraw(context),
-                child: const Text(
+                icon: const Icon(Icons.cancel_outlined, size: 16),
+                label: const Text(
                   'Withdraw',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
@@ -424,13 +426,27 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Text(
-        status,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: _textColor,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: _textColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: _textColor,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -443,7 +459,12 @@ class _ApplicationTimeline extends StatelessWidget {
 
   bool _isCompleted(String stage) {
     const stages = ['Applied', 'Screening', 'Interview', 'Offer'];
-    final currentIndex = stages.indexOf(status);
+    // Terminal statuses like "Rejected" or "Withdrawn" aren't in `stages`, so
+    // indexOf would return -1 and make even "Applied" look incomplete even
+    // though the applicant did apply. Treat any unknown status as having at
+    // least reached "Applied".
+    final rawIndex = stages.indexOf(status);
+    final currentIndex = rawIndex == -1 ? 0 : rawIndex;
     final stageIndex = stages.indexOf(stage);
     return stageIndex <= currentIndex;
   }
@@ -566,7 +587,7 @@ class JobApplication {
     }
 
     return JobApplication(
-      id: (json['_id'] as String?) ?? '',
+      id: (json['_id'] as Object?)?.toString().trim() ?? '',
       jobId: (json['jobId'] as Object?)?.toString().trim() ?? '',
       jobTitle: (s['title'] as String?)?.trim() ?? 'Untitled role',
       company: (s['company'] as String?)?.trim() ?? '',

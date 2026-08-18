@@ -1,10 +1,25 @@
+import 'dart:async';
 import 'dart:convert';
+
+import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import 'authed_http.dart';
 import 'session_store.dart';
 
 Uri _meUri() => Uri.parse('$kApiBaseUrl/api/me');
+
+const _kTimeout = Duration(seconds: 10);
+
+Future<T> _withNetworkErrors<T>(Future<T> Function() run) async {
+  try {
+    return await run().timeout(_kTimeout);
+  } on TimeoutException {
+    throw AuthedException('Request timed out. Please check your connection and try again.');
+  } on http.ClientException {
+    throw AuthedException('Could not reach the server. Start the API and check API_BASE_URL.');
+  }
+}
 
 String _apiErrorMessage(String fallback, String body) {
   try {
@@ -18,37 +33,41 @@ String _apiErrorMessage(String fallback, String body) {
 }
 
 Future<Map<String, dynamic>> fetchMyProfile() async {
-  final res = await authedGet(_meUri());
-  if (res.statusCode < 200 || res.statusCode >= 300) {
-    final message = _apiErrorMessage(
-      'Could not load profile (${res.statusCode}).',
-      res.body,
-    );
-    throw AuthedException(message, statusCode: res.statusCode);
-  }
-  final decoded = jsonDecode(res.body);
-  if (decoded is! Map) throw AuthedException('Invalid profile response.');
-  final user = decoded['user'];
-  if (user is! Map) throw AuthedException('Invalid profile response (user).');
-  final map = user.map((k, v) => MapEntry(k.toString(), v));
-  await SessionStore.updateUser(map);
-  return map;
+  return _withNetworkErrors(() async {
+    final res = await authedGet(_meUri());
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      final message = _apiErrorMessage(
+        'Could not load profile (${res.statusCode}).',
+        res.body,
+      );
+      throw AuthedException(message, statusCode: res.statusCode);
+    }
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map) throw AuthedException('Invalid profile response.');
+    final user = decoded['user'];
+    if (user is! Map) throw AuthedException('Invalid profile response (user).');
+    final map = user.map((k, v) => MapEntry(k.toString(), v));
+    await SessionStore.updateUser(map);
+    return map;
+  });
 }
 
 Future<Map<String, dynamic>> updateMyProfile(Map<String, dynamic> patch) async {
-  final res = await authedPut(_meUri(), body: jsonEncode(patch));
-  if (res.statusCode < 200 || res.statusCode >= 300) {
-    final message = _apiErrorMessage(
-      'Could not save profile (${res.statusCode}).',
-      res.body,
-    );
-    throw AuthedException(message, statusCode: res.statusCode);
-  }
-  final decoded = jsonDecode(res.body);
-  if (decoded is! Map) throw AuthedException('Invalid profile response.');
-  final user = decoded['user'];
-  if (user is! Map) throw AuthedException('Invalid profile response (user).');
-  final map = user.map((k, v) => MapEntry(k.toString(), v));
-  await SessionStore.updateUser(map);
-  return map;
+  return _withNetworkErrors(() async {
+    final res = await authedPut(_meUri(), body: jsonEncode(patch));
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      final message = _apiErrorMessage(
+        'Could not save profile (${res.statusCode}).',
+        res.body,
+      );
+      throw AuthedException(message, statusCode: res.statusCode);
+    }
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map) throw AuthedException('Invalid profile response.');
+    final user = decoded['user'];
+    if (user is! Map) throw AuthedException('Invalid profile response (user).');
+    final map = user.map((k, v) => MapEntry(k.toString(), v));
+    await SessionStore.updateUser(map);
+    return map;
+  });
 }

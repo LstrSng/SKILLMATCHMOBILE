@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../models/job_match_result.dart';
+import '../models/training_pathway.dart';
 import '../services/applications_api.dart';
-import '../services/job_match_api.dart';
+import '../services/job_roles_data.dart';
+import '../services/job_skill_matcher.dart';
+import '../services/pathway_links_data.dart';
+import '../services/saved_jobs_store.dart';
 import '../services/session_store.dart';
 import 'settings_page.dart';
+import '../widgets/centered_form_width.dart';
 import '../widgets/notification_bell_button.dart';
+import '../widgets/training_pathway_card.dart';
 
 class JobDetailPage extends StatefulWidget {
   const JobDetailPage({
@@ -51,49 +57,82 @@ class _JobDetailPageState extends State<JobDetailPage> {
   bool _loading = true;
   String? _error;
   JobMatchResult? _matchResult;
+  TrainingPathway? _trainingPathway;
+  String? _csvDescription;
+
+  /// The CSV role's own description when a role match was found, falling
+  /// back to whatever description the caller passed in (from the backend
+  /// job listing or a saved application snapshot).
+  String get _displayDescription {
+    final csv = _csvDescription?.trim() ?? '';
+    if (csv.isNotEmpty) return csv;
+    return widget.description;
+  }
 
   @override
   void initState() {
     super.initState();
     _loadMatchResult();
+    _loadBookmarkState();
   }
 
-  String? get _resolvedApplicantId {
-    final fromWidget = widget.applicantId?.trim();
-    if (fromWidget != null && fromWidget.isNotEmpty) return fromWidget;
-
-    final user = SessionStore.user;
-    final raw = user?['_id'] ?? user?['id'];
-    final fromSession = raw?.toString().trim() ?? '';
-    if (fromSession.isEmpty) return null;
-    return fromSession;
+  Future<void> _loadBookmarkState() async {
+    if (widget.jobId.trim().isEmpty) return;
+    final saved = await SavedJobsStore.isSaved(widget.jobId);
+    if (!mounted) return;
+    setState(() => _isBookmarked = saved);
   }
 
+  Future<void> _toggleBookmark() async {
+    if (widget.jobId.trim().isEmpty) return;
+    final ids = await SavedJobsStore.toggle(widget.jobId);
+    if (!mounted) return;
+    setState(() => _isBookmarked = ids.contains(widget.jobId));
+  }
+
+  /// Builds the skill match breakdown the same way as the Jobs list and
+  /// Dashboard: the job's title is matched to a canonical role in the
+  /// bundled IT_Job_Roles_Skills CSV, and that role's skills are split
+  /// matched/unmatched against the signed-in user's own profile skills.
+  /// This keeps the number shown here consistent with every other screen
+  /// that shows a match percentage for the same job.
   Future<void> _loadMatchResult() async {
-    final applicantId = _resolvedApplicantId;
-    if (applicantId == null || applicantId.isEmpty) {
-      setState(() {
-        _loading = false;
-        _error = 'Missing applicant ID. Please sign in again and retry.';
-      });
-      return;
-    }
-
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      final result = await fetchJobMatchResult(
-        applicantId: applicantId,
-        jobId: widget.jobId,
+      final roles = await loadJobRoles();
+      final role = findBestRoleForTitle(roles, widget.title);
+      final mySkills = readMySkillKeys(SessionStore.user);
+
+      var matched = const <String>[];
+      var missing = const <String>[];
+      var score = widget.matchPercentage;
+
+      if (role != null && role.skills.isNotEmpty) {
+        final split = splitSkillsByOwnership(role.skills, mySkills);
+        matched = split.matched;
+        missing = split.unmatched;
+        score = (matched.length / role.skills.length * 100).round();
+      }
+
+      final result = JobMatchResult(
+        jobTitle: widget.title,
+        matchScore: score,
+        matchedSkills: matched,
+        missingSkills: missing,
+        recommendation: _recommendationFor(score, missing),
       );
+
       if (!mounted) return;
       setState(() {
         _matchResult = result;
+        _csvDescription = role?.description;
         _loading = false;
       });
+      _loadTrainingPathway(widget.title);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -101,6 +140,23 @@ class _JobDetailPageState extends State<JobDetailPage> {
         _error = e.toString();
       });
     }
+  }
+
+  static String _recommendationFor(int score, List<String> missing) {
+    if (score >= 80) return 'Great fit — you match most required skills.';
+    if (score >= 50) {
+      return 'Good fit — consider learning a few missing skills to improve your chances.';
+    }
+    if (score > 0) {
+      return 'Low match — consider gaining experience in ${missing.take(3).join(', ')}.';
+    }
+    return 'No recommendation available.';
+  }
+
+  Future<void> _loadTrainingPathway(String roleTitle) async {
+    final pathway = await trainingPathwayForRole(roleTitle);
+    if (!mounted) return;
+    setState(() => _trainingPathway = pathway);
   }
 
   Future<void> _applyNow() async {
@@ -117,6 +173,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
           'jobType': widget.jobType,
           'postedDate': widget.postedDate,
           'matchPercentage': _displayScore,
+          'description': _displayDescription,
         },
       );
       if (!mounted) return;
@@ -231,64 +288,66 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Color(0xFF6B7280),
-              size: 18,
-            ),
-            label: Text(
-              widget.backLabel,
-              style: const TextStyle(
+      child: CenteredFormWidth(
+        maxWidth: 700,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(
+                Icons.arrow_back,
                 color: Color(0xFF6B7280),
-                fontWeight: FontWeight.w500,
+                size: 18,
               ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          JobHeaderCard(
-            title: _displayTitle,
-            company: widget.company,
-            location: widget.location,
-            salary: widget.salary,
-            jobType: widget.jobType,
-            postedDate: widget.postedDate,
-            matchScore: result.matchScore,
-            isBookmarked: _isBookmarked,
-            allowApply: widget.allowApply,
-            applying: _applying,
-            onApply: _applyNow,
-            onBookmarkToggle: () {
-              setState(() {
-                _isBookmarked = !_isBookmarked;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          SkillMatchBreakdownCard(
-            matchedSkills: result.matchedSkills,
-            missingSkills: result.missingSkills,
-          ),
-          const SizedBox(height: 16),
-          RecommendationCard(recommendation: result.recommendation),
-          if (widget.description.trim().isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _InfoCard(
-              title: 'Job Description',
-              child: Text(
-                widget.description,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF475569),
-                  height: 1.55,
+              label: Text(
+                widget.backLabel,
+                style: const TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+            JobHeaderCard(
+              title: _displayTitle,
+              company: widget.company,
+              location: widget.location,
+              salary: widget.salary,
+              jobType: widget.jobType,
+              postedDate: widget.postedDate,
+              matchScore: result.matchScore,
+              isBookmarked: _isBookmarked,
+              allowApply: widget.allowApply,
+              applying: _applying,
+              onApply: _applyNow,
+              onBookmarkToggle: _toggleBookmark,
+            ),
+            if (_displayDescription.trim().isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _InfoCard(
+                title: 'Job Description',
+                child: Text(
+                  _displayDescription,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFF475569),
+                    height: 1.55,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            SkillMatchBreakdownCard(
+              matchedSkills: result.matchedSkills,
+              missingSkills: result.missingSkills,
+            ),
+            const SizedBox(height: 16),
+            RecommendationCard(
+              recommendation: result.recommendation,
+              trainingPathway: _trainingPathway,
+            ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -616,46 +675,72 @@ class SkillRow extends StatelessWidget {
 }
 
 class RecommendationCard extends StatelessWidget {
-  const RecommendationCard({super.key, required this.recommendation});
+  const RecommendationCard({
+    super.key,
+    required this.recommendation,
+    this.trainingPathway,
+  });
 
   final String recommendation;
+  final TrainingPathway? trainingPathway;
+
+  static const _kPlaceholders = {
+    '',
+    'no recommendation available.',
+    'no recommendation available',
+  };
+
+  bool get _hasRecommendation =>
+      !_kPlaceholders.contains(recommendation.trim().toLowerCase());
+
+  bool get _hasLinks => trainingPathway?.links.isNotEmpty ?? false;
 
   @override
   Widget build(BuildContext context) {
-    final text = recommendation.trim().isEmpty
-        ? 'You match all required skills for this job.'
-        : recommendation.trim();
+    final showRecommendation = _hasRecommendation;
+    final showLinks = _hasLinks;
+    if (!showRecommendation && !showLinks) return const SizedBox.shrink();
 
     return _InfoCard(
       title: 'Recommendation',
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0FDFA),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF99F6E4)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(
-              Icons.auto_awesome_outlined,
-              color: Color(0xFF0F766E),
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                text,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF134E4A),
-                  height: 1.45,
-                  fontWeight: FontWeight.w500,
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showRecommendation)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDFA),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF99F6E4)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_outlined,
+                    color: Color(0xFF0F766E),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      recommendation.trim(),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF134E4A),
+                        height: 1.45,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+          if (showLinks) ...[
+            if (showRecommendation) const SizedBox(height: 16),
+            TrainingLinksList(pathway: trainingPathway!),
           ],
-        ),
+        ],
       ),
     );
   }
