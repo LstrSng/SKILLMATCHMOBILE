@@ -9,6 +9,7 @@ import MobileUser from "./models/mobile_user.js";
 import Job from "./models/job.js";
 import Application from "./models/application.js";
 import Otp from "./models/otp.js";
+import EmployerAccount from "./models/employer_account.js";
 import { normalizeJobDoc } from "./jobNormalize.js";
 import { generateNumericOtp, hashOtp } from "./utils/otp.js";
 import { sendMail } from "./utils/mailer.js";
@@ -313,6 +314,30 @@ app.get("/api/jobs", requireDb, async (req, res) => {
       .limit(JOBS_QUERY_LIMIT)
       .lean();
 
+    // Job postings usually don't repeat the company name on the job itself —
+    // it lives on the employer account that posted it (`postedBy`). Batch
+    // resolve those so `normalizeJobDoc` can fall back to it.
+    const posterIds = [
+      ...new Set(
+        raw
+          .map((d) => d.postedBy)
+          .filter((v) => v && mongoose.Types.ObjectId.isValid(v))
+          .map((v) => String(v))
+      ),
+    ];
+    let postersById = new Map();
+    if (posterIds.length) {
+      try {
+        const posters = await EmployerAccount.find(
+          { _id: { $in: posterIds } },
+          { companyName: 1, logoUrl: 1 }
+        ).lean();
+        postersById = new Map(posters.map((p) => [String(p._id), p]));
+      } catch (e) {
+        console.error("Poster lookup error:", e);
+      }
+    }
+
     // Try to resolve an authenticated applicant (optional). If a valid bearer
     // token is present, compute per-job matched/unmatched skills and score.
     let applicant = null;
@@ -332,7 +357,8 @@ app.get("/api/jobs", requireDb, async (req, res) => {
       : null;
 
     const jobs = raw.map((doc) => {
-      const job = normalizeJobDoc(doc);
+      const poster = doc.postedBy ? postersById.get(String(doc.postedBy)) : null;
+      const job = normalizeJobDoc(doc, poster);
 
       if (applicantSkillsSet) {
         const jobSkills = (Array.isArray(job.matchedSkills) && job.matchedSkills.length)
@@ -365,6 +391,40 @@ app.get("/api/jobs", requireDb, async (req, res) => {
   } catch (err) {
     console.error("Jobs list error:", err);
     return res.status(500).json({ message: "Could not load jobs." });
+  }
+});
+
+// Company details for the employer that posted a given job
+app.get("/api/jobs/:id/company", requireDb, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid job id." });
+    }
+
+    const jobDoc = await Job.findById(id).lean();
+    if (!jobDoc) return res.status(404).json({ message: "Job not found." });
+
+    if (!jobDoc.postedBy || !mongoose.Types.ObjectId.isValid(jobDoc.postedBy)) {
+      return res.status(404).json({ message: "No company info for this job." });
+    }
+
+    const poster = await EmployerAccount.findById(jobDoc.postedBy).lean();
+    if (!poster) return res.status(404).json({ message: "Company not found." });
+
+    return res.json({
+      company: {
+        name: String(poster.companyName ?? ""),
+        bio: String(poster.companyBio ?? ""),
+        website: String(poster.website ?? ""),
+        location: String(poster.location ?? ""),
+        contactNumber: String(poster.contactNumber ?? ""),
+        logoUrl: String(poster.logoUrl ?? ""),
+      },
+    });
+  } catch (err) {
+    console.error("Company details error:", err);
+    return res.status(500).json({ message: "Could not load company details." });
   }
 });
 

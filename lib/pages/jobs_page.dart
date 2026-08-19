@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'job_detail_page.dart';
 import '../models/job_role_skills.dart';
+import '../services/applications_api.dart';
 import '../services/job_roles_data.dart';
 import '../services/job_skill_matcher.dart';
 import '../services/jobs_api.dart';
 import '../services/notification_store.dart';
 import '../services/session_store.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/centered_form_width.dart';
@@ -43,11 +44,25 @@ class _JobsPageState extends State<JobsPage> {
       });
     }
     try {
-      final results = await Future.wait([fetchJobsRaw(), loadJobRoles()]);
+      final results = await Future.wait([
+        fetchJobsRaw(),
+        loadJobRoles(),
+        fetchMyApplications().catchError(
+          (_) => <Map<String, dynamic>>[],
+        ),
+      ]);
       final raw = results[0] as List<Map<String, dynamic>>;
       final roles = results[1] as List<JobRoleSkills>;
+      final applications = results[2] as List<Map<String, dynamic>>;
+      final appliedJobIds = applications
+          .map((a) => (a['jobId'] as Object?)?.toString().trim() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
       final list = applyCsvSkillMatch(
-        jobs: raw.map(Job.fromJson).toList(),
+        jobs: raw
+            .map(Job.fromJson)
+            .where((j) => !appliedJobIds.contains(j.id))
+            .toList(),
         roles: roles,
         mySkillKeys: readMySkillKeys(SessionStore.user),
       );
@@ -370,7 +385,12 @@ class _JobsPageState extends State<JobsPage> {
                       else
                         Column(
                           children: _visibleJobs
-                              .map((job) => _JobCard(job: job))
+                              .map(
+                                (job) => _JobCard(
+                                  job: job,
+                                  onReturn: () => _loadJobs(silent: true),
+                                ),
+                              )
                               .toList(),
                         ),
                       const SizedBox(height: 100),
@@ -391,8 +411,9 @@ Color _matchColor(int percent) {
 
 class _JobCard extends StatelessWidget {
   final Job job;
+  final VoidCallback onReturn;
 
-  const _JobCard({required this.job});
+  const _JobCard({required this.job, required this.onReturn});
 
   int get _totalSkills => job.matchedSkills.length + job.unmatchedSkills.length;
 
@@ -401,8 +422,8 @@ class _JobCard extends StatelessWidget {
     final applicantId = (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
         ?.toString();
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => JobDetailPage(
@@ -421,6 +442,7 @@ class _JobCard extends StatelessWidget {
             ),
           ),
         );
+        onReturn();
       },
       child: AppCard(
         margin: const EdgeInsets.only(bottom: 16),
@@ -531,9 +553,7 @@ class _JobCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 Icon(
-                  job.jobType == 'Full-time'
-                      ? Icons.schedule
-                      : Icons.location_on,
+                  Icons.schedule,
                   color: const Color(0xFF9CA3AF),
                   size: 16,
                 ),

@@ -394,6 +394,8 @@ class _StatusBadge extends StatelessWidget {
         return const Color(0xFFDEEEFF);
       case 'Offer':
         return const Color(0xFFDCFCE7);
+      case 'Hired':
+        return const Color(0xFFDCFCE7);
       case 'Rejected':
         return const Color(0xFFFEF2F2);
       default:
@@ -410,6 +412,8 @@ class _StatusBadge extends StatelessWidget {
       case 'Interview':
         return const Color(0xFF2563EB);
       case 'Offer':
+        return const Color(0xFF10B981);
+      case 'Hired':
         return const Color(0xFF10B981);
       case 'Rejected':
         return const Color(0xFFDC2626);
@@ -462,8 +466,9 @@ class _ApplicationTimeline extends StatelessWidget {
     // Terminal statuses like "Rejected" or "Withdrawn" aren't in `stages`, so
     // indexOf would return -1 and make even "Applied" look incomplete even
     // though the applicant did apply. Treat any unknown status as having at
-    // least reached "Applied".
-    final rawIndex = stages.indexOf(status);
+    // least reached "Applied". "Hired" comes after an accepted "Offer", so
+    // it should light up the whole timeline instead.
+    final rawIndex = status == 'Hired' ? stages.length - 1 : stages.indexOf(status);
     final currentIndex = rawIndex == -1 ? 0 : rawIndex;
     final stageIndex = stages.indexOf(stage);
     return stageIndex <= currentIndex;

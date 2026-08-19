@@ -39,8 +39,12 @@ function numOrDefault(v, fallback) {
 
 /**
  * Map a MongoDB job document to the JSON shape expected by the mobile app.
+ *
+ * `poster`, when given, is the employer account doc the job's `postedBy`
+ * points to. Job postings usually don't duplicate the company name on the
+ * job itself, so it's used as a fallback when the job doc has none.
  */
-export function normalizeJobDoc(d) {
+export function normalizeJobDoc(d, poster) {
   const id = d._id != null ? String(d._id) : "";
 
   const title =
@@ -48,7 +52,9 @@ export function normalizeJobDoc(d) {
     "Untitled role";
 
   const company =
-    pickFirst(d, ["company", "companyName", "employer", "organization", "org"]) || "";
+    pickFirst(d, ["company", "companyName", "employer", "organization", "org"]) ||
+    pickFirst(poster, ["companyName", "company", "name"]) ||
+    "";
 
   const location =
     pickFirst(d, ["location", "place", "city", "region"]) || "";

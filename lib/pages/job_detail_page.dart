@@ -8,6 +8,7 @@ import '../services/job_skill_matcher.dart';
 import '../services/pathway_links_data.dart';
 import '../services/saved_jobs_store.dart';
 import '../services/session_store.dart';
+import 'company_details_page.dart';
 import 'settings_page.dart';
 import '../widgets/centered_form_width.dart';
 import '../widgets/notification_bell_button.dart';
@@ -198,6 +199,15 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
   int get _displayScore => _matchResult?.matchScore ?? widget.matchPercentage;
 
+  void _openCompanyDetails() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CompanyDetailsPage(jobId: widget.jobId),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -322,6 +332,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
               applying: _applying,
               onApply: _applyNow,
               onBookmarkToggle: _toggleBookmark,
+              onCompanyTap: widget.jobId.trim().isEmpty
+                  ? null
+                  : _openCompanyDetails,
             ),
             if (_displayDescription.trim().isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -368,6 +381,7 @@ class JobHeaderCard extends StatelessWidget {
     required this.applying,
     required this.onApply,
     required this.onBookmarkToggle,
+    this.onCompanyTap,
   });
 
   final String title;
@@ -382,6 +396,7 @@ class JobHeaderCard extends StatelessWidget {
   final bool applying;
   final VoidCallback onApply;
   final VoidCallback onBookmarkToggle;
+  final VoidCallback? onCompanyTap;
 
   @override
   Widget build(BuildContext context) {
@@ -416,11 +431,31 @@ class JobHeaderCard extends StatelessWidget {
                     ),
                     if (company.trim().isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Text(
-                        company,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: const Color(0xFF64748B),
-                          fontWeight: FontWeight.w500,
+                      InkWell(
+                        onTap: onCompanyTap,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              company,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: onCompanyTap != null
+                                        ? const Color(0xFF2563EB)
+                                        : const Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                            if (onCompanyTap != null) ...[
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: Color(0xFF2563EB),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],
@@ -507,13 +542,14 @@ class JobHeaderCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2563EB),
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: const Color(0xFFCBD5E1),
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: applying ? null : onApply,
+                    onPressed: (applying || matchScore <= 0) ? null : onApply,
                     child: applying
                         ? const SizedBox(
                             height: 20,
@@ -549,6 +585,15 @@ class JobHeaderCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (matchScore <= 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                "You don't match any required skills for this job yet, so you can't apply.",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+            ],
           ],
         ],
       ),
