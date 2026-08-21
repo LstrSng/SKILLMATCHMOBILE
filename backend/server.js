@@ -9,12 +9,14 @@ import MobileUser from "./models/mobile_user.js";
 import Job from "./models/job.js";
 import Application from "./models/application.js";
 import Otp from "./models/otp.js";
+import TrustedDevice from "./models/trusted_device.js";
 import EmployerAccount from "./models/employer_account.js";
 import { normalizeJobDoc } from "./jobNormalize.js";
 import { generateNumericOtp, hashOtp } from "./utils/otp.js";
+import { generateDeviceToken, hashDeviceToken } from "./utils/device_token.js";
 import { sendMail } from "./utils/mailer.js";
 
-const DEFAULT_PORT = 5002;
+const DEFAULT_PORT = 5003;
 const PORT = Number(process.env.PORT) || DEFAULT_PORT;
 // Some setups use `MONGODB_URI`, others use `MONGO_URI`.
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
@@ -59,6 +61,7 @@ const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_RESEND_WINDOW_MS = 15 * 60 * 1000;
 const OTP_MAX_SENDS_PER_WINDOW = 3;
+const DEVICE_TRUST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function getBearerToken(req) {
   const h = req.headers?.authorization;
@@ -412,6 +415,11 @@ app.get("/api/jobs/:id/company", requireDb, async (req, res) => {
     const poster = await EmployerAccount.findById(jobDoc.postedBy).lean();
     if (!poster) return res.status(404).json({ message: "Company not found." });
 
+    const contactName = [poster.firstName, poster.lastName]
+      .map((v) => String(v ?? "").trim())
+      .filter(Boolean)
+      .join(" ");
+
     return res.json({
       company: {
         name: String(poster.companyName ?? ""),
@@ -420,6 +428,10 @@ app.get("/api/jobs/:id/company", requireDb, async (req, res) => {
         location: String(poster.location ?? ""),
         contactNumber: String(poster.contactNumber ?? ""),
         logoUrl: String(poster.logoUrl ?? ""),
+        bannerUrl: String(poster.bannerUrl ?? ""),
+        email: String(poster.email ?? ""),
+        contactName,
+        memberSince: poster.createdAt ? new Date(poster.createdAt).toISOString() : "",
       },
     });
   } catch (err) {
@@ -523,6 +535,7 @@ app.post("/api/users/login", requireDb, async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || "");
+    const deviceToken = String(req.body?.deviceToken || "").trim();
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required." });
@@ -536,6 +549,23 @@ app.post("/api/users/login", requireDb, async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       return res.status(400).json({ message: "Invalid email or password." });
+    }
+
+    if (deviceToken) {
+      const trusted = await TrustedDevice.findOne({
+        userId: user._id,
+        tokenHash: hashDeviceToken(deviceToken),
+        expiresAt: { $gt: new Date() },
+      });
+      if (trusted) {
+        return res.json({
+          _id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          token: generateToken(user._id),
+        });
+      }
     }
 
     const result = await createAndSendOtp({ email, purpose: "login" });
@@ -582,6 +612,7 @@ app.post("/api/users/login/otp/verify", requireDb, async (req, res) => {
     const email = normalizeEmail(req.body?.email);
     const otp = String(req.body?.otp || "").trim();
     const challengeId = String(req.body?.challengeId || "").trim();
+    const rememberDevice = Boolean(req.body?.rememberDevice);
 
     if (!email || !otp || !challengeId) {
       return res.status(400).json({ message: "email, otp, and challengeId are required." });
@@ -597,13 +628,25 @@ app.post("/api/users/login/otp/verify", requireDb, async (req, res) => {
       return res.status(400).json({ message: "No account found for that email." });
     }
 
-    return res.json({
+    const response = {
       _id: user._id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       token: generateToken(user._id),
-    });
+    };
+
+    if (rememberDevice) {
+      const deviceToken = generateDeviceToken();
+      await TrustedDevice.create({
+        userId: user._id,
+        tokenHash: hashDeviceToken(deviceToken),
+        expiresAt: new Date(Date.now() + DEVICE_TRUST_TTL_MS),
+      });
+      response.deviceToken = deviceToken;
+    }
+
+    return res.json(response);
   } catch (err) {
     console.error("Login OTP verify error:", err);
     return res.status(500).json({ message: "Server error during OTP login." });

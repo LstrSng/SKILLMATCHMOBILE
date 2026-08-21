@@ -49,6 +49,27 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
 
   String _s(String key) => (_company[key] as Object?)?.toString().trim() ?? '';
 
+  String _memberSinceLabel(String raw) {
+    if (raw.isEmpty) return '';
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return '';
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return '${months[parsed.month - 1]} ${parsed.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,12 +125,21 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
     final location = _s('location');
     final contactNumber = _s('contactNumber');
     final logoUrl = _s('logoUrl');
+    final bannerUrl = _s('bannerUrl');
+    final email = _s('email');
+    final contactName = _s('contactName');
+    final memberSince = _memberSinceLabel(_s('memberSince'));
 
     final infoItems = <_InfoItem>[
       if (location.isNotEmpty) _InfoItem(label: 'Location', value: location),
       if (website.isNotEmpty) _InfoItem(label: 'Website', value: website),
       if (contactNumber.isNotEmpty)
         _InfoItem(label: 'Contact', value: contactNumber),
+      if (email.isNotEmpty) _InfoItem(label: 'Email', value: email),
+      if (contactName.isNotEmpty)
+        _InfoItem(label: 'Contact Person', value: contactName),
+      if (memberSince.isNotEmpty)
+        _InfoItem(label: 'Member Since', value: memberSince),
     ];
 
     return SingleChildScrollView(
@@ -140,28 +170,46 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
           const SizedBox(height: 24),
 
           AppCard(
-            child: Row(
+            padding: bannerUrl.isEmpty ? const EdgeInsets.all(16) : EdgeInsets.zero,
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _companyLogo(logoUrl),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
+                if (bannerUrl.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: _companyBanner(bannerUrl),
+                  ),
+                Padding(
+                  padding: bannerUrl.isEmpty
+                      ? EdgeInsets.zero
+                      : const EdgeInsets.all(16),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'About $name',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                      _companyLogo(logoUrl),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'About $name',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -251,6 +299,27 @@ Widget _companyLogo(String logoUrl, {double size = 60}) {
     );
   } catch (_) {
     return fallback;
+  }
+}
+
+Widget _companyBanner(String bannerUrl) {
+  if (!bannerUrl.startsWith('data:image')) return const SizedBox.shrink();
+  final comma = bannerUrl.indexOf(',');
+  if (comma <= -1 || comma + 1 >= bannerUrl.length) {
+    return const SizedBox.shrink();
+  }
+  try {
+    final bytes = base64Decode(bannerUrl.substring(comma + 1));
+    return AspectRatio(
+      aspectRatio: 16 / 6,
+      child: Image.memory(
+        bytes,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      ),
+    );
+  } catch (_) {
+    return const SizedBox.shrink();
   }
 }
 
