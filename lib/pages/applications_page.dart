@@ -6,7 +6,7 @@ import '../services/applications_api.dart';
 import '../services/jobs_api.dart';
 import '../services/notification_store.dart';
 import '../services/session_store.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import 'job_detail_page.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
@@ -42,7 +42,31 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
     try {
       final raw = await fetchMyApplications();
       await NotificationStore.syncApplicationUpdatesFromList(raw);
-      final list = raw.map(JobApplication.fromJson).toList();
+
+      // Application snapshots freeze the company name as of the moment the
+      // user applied. If that snapshot predates the job having a resolved
+      // company (or the employer filling in their company name), it stays
+      // blank forever. Backfill from the live jobs list so the card always
+      // reflects the current company name when we can find one.
+      final jobs = await fetchJobsRaw().catchError(
+        (_) => <Map<String, dynamic>>[],
+      );
+      final companyByJobId = {
+        for (final j in jobs)
+          (j['id'] as Object?)?.toString().trim() ?? '':
+              (j['company'] as String?)?.trim() ?? '',
+      };
+
+      final list = raw
+          .map(
+            (r) => JobApplication.fromJson(
+              r,
+              liveCompany: companyByJobId[(r['jobId'] as Object?)
+                  ?.toString()
+                  .trim()],
+            ),
+          )
+          .toList();
 
       if (!mounted) return;
       setState(() {
@@ -289,7 +313,6 @@ class _ApplicationCard extends StatelessWidget {
           matchedSkills: list('matchedSkills'),
           unmatchedSkills: list('unmatchedSkills'),
           allowApply: false,
-          backLabel: 'Back to Applications',
         ),
       ),
     );
@@ -318,7 +341,9 @@ class _ApplicationCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${application.company} • ${application.dateApplied}',
+                      application.company.isNotEmpty
+                          ? '${application.company} • ${application.dateApplied}'
+                          : application.dateApplied,
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0xFF6B7280),
@@ -581,7 +606,10 @@ class JobApplication {
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
 
-  factory JobApplication.fromJson(Map<String, dynamic> json) {
+  factory JobApplication.fromJson(
+    Map<String, dynamic> json, {
+    String? liveCompany,
+  }) {
     final snap = json['jobSnapshot'];
     final s = snap is Map ? snap : const {};
     final snapMap = s.map((k, v) => MapEntry(k.toString(), v));
@@ -591,11 +619,15 @@ class JobApplication {
       createdAt = DateTime.tryParse(createdAtRaw) ?? createdAt;
     }
 
+    final snapshotCompany = (s['company'] as String?)?.trim() ?? '';
+
     return JobApplication(
       id: (json['_id'] as Object?)?.toString().trim() ?? '',
       jobId: (json['jobId'] as Object?)?.toString().trim() ?? '',
       jobTitle: (s['title'] as String?)?.trim() ?? 'Untitled role',
-      company: (s['company'] as String?)?.trim() ?? '',
+      company: snapshotCompany.isNotEmpty
+          ? snapshotCompany
+          : (liveCompany?.trim() ?? ''),
       dateApplied: _fmtDate(createdAt),
       currentStatus: (json['status'] as String?)?.trim() ?? 'Applied',
       appliedDate: createdAt,

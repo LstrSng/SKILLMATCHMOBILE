@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/job_role_skills.dart';
@@ -6,7 +10,7 @@ import '../services/job_roles_data.dart';
 import '../services/pathway_links_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
@@ -17,6 +21,32 @@ const _kBlue = Color(0xFF2563EB);
 const _kGray = Color(0xFF6B7280);
 const _kBorder = Color(0xFFE5E7EB);
 const _kLockedFill = Color(0xFFF3F4F6);
+
+const _kCertAllowedExtensions = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'};
+const _kCertMaxBytes = 5 * 1024 * 1024;
+
+String _certificateMimeType(String fileName) {
+  final lower = fileName.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.doc')) return 'application/msword';
+  if (lower.endsWith('.docx')) {
+    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  }
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  return 'application/octet-stream';
+}
+
+Future<Uint8List?> _certificateBytesFromPick(PlatformFile file) async {
+  if (file.bytes != null) return file.bytes;
+  final stream = file.readStream;
+  if (stream == null) return null;
+  final builder = BytesBuilder(copy: false);
+  await for (final chunk in stream) {
+    builder.add(chunk);
+  }
+  return builder.takeBytes();
+}
 
 class PathwayPage extends StatefulWidget {
   const PathwayPage({super.key});
@@ -109,40 +139,48 @@ class _PathwayPageState extends State<PathwayPage> {
     setState(() => _trainingPathway = pathway);
   }
 
-  Future<void> _addSkillToProfile(String skill) async {
-    if (SessionStore.user == null) {
-      showAppToast(
-        context,
-        'Sign in to track your skill progress.',
-        type: AppToastType.info,
-      );
-      return;
+  Future<void> _addSkillToProfile(
+    String skill, {
+    required PlatformFile certificateFile,
+  }) async {
+    final bytes = await _certificateBytesFromPick(certificateFile);
+    if (bytes == null) {
+      throw Exception('Could not read the selected file.');
     }
+
     final rawSkills = SessionStore.user?['skills'];
     final current = rawSkills is List
         ? rawSkills.map((e) => e.toString()).toList()
         : <String>[];
-    if (current.any((s) => s.trim().toLowerCase() == skill.toLowerCase())) {
-      return;
+    if (!current.any((s) => s.trim().toLowerCase() == skill.toLowerCase())) {
+      current.add(skill);
     }
-    current.add(skill);
-    try {
-      await updateMyProfile({'skills': current});
-      if (!mounted) return;
-      setState(() => _mySkillKeys = _readMySkills());
-      showAppToast(
-        context,
-        'Added "$skill" to your profile skills.',
-        type: AppToastType.success,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      showAppToast(
-        context,
-        'Could not update profile: $e',
-        type: AppToastType.error,
-      );
-    }
+
+    final rawProfile = SessionStore.user?['profile'];
+    final profile = rawProfile is Map
+        ? rawProfile.map((k, v) => MapEntry(k.toString(), v))
+        : <String, dynamic>{};
+    final rawCerts = profile['skillCertificates'];
+    final certs = rawCerts is Map
+        ? rawCerts.map((k, v) => MapEntry(k.toString(), v))
+        : <String, dynamic>{};
+    certs[skill.trim().toLowerCase()] = {
+      'skill': skill,
+      'name': certificateFile.name,
+      'mimeType': _certificateMimeType(certificateFile.name),
+      'data': base64Encode(bytes),
+      'uploadedAt': DateTime.now().toUtc().toIso8601String(),
+    };
+    profile['skillCertificates'] = certs;
+
+    await updateMyProfile({'skills': current, 'profile': profile});
+    if (!mounted) return;
+    setState(() => _mySkillKeys = _readMySkills());
+    showAppToast(
+      context,
+      'Added "$skill" with your certificate.',
+      type: AppToastType.success,
+    );
   }
 
   void _onNodeTap(String skill, bool mastered) {
@@ -154,12 +192,26 @@ class _PathwayPageState extends State<PathwayPage> {
       );
       return;
     }
-    showAppToast(
-      context,
-      '"$skill" isn\'t on your profile yet.',
-      type: AppToastType.info,
-      actionLabel: 'ADD',
-      onAction: () => _addSkillToProfile(skill),
+    if (SessionStore.user == null) {
+      showAppToast(
+        context,
+        'Sign in to track your skill progress.',
+        type: AppToastType.info,
+      );
+      return;
+    }
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => _AddSkillSheet(
+        skill: skill,
+        onSubmit: (file) => _addSkillToProfile(skill, certificateFile: file),
+      ),
     );
   }
 
@@ -710,6 +762,182 @@ class _RolePickerSheetState extends State<_RolePickerSheet> {
           ),
         );
       },
+    );
+  }
+}
+
+class _AddSkillSheet extends StatefulWidget {
+  final String skill;
+  final Future<void> Function(PlatformFile certificateFile) onSubmit;
+
+  const _AddSkillSheet({required this.skill, required this.onSubmit});
+
+  @override
+  State<_AddSkillSheet> createState() => _AddSkillSheetState();
+}
+
+class _AddSkillSheetState extends State<_AddSkillSheet> {
+  PlatformFile? _picked;
+  bool _saving = false;
+  String? _error;
+
+  Future<void> _pickFile() async {
+    setState(() => _error = null);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: _kCertAllowedExtensions.toList(),
+      withData: true,
+      withReadStream: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    final ext = (file.extension ?? '').toLowerCase();
+    if (!_kCertAllowedExtensions.contains(ext)) {
+      setState(
+        () => _error = 'Please choose a PDF, DOC, DOCX, JPG, or PNG file.',
+      );
+      return;
+    }
+    if (file.size > _kCertMaxBytes) {
+      setState(() => _error = 'Certificate must be 5MB or smaller.');
+      return;
+    }
+    setState(() => _picked = file);
+  }
+
+  Future<void> _submit() async {
+    if (_picked == null) {
+      setState(() => _error = 'Upload a certificate to add this skill.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSubmit(_picked!);
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        20 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Add "${widget.skill}"',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Upload a certificate to prove this skill before adding it.',
+            style: TextStyle(fontSize: 13, color: _kGray),
+          ),
+          const SizedBox(height: 16),
+          InkWell(
+            onTap: _saving ? null : _pickFile,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: _kBorder),
+                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFF9FAFB),
+              ),
+              child: _picked == null
+                  ? const Column(
+                      children: [
+                        Icon(Icons.upload_file, color: _kGray, size: 28),
+                        SizedBox(height: 8),
+                        Text(
+                          'Tap to upload certificate (required)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'PDF, DOC, DOCX, JPG, or PNG · up to 5MB',
+                          style: TextStyle(fontSize: 11, color: _kGray),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        const Icon(Icons.description, color: _kBlue),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _picked!.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: _saving
+                              ? null
+                              : () => setState(() => _picked = null),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ],
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _saving ? null : _submit,
+              child: _saving
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Add skill with certificate'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: _saving ? null : () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

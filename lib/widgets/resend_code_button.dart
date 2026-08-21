@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 
 /// A "Resend code" button that disables itself behind a countdown after
 /// each send, so the user can't hammer the OTP-request endpoint. Shown as

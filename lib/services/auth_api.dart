@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
+import 'session_store.dart';
 
 class AuthApiException implements Exception {
   AuthApiException(this.message, {this.statusCode});
@@ -14,10 +15,15 @@ class AuthApiException implements Exception {
 }
 
 class AuthResult {
-  const AuthResult({required this.token, required this.user});
+  const AuthResult({required this.token, required this.user, this.deviceToken});
 
   final String token;
   final Map<String, dynamic> user;
+
+  /// Present when the caller opted in to being remembered on this device
+  /// (e.g. via `rememberDevice` on OTP verification). Persist it and send
+  /// it back on future logins to skip OTP for up to 30 days.
+  final String? deviceToken;
 }
 
 class OtpChallengeResult {
@@ -28,6 +34,22 @@ class OtpChallengeResult {
 
   final String challengeId;
   final String message;
+}
+
+/// Result of a login attempt: either the server recognized a trusted
+/// [deviceToken] and logged in directly ([direct] set), or it requires OTP
+/// verification ([challenge] set). Exactly one is non-null.
+class LoginOutcome {
+  const LoginOutcome.direct(AuthResult result)
+      : direct = result,
+        challenge = null;
+
+  const LoginOutcome.challenge(OtpChallengeResult result)
+      : direct = null,
+        challenge = result;
+
+  final AuthResult? direct;
+  final OtpChallengeResult? challenge;
 }
 
 class PasswordResetConfirmResult {
@@ -350,7 +372,12 @@ AuthResult _parseAuthResponse(
         statusCode: res.statusCode,
       );
     }
-    return AuthResult(token: token, user: user);
+    final deviceToken = body['deviceToken']?.toString();
+    return AuthResult(
+      token: token,
+      user: user,
+      deviceToken: (deviceToken != null && deviceToken.isNotEmpty) ? deviceToken : null,
+    );
   }
   final err = body['error'] as String? ??
       body['message'] as String? ??
@@ -430,23 +457,52 @@ Future<AuthResult> loginUser({
   return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
 }
 
-Future<OtpChallengeResult> requestLoginOtp({
+/// Logs in with email/password. If this device previously completed OTP
+/// verification with "remember me" checked, [SessionStore.deviceToken] is
+/// sent along and the server may skip OTP entirely (a [LoginOutcome.direct]
+/// result). Otherwise the server issues a fresh OTP challenge.
+Future<LoginOutcome> login({
   required String email,
   required String password,
 }) async {
   final uri = _loginUri();
+  final deviceToken = SessionStore.deviceToken;
   final res = await http.post(
     uri,
     headers: _jsonHeaders(),
-    body: jsonEncode({'email': email, 'password': password}),
+    body: jsonEncode({
+      'email': email,
+      'password': password,
+      if (deviceToken != null && deviceToken.isNotEmpty) 'deviceToken': deviceToken,
+    }),
   );
-  return _parseOtpChallengeResponse(res, requestedUri: uri);
+
+  Map<String, dynamic>? body;
+  if (res.body.trim().isNotEmpty) {
+    try {
+      body = _asMap(jsonDecode(res.body));
+    } catch (_) {
+      body = null;
+    }
+  }
+
+  final isDirectSuccess = res.statusCode >= 200 &&
+      res.statusCode < 300 &&
+      body != null &&
+      body['challengeId'] == null;
+  if (isDirectSuccess) {
+    return LoginOutcome.direct(
+      _parseAuthResponse(res, knownEmail: email, requestedUri: uri),
+    );
+  }
+  return LoginOutcome.challenge(_parseOtpChallengeResponse(res, requestedUri: uri));
 }
 
 Future<AuthResult> verifyLoginOtp({
   required String email,
   required String otp,
   required String challengeId,
+  bool rememberDevice = false,
 }) async {
   final uri = _loginOtpVerifyUri();
   final res = await http.post(
@@ -456,6 +512,7 @@ Future<AuthResult> verifyLoginOtp({
       'email': email,
       'otp': otp,
       'challengeId': challengeId,
+      'rememberDevice': rememberDevice,
     }),
   );
   return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);

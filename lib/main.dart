@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pages/landing_page.dart';
+import 'pages/splash_page.dart';
 import 'services/session_store.dart';
 import 'services/theme_store.dart';
 import 'theme/app_theme.dart';
@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
             ),
             cardColor: const Color(0xFF1F2937),
           ),
-          home: const LandingPage(),
+          home: const SplashPage(),
         );
       },
     );

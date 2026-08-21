@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 
 /// A password field with an obscure/reveal toggle, styled to match
 /// SkillMatch's standard text inputs. This exact controller+toggle+

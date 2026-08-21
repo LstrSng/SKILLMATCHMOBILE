@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -120,8 +119,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final rawName = _s('name');
-    final name = rawName.isEmpty ? 'Unknown company' : rawName;
+    final name = _s('name').isEmpty ? 'Unknown company' : _s('name');
     final bio = _s('bio');
     final website = _s('website');
     final location = _s('location');
@@ -172,9 +170,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
           const SizedBox(height: 24),
 
           AppCard(
-            padding: bannerUrl.isEmpty
-                ? const EdgeInsets.all(16)
-                : EdgeInsets.zero,
+            padding: bannerUrl.isEmpty ? const EdgeInsets.all(16) : EdgeInsets.zero,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -255,7 +251,10 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                 children: [
                   const Text(
                     'Company Info',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   for (var i = 0; i < infoItems.length; i++) ...[
@@ -273,45 +272,55 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
   }
 }
 
-/// Decodes a `data:image/...;base64,...` URI into raw bytes, or returns
-/// null if [dataUri] isn't a well-formed base64 image URI.
-Uint8List? _decodeDataImage(String dataUri) {
-  if (!dataUri.startsWith('data:image')) return null;
-  final comma = dataUri.indexOf(',');
-  if (comma <= -1 || comma + 1 >= dataUri.length) return null;
-  try {
-    return base64Decode(dataUri.substring(comma + 1));
-  } catch (_) {
-    return null;
-  }
-}
-
 Widget _companyLogo(String logoUrl, {double size = 60}) {
-  final bytes = _decodeDataImage(logoUrl);
-  if (bytes == null) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Icon(Icons.business, color: Colors.white, size: 30),
-    );
-  }
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(14),
-    child: Image.memory(bytes, width: size, height: size, fit: BoxFit.cover),
+  final fallback = Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: const Icon(Icons.business, color: Colors.white, size: 30),
   );
+
+  if (!logoUrl.startsWith('data:image')) return fallback;
+  final comma = logoUrl.indexOf(',');
+  if (comma <= -1 || comma + 1 >= logoUrl.length) return fallback;
+  try {
+    final bytes = base64Decode(logoUrl.substring(comma + 1));
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Image.memory(
+        bytes,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+      ),
+    );
+  } catch (_) {
+    return fallback;
+  }
 }
 
 Widget _companyBanner(String bannerUrl) {
-  final bytes = _decodeDataImage(bannerUrl);
-  if (bytes == null) return const SizedBox.shrink();
-  return AspectRatio(
-    aspectRatio: 16 / 6,
-    child: Image.memory(bytes, width: double.infinity, fit: BoxFit.cover),
-  );
+  if (!bannerUrl.startsWith('data:image')) return const SizedBox.shrink();
+  final comma = bannerUrl.indexOf(',');
+  if (comma <= -1 || comma + 1 >= bannerUrl.length) {
+    return const SizedBox.shrink();
+  }
+  try {
+    final bytes = base64Decode(bannerUrl.substring(comma + 1));
+    return AspectRatio(
+      aspectRatio: 16 / 6,
+      child: Image.memory(
+        bytes,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      ),
+    );
+  } catch (_) {
+    return const SizedBox.shrink();
+  }
 }
 
 class _InfoItem extends StatelessWidget {

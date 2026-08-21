@@ -6,7 +6,7 @@ import '../services/job_roles_data.dart';
 import '../services/pathway_links_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/notification_bell_button.dart';

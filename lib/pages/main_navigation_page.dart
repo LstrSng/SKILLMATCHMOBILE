@@ -4,7 +4,7 @@ import 'jobs_page.dart';
 import 'pathway_page.dart';
 import 'profile_page.dart';
 import 'applications_page.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});

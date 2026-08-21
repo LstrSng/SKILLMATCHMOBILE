@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'sign_in_page.dart';
 import 'register_page.dart';
 import '../services/session_store.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/centered_form_width.dart';
 import 'main_navigation_page.dart';
 

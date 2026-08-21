@@ -9,7 +9,7 @@ import '../services/job_skill_matcher.dart';
 import '../services/jobs_api.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
 

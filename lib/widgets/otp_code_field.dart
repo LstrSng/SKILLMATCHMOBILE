@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 
 /// The standard 6-digit OTP entry field used across the sign-up,
 /// sign-in, and password-reset verification screens: one box per digit,

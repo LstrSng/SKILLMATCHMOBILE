@@ -52,8 +52,25 @@ class _SignInPageState extends State<SignInPage> {
     }
     setState(() => _submitting = true);
     try {
-      final challenge = await requestLoginOtp(email: email, password: password);
+      final outcome = await login(email: email, password: password);
       if (!mounted) return;
+      final direct = outcome.direct;
+      if (direct != null) {
+        // This device was already trusted (remembered) — skip OTP.
+        await SessionStore.save(
+          token: direct.token,
+          user: direct.user,
+          remember: _rememberMe,
+        );
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+          (route) => false,
+        );
+        return;
+      }
+      final challenge = outcome.challenge!;
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -368,12 +385,16 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
         email: _draft.email,
         otp: otp,
         challengeId: _draft.challengeId,
+        rememberDevice: _draft.rememberMe,
       );
       await SessionStore.save(
         token: res.token,
         user: res.user,
         remember: _draft.rememberMe,
       );
+      if (res.deviceToken != null) {
+        await SessionStore.saveDeviceToken(res.deviceToken!);
+      }
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,

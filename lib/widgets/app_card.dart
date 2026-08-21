@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 
 /// The standard SkillMatch card container: theme surface color, 16px
 /// radius, soft floating shadow instead of a flat border. This exact

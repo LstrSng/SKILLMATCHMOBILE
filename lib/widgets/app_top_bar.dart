@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../pages/settings_page.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import 'notification_bell_button.dart';
 
 /// The standard SkillMatch app bar: brand mark + title, with optional

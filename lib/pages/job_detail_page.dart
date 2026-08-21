@@ -30,7 +30,6 @@ class JobDetailPage extends StatefulWidget {
     required this.matchedSkills,
     required this.unmatchedSkills,
     this.allowApply = true,
-    this.backLabel = 'Back to Jobs',
   });
 
   final String jobId;
@@ -46,7 +45,6 @@ class JobDetailPage extends StatefulWidget {
   final List<String> matchedSkills;
   final List<String> unmatchedSkills;
   final bool allowApply;
-  final String backLabel;
 
   @override
   State<JobDetailPage> createState() => _JobDetailPageState();
@@ -303,22 +301,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextButton.icon(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(
-                Icons.arrow_back,
-                color: Color(0xFF6B7280),
-                size: 18,
-              ),
-              label: Text(
-                widget.backLabel,
-                style: const TextStyle(
-                  color: Color(0xFF6B7280),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
             JobHeaderCard(
               title: _displayTitle,
               company: widget.company,

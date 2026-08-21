@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 
 /// Central Material theme for SkillMatch+. Pages still set a lot of their
 /// own inline styles (this app grew page-by-page rather than from a design

@@ -6,16 +6,22 @@ class SessionStore {
   static const _kTokenKey = 'auth.token';
   static const _kUserKey = 'auth.user';
   static const _kExpiresAtKey = 'auth.expiresAt';
+  static const _kDeviceTokenKey = 'auth.deviceToken';
   static const Duration _kRememberDuration = Duration(days: 30);
 
   static String? _token;
   static Map<String, dynamic>? _user;
+  static String? _deviceToken;
 
   static String? get token => _token;
   static Map<String, dynamic>? get user => _user;
 
+  static String? get deviceToken => _deviceToken;
+
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
+
+    _deviceToken = prefs.getString(_kDeviceTokenKey);
 
     final expiresAtRaw = prefs.getString(_kExpiresAtKey);
     if (expiresAtRaw != null) {
@@ -43,10 +49,12 @@ class SessionStore {
     }
   }
 
-  /// Signs the user in for this app session. When [remember] is true (the
-  /// default), the session is written to disk with a 30-day expiry so it
-  /// survives an app restart. When false, the session lives only in memory
-  /// for the current run — closing the app signs the user out.
+  static Future<void> saveDeviceToken(String deviceToken) async {
+    _deviceToken = deviceToken;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kDeviceTokenKey, deviceToken);
+  }
+
   static Future<void> save({
     required String token,
     required Map<String, dynamic> user,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/notification_store.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/centered_form_width.dart';

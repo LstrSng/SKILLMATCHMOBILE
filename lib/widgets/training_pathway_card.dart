@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/training_pathway.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import 'app_toast.dart';
 
 Future<void> _launchTrainingLink(BuildContext context, String url) async {

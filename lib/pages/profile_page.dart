@@ -3,12 +3,26 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
-import '../theme/app_colors.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
+
+/// Strips a raw phone value down to the 10-digit PH mobile number
+/// (no leading 0 or +63), so it can be shown after a fixed "+63 " prefix.
+String _phoneDigitsOnly(String raw) {
+  var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+  if (digits.startsWith('63') && digits.length > 10) {
+    digits = digits.substring(2);
+  }
+  if (digits.startsWith('0') && digits.length == 11) {
+    digits = digits.substring(1);
+  }
+  return digits;
+}
 
 Widget _profileAvatar({
   required String avatarUrl,
@@ -809,7 +823,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     text: (widget.initial['location'] as String?) ?? '',
   );
   late final TextEditingController _phone = TextEditingController(
-    text: (widget.initial['phone'] as String?) ?? '',
+    text: _phoneDigitsOnly((widget.initial['phone'] as String?) ?? ''),
   );
   late final TextEditingController _portfolio = TextEditingController(
     text: (widget.initial['portfolioUrl'] as String?) ?? '',
@@ -1015,6 +1029,21 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final phoneDigits = _phone.text.trim();
+    String phone = '';
+    if (phoneDigits.isNotEmpty) {
+      if (phoneDigits.length != 10 || !phoneDigits.startsWith('9')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Enter a valid PH mobile number, e.g. +63 9171234567.',
+            ),
+          ),
+        );
+        return;
+      }
+      phone = '+63$phoneDigits';
+    }
     setState(() => _saving = true);
     try {
       final user = await updateMyProfile({
@@ -1022,7 +1051,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         'lastName': _lastName.text.trim(),
         'headline': _headline.text.trim(),
         'location': _location.text.trim(),
-        'phone': _phone.text.trim(),
+        'phone': phone,
         'portfolioUrl': _portfolio.text.trim(),
         'bio': _bio.text.trim(),
         'avatarUrl': _avatarUrl.trim(),
@@ -1169,7 +1198,15 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               const SizedBox(height: 12),
               TextField(controller: _location, decoration: _dec('Location')),
               const SizedBox(height: 12),
-              TextField(controller: _phone, decoration: _dec('Phone')),
+              TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                decoration: _dec('Phone').copyWith(prefixText: '+63 '),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: _portfolio,
