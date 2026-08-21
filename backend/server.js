@@ -428,7 +428,9 @@ app.get("/api/jobs/:id/company", requireDb, async (req, res) => {
         bannerUrl: String(poster.bannerUrl ?? ""),
         email: String(poster.email ?? ""),
         contactName,
-        memberSince: poster.createdAt ? new Date(poster.createdAt).toISOString() : "",
+        memberSince: poster.createdAt
+          ? new Date(poster.createdAt).toISOString()
+          : "",
       },
     });
   } catch (err) {
