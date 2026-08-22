@@ -5,11 +5,16 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import '../models/skill_assessment.dart';
+import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
+import '../services/skill_assessment_bank.dart';
+import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
+import 'skill_assessment_page.dart';
 
 /// Strips a raw phone value down to the 10-digit PH mobile number
 /// (no leading 0 or +63), so it can be shown after a fixed "+63 " prefix.
@@ -90,6 +95,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool _loading = true;
   bool _uploadingResume = false;
+  bool _uploadingCertification = false;
   String? _error;
   Map<String, dynamic> _user = SessionStore.user ?? {};
 
@@ -181,8 +187,36 @@ class _ProfilePageState extends State<ProfilePage> {
     return raw.map((k, v) => MapEntry(k.toString(), v));
   }
 
+  Map<String, AssessmentResult> _assessmentResults() =>
+      readAssessmentResults(_profileData());
+
+  Future<void> _openAssessment() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SkillAssessmentPage()),
+    );
+    if (!mounted) return;
+    _load();
+  }
+
   Map<String, String>? _resumeData() {
     final raw = _profileData()['resume'];
+    if (raw is! Map) return null;
+    final name = (raw['name'] as Object?)?.toString().trim() ?? '';
+    final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
+    final data = (raw['data'] as Object?)?.toString().trim() ?? '';
+    final updatedAt = (raw['updatedAt'] as Object?)?.toString().trim() ?? '';
+    if (name.isEmpty || data.isEmpty) return null;
+    return {
+      'name': name,
+      'mimeType': mimeType,
+      'data': data,
+      'updatedAt': updatedAt,
+    };
+  }
+
+  Map<String, String>? _certificationData() {
+    final raw = _profileData()['certification'];
     if (raw is! Map) return null;
     final name = (raw['name'] as Object?)?.toString().trim() ?? '';
     final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
@@ -310,6 +344,79 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _uploadCertification() async {
+    if (_uploadingCertification) return;
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        withData: true,
+        withReadStream: true,
+      );
+      if (picked == null || picked.files.isEmpty) return;
+      final file = picked.files.first;
+      final ext = (file.extension ?? '').toLowerCase();
+      const allowed = {'pdf', 'doc', 'docx'};
+      if (!allowed.contains(ext)) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please choose a PDF, DOC, or DOCX file.'),
+          ),
+        );
+        return;
+      }
+      final bytes = await _resumeBytesFromPick(file);
+      if (bytes == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not read selected file.')),
+        );
+        return;
+      }
+
+      const maxBytes = 5 * 1024 * 1024;
+      if (bytes.length > maxBytes) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Certification must be 5MB or smaller.'),
+          ),
+        );
+        return;
+      }
+
+      final now = DateTime.now().toUtc().toIso8601String();
+      final profile = _profileData();
+      profile['certification'] = {
+        'name': file.name,
+        'mimeType': _resumeMimeType(file.name),
+        'data': base64Encode(bytes),
+        'updatedAt': now,
+      };
+
+      setState(() => _uploadingCertification = true);
+      final updated = await updateMyProfile({'profile': profile});
+      if (!mounted) return;
+      setState(() {
+        _user = updated;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Certification uploaded successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString();
+      final friendly = message.contains('(413)')
+          ? 'Upload is too large for the server. Restart backend with the latest code or use a smaller file.'
+          : 'Upload failed: $message';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(friendly)));
+    } finally {
+      if (mounted) setState(() => _uploadingCertification = false);
+    }
+  }
+
   Future<void> _openEdit() async {
     final initial = Map<String, dynamic>.from(_user);
     final res = await showModalBottomSheet<Map<String, dynamic>>(
@@ -367,9 +474,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final phone = _s('phone');
     final portfolio = _s('portfolioUrl');
     final resume = _resumeData();
+    final certification = _certificationData();
     final skills = _skills();
     final education = _education();
     final experience = _experience();
+    final assessmentResults = _assessmentResults();
 
     return Scaffold(
       // backgroundColor: uses theme
@@ -497,12 +606,95 @@ class _ProfilePageState extends State<ProfilePage> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: skills.isEmpty
-                        ? const [_SkillTag(skill: 'Add skills (Edit)')]
-                        : skills.map((s) => _SkillTag(skill: s)).toList(),
+                  if (skills.isEmpty)
+                    _AddInfoButton(label: 'Add skills', onPressed: _openEdit)
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: skills.map((s) => _SkillTag(skill: s)).toList(),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Skill Assessment Section
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Skill assessment',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (assessmentResults.isNotEmpty)
+                        Text(
+                          '${assessmentResults.length}/${kAssessmentCategories.length} taken',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textFaint,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    assessmentResults.isEmpty
+                        ? 'Find your proficiency level with a short adaptive quiz.'
+                        : 'Your assessed proficiency across topics.',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  if (assessmentResults.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: assessmentResults.entries.map((entry) {
+                        final category = kAssessmentCategories.firstWhere(
+                          (c) => c.key == entry.key,
+                          orElse: () => kAssessmentCategories.first,
+                        );
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceMuted,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${category.label}: ${entry.value.level}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _openAssessment,
+                      child: Text(
+                        assessmentResults.isEmpty
+                            ? 'Take skill assessment'
+                            : 'Retake or try another topic',
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -520,9 +712,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 16),
                   if (experience.isEmpty)
-                    const Text(
-                      'Add experience (Edit)',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                    _AddInfoButton(
+                      label: 'Add experience',
+                      onPressed: _openEdit,
                     )
                   else
                     ...experience.asMap().entries.map((entry) {
@@ -563,10 +755,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 16),
                   if (education.isEmpty)
-                    const Text(
-                      'Add education (Edit)',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
-                    )
+                    _AddInfoButton(label: 'Add education', onPressed: _openEdit)
                   else
                     ...education.map(
                       (e) => Padding(
@@ -723,6 +912,101 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+
+            // Certification Section
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Certification',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2ECFE),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.workspace_premium,
+                            color: Color(0xFF2563EB),
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              certification == null
+                                  ? 'No certification uploaded yet'
+                                  : (certification['name'] ?? 'Certification'),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              certification == null
+                                  ? 'PDF, DOC, or DOCX (max 5MB)'
+                                  : _resumeDateLabel(
+                                      certification['updatedAt'] ?? '',
+                                    ),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF2563EB),
+                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        onPressed: _uploadingCertification
+                            ? null
+                            : _uploadCertification,
+                        child: _uploadingCertification
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                certification == null ? 'Upload' : 'Replace',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 100),
           ],
         ),
@@ -770,6 +1054,45 @@ class _ProfileInfoPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AddInfoButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const _AddInfoButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.add, size: 16, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -832,13 +1155,18 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     text: (widget.initial['bio'] as String?) ?? '',
   );
   late String _avatarUrl = (widget.initial['avatarUrl'] as String?) ?? '';
-  late final TextEditingController _skills = TextEditingController(
-    text: (() {
-      final v = widget.initial['skills'];
-      if (v is List) return v.map((e) => e.toString()).join(', ');
-      return '';
-    })(),
-  );
+  late List<String> _selectedSkills = (() {
+    final v = widget.initial['skills'];
+    if (v is List) {
+      return v
+          .map((e) => e.toString())
+          .where((s) => s.trim().isNotEmpty)
+          .toList();
+    }
+    return <String>[];
+  })();
+  late final List<String> _initialSkills = List.of(_selectedSkills);
+  List<String> _skillOptions = [];
   late final TextEditingController _education = TextEditingController(
     text: (() {
       final v = widget.initial['education'];
@@ -878,6 +1206,23 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   final _imagePicker = ImagePicker();
   bool _saving = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSkillOptions();
+  }
+
+  Future<void> _loadSkillOptions() async {
+    try {
+      final options = await loadSkillOptions();
+      if (!mounted) return;
+      setState(() => _skillOptions = options);
+    } catch (_) {
+      // Skill list failed to load; the picker's search box still works
+      // once retried, so fail quietly rather than blocking the form.
+    }
+  }
+
   late final Map<String, String> _initialValues = {
     'firstName': _firstName.text,
     'lastName': _lastName.text,
@@ -887,10 +1232,19 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     'portfolio': _portfolio.text,
     'bio': _bio.text,
     'avatarUrl': _avatarUrl,
-    'skills': _skills.text,
     'education': _education.text,
     'experience': _experience.text,
   };
+
+  bool _skillsChanged() {
+    final a = List<String>.of(_selectedSkills)..sort();
+    final b = List<String>.of(_initialSkills)..sort();
+    if (a.length != b.length) return true;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return true;
+    }
+    return false;
+  }
 
   bool _hasChanges() {
     return _firstName.text != _initialValues['firstName'] ||
@@ -901,7 +1255,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         _portfolio.text != _initialValues['portfolio'] ||
         _bio.text != _initialValues['bio'] ||
         _avatarUrl != _initialValues['avatarUrl'] ||
-        _skills.text != _initialValues['skills'] ||
+        _skillsChanged() ||
         _education.text != _initialValues['education'] ||
         _experience.text != _initialValues['experience'];
   }
@@ -974,7 +1328,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _phone.dispose();
     _portfolio.dispose();
     _bio.dispose();
-    _skills.dispose();
     _education.dispose();
     _experience.dispose();
     super.dispose();
@@ -1055,11 +1408,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         'portfolioUrl': _portfolio.text.trim(),
         'bio': _bio.text.trim(),
         'avatarUrl': _avatarUrl.trim(),
-        'skills': _skills.text
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList(),
+        'skills': _selectedSkills,
         'education': _parseEducation(_education.text),
         'experience': _parseExperience(_experience.text),
       });
@@ -1213,9 +1562,19 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                 decoration: _dec('Portfolio URL'),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _skills,
-                decoration: _dec('Skills (comma separated)'),
+              const Text(
+                'Skills',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151),
+                ),
+              ),
+              const SizedBox(height: 6),
+              _SkillsSelector(
+                options: _skillOptions,
+                initialSelected: _selectedSkills,
+                onChanged: (list) => setState(() => _selectedSkills = list),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -1240,6 +1599,182 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Lets the user build up their skills list by picking from a fixed set of
+/// [options] instead of typing free text, so profile skills stay in the
+/// same vocabulary that job postings are matched against.
+class _SkillsSelector extends StatefulWidget {
+  final List<String> options;
+  final List<String> initialSelected;
+  final ValueChanged<List<String>> onChanged;
+
+  const _SkillsSelector({
+    required this.options,
+    required this.initialSelected,
+    required this.onChanged,
+  });
+
+  @override
+  State<_SkillsSelector> createState() => _SkillsSelectorState();
+}
+
+class _SkillsSelectorState extends State<_SkillsSelector> {
+  late final List<String> _selected = List.of(widget.initialSelected);
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _toggle(String skill) {
+    setState(() {
+      if (!_selected.remove(skill)) _selected.add(skill);
+    });
+    widget.onChanged(_selected);
+  }
+
+  void _addCustom(String skill) {
+    final trimmed = skill.trim();
+    if (trimmed.isEmpty) return;
+    final alreadyHave = _selected.any(
+      (s) => s.toLowerCase() == trimmed.toLowerCase(),
+    );
+    setState(() {
+      if (!alreadyHave) _selected.add(trimmed);
+      _searchController.clear();
+      _query = '';
+    });
+    widget.onChanged(_selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmedQuery = _query.trim();
+    final query = trimmedQuery.toLowerCase();
+    final available = widget.options
+        .where((o) => !_selected.contains(o))
+        .where((o) => query.isEmpty || o.toLowerCase().contains(query))
+        .take(30)
+        .toList();
+    final hasExactMatch =
+        query.isEmpty ||
+        widget.options.any((o) => o.toLowerCase() == query) ||
+        _selected.any((s) => s.toLowerCase() == query);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_selected.isNotEmpty) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _selected
+                .map(
+                  (s) => InputChip(
+                    label: Text(s, style: const TextStyle(fontSize: 13)),
+                    onDeleted: () => _toggle(s),
+                    backgroundColor: const Color(0xFFDEEEFF),
+                    side: const BorderSide(color: Color(0xFFBFDBFE)),
+                    labelStyle: const TextStyle(color: Color(0xFF2563EB)),
+                    deleteIconColor: const Color(0xFF2563EB),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+        ],
+        TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Search or type your own skill',
+            prefixIcon: const Icon(Icons.search, size: 20),
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+            ),
+          ),
+          onChanged: (v) => setState(() => _query = v),
+          onSubmitted: _addCustom,
+        ),
+        if (trimmedQuery.isNotEmpty && !hasExactMatch) ...[
+          const SizedBox(height: 8),
+          ActionChip(
+            avatar: const Icon(Icons.add, size: 16, color: Color(0xFF2563EB)),
+            label: Text(
+              'Add "$trimmedQuery" as a skill',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF2563EB),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onPressed: () => _addCustom(trimmedQuery),
+            backgroundColor: Colors.white,
+            side: const BorderSide(color: Color(0xFF2563EB)),
+          ),
+        ],
+        const SizedBox(height: 8),
+        if (widget.options.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Loading skill list…',
+              style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+            ),
+          )
+        else
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 160),
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: available.isEmpty
+                    ? [
+                        Text(
+                          trimmedQuery.isEmpty
+                              ? 'No matching skills'
+                              : 'No matching skills — press enter to add "$trimmedQuery" as a new one',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ]
+                    : available
+                          .map(
+                            (s) => ActionChip(
+                              avatar: const Icon(Icons.add, size: 16),
+                              label: Text(
+                                s,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              onPressed: () => _toggle(s),
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: Color(0xFFE5E7EB)),
+                            ),
+                          )
+                          .toList(),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

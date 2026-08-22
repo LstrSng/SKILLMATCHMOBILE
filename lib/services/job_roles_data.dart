@@ -146,6 +146,108 @@ JobRoleSkills? findBestRoleForTitle(
   return best;
 }
 
+/// Strips a competency-framework skill entry down to its plain skill name,
+/// e.g. "Business Needs Analysis Level 2" -> "Business Needs Analysis" and
+/// "Collaboration Basic" -> "Collaboration". Used to build a clean list of
+/// pickable skill names for the profile skills selector.
+String _stripLevelSuffix(String s) {
+  var out = s.trim();
+  out = out.replaceFirst(
+    RegExp(r'^-?\s*Level\s*\d+(?:-\d+)?\s*', caseSensitive: false),
+    '',
+  );
+  out = out.replaceFirst(
+    RegExp(r'\s*Level\s*\d+(?:-\d+)?\s*$', caseSensitive: false),
+    '',
+  );
+  out = out.replaceFirst(
+    RegExp(r'\s*(Basic|Intermediate|Advanced)\s*$', caseSensitive: false),
+    '',
+  );
+  return out.trim();
+}
+
+/// Concrete tools, languages, and platforms that real applicants list on
+/// their profiles but that never appear in the bundled competency-framework
+/// dataset (which only has broad process/soft skills like "Programming and
+/// Coding" or "Cloud Computing", not "Python" or "AWS"). Merged into the
+/// profile skill picker's options so it covers what people actually search
+/// for, on top of the vocabulary job postings are matched against.
+const List<String> _kCommonTechSkills = [
+  // Programming languages
+  'Python', 'Java', 'JavaScript', 'TypeScript', 'C', 'C++', 'C#', 'Dart',
+  'Kotlin', 'Swift', 'PHP', 'Ruby', 'Go', 'Rust', 'R', 'MATLAB', 'Scala',
+  'Perl', 'Objective-C', 'VB.NET', 'SQL',
+  // Web front end
+  'HTML', 'CSS', 'Sass', 'React', 'React Native', 'Angular', 'Vue.js',
+  'Next.js', 'Svelte', 'jQuery', 'Tailwind CSS', 'Bootstrap', 'Redux',
+  // Mobile
+  'Flutter', 'Android Development', 'iOS Development', 'Xamarin',
+  // Backend & frameworks
+  'Node.js', 'Express.js', 'Django', 'Flask', 'FastAPI', 'Spring Boot',
+  'Laravel', 'Ruby on Rails', 'ASP.NET', '.NET', 'GraphQL', 'REST APIs',
+  // Databases
+  'MySQL', 'PostgreSQL', 'MongoDB', 'Firebase', 'Oracle Database',
+  'Microsoft SQL Server', 'Redis', 'SQLite', 'Elasticsearch', 'DynamoDB',
+  // Cloud & DevOps
+  'Amazon Web Services (AWS)', 'Microsoft Azure', 'Google Cloud Platform',
+  'Docker', 'Kubernetes', 'Jenkins', 'Terraform', 'Ansible', 'CI/CD',
+  'Git', 'GitHub', 'GitLab', 'Bitbucket', 'Linux Administration',
+  'Shell Scripting', 'Nginx',
+  // Data, AI & analytics
+  'Data Science', 'Machine Learning', 'Deep Learning',
+  'Natural Language Processing', 'Computer Vision', 'TensorFlow', 'PyTorch',
+  'Pandas', 'NumPy', 'Power BI', 'Tableau', 'Apache Spark', 'ETL',
+  'Big Data',
+  // Design
+  'UI/UX Design', 'Figma', 'Adobe XD', 'Adobe Photoshop',
+  'Adobe Illustrator', 'Sketch', 'Canva', 'Wireframing', 'Prototyping',
+  // QA & testing
+  'Manual Testing', 'Automated Testing', 'Selenium', 'JUnit', 'Cypress',
+  'API Testing', 'Postman',
+  // Project management & methodology
+  'Agile', 'Scrum', 'Kanban', 'Waterfall', 'Jira', 'Trello',
+  'Project Planning',
+  // Security & networking
+  'Ethical Hacking', 'Penetration Testing', 'Firewall Configuration',
+  'Cloud Security',
+  // Office & productivity
+  'Microsoft Excel', 'Microsoft Word', 'Microsoft PowerPoint',
+  'Google Sheets', 'Google Docs',
+  // Common soft skills
+  'Leadership', 'Time Management', 'Customer Service', 'Creativity',
+  'Attention to Detail', 'Public Speaking', 'Negotiation',
+  'Conflict Resolution',
+];
+
+/// Returns the deduplicated, alphabetically sorted list of pickable skill
+/// names shown in the profile page's skill picker: the curated
+/// [_kCommonTechSkills] (concrete languages/tools/soft skills applicants
+/// actually search for) plus every plain skill name (competency levels
+/// stripped) drawn from the bundled IT job-role/skills dataset — the same
+/// vocabulary job postings are matched against. Deduplicated
+/// case-insensitively, keeping the curated list's casing on overlaps
+/// (e.g. "Communication" appears in both).
+Future<List<String>> loadSkillOptions() async {
+  final roles = await loadJobRoles();
+  final seen = <String>{};
+  final out = <String>[];
+
+  for (final skill in _kCommonTechSkills) {
+    if (seen.add(skill.toLowerCase())) out.add(skill);
+  }
+  for (final role in roles) {
+    for (final skill in role.skills) {
+      final base = _stripLevelSuffix(skill);
+      if (base.isEmpty) continue;
+      if (seen.add(base.toLowerCase())) out.add(base);
+    }
+  }
+
+  out.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return out;
+}
+
 /// Splits [skills] into (matched, unmatched) based on whether each skill
 /// (case-insensitively) is present in [mySkillKeys].
 ({List<String> matched, List<String> unmatched}) splitSkillsByOwnership(
@@ -235,7 +337,7 @@ class _MergingRole {
 
 List<String> _splitList(String field) {
   return field
-      .split(',')
+      .split(';')
       .map((s) => s.trim())
       .where((s) => s.isNotEmpty)
       .toList();

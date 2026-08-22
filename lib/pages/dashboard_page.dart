@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'applications_page.dart';
 import 'job_detail_page.dart';
 import 'jobs_page.dart';
-import '../models/job_role_skills.dart';
+import 'skill_assessment_page.dart';
 import '../services/applications_api.dart';
-import '../services/job_roles_data.dart';
 import '../services/job_skill_matcher.dart';
 import '../services/jobs_api.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
+import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
@@ -43,7 +43,6 @@ class _DashboardPageState extends State<DashboardPage> {
         fetchMyProfile(),
         fetchJobsRaw(),
         fetchMyApplications(),
-        loadJobRoles(),
       ]);
       if (!mounted) return;
       final profile = results[0] as Map<String, dynamic>;
@@ -53,10 +52,8 @@ class _DashboardPageState extends State<DashboardPage> {
       final applications = (results[2] as List<Map<String, dynamic>>)
           .map(JobApplication.fromJson)
           .toList();
-      final roles = results[3] as List<JobRoleSkills>;
-      final jobs = applyCsvSkillMatch(
+      final jobs = applyOwnSkillMatch(
         jobs: rawJobs,
-        roles: roles,
         mySkillKeys: readMySkillKeys(profile),
       );
       setState(() {
@@ -123,6 +120,22 @@ class _DashboardPageState extends State<DashboardPage> {
     final sorted = [..._jobs]
       ..sort((a, b) => b.matchPercentage.compareTo(a.matchPercentage));
     return sorted.take(3).toList();
+  }
+
+  bool _hasAnyAssessment() {
+    final profileData = _profile['profile'];
+    if (profileData is! Map) return false;
+    final mapped = profileData.map((k, v) => MapEntry(k.toString(), v));
+    return readAssessmentResults(mapped).isNotEmpty;
+  }
+
+  Future<void> _openAssessment() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SkillAssessmentPage()),
+    );
+    if (!mounted) return;
+    _load();
   }
 
   /// Application counts for the last 7 calendar days (oldest to newest).
@@ -251,6 +264,56 @@ class _DashboardPageState extends State<DashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
+
+                if (!_hasAnyAssessment()) ...[
+                  AppCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.quiz_outlined,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Find your skill level',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Take a short adaptive quiz to improve your job matches.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: const Color(0xFF6B7280)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: _openAssessment,
+                          child: const Text('Start'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
                 AppCard(
                   padding: const EdgeInsets.all(20),

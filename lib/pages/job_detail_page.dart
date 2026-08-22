@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../models/job_match_result.dart';
-import '../models/training_pathway.dart';
 import '../services/applications_api.dart';
 import '../services/job_roles_data.dart';
-import '../services/job_skill_matcher.dart';
-import '../services/pathway_links_data.dart';
 import '../services/saved_jobs_store.dart';
-import '../services/session_store.dart';
 import 'company_details_page.dart';
 import 'settings_page.dart';
 import '../widgets/centered_form_width.dart';
 import '../widgets/notification_bell_button.dart';
-import '../widgets/training_pathway_card.dart';
 
 class JobDetailPage extends StatefulWidget {
   const JobDetailPage({
@@ -56,7 +51,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
   bool _loading = true;
   String? _error;
   JobMatchResult? _matchResult;
-  TrainingPathway? _trainingPathway;
   String? _csvDescription;
 
   /// The CSV role's own description when a role match was found, falling
@@ -89,12 +83,13 @@ class _JobDetailPageState extends State<JobDetailPage> {
     setState(() => _isBookmarked = ids.contains(widget.jobId));
   }
 
-  /// Builds the skill match breakdown the same way as the Jobs list and
-  /// Dashboard: the job's title is matched to a canonical role in the
-  /// bundled IT_Job_Roles_Skills CSV, and that role's skills are split
-  /// matched/unmatched against the signed-in user's own profile skills.
-  /// This keeps the number shown here consistent with every other screen
-  /// that shows a match percentage for the same job.
+  /// Builds the skill match breakdown from the job's own required skills —
+  /// whatever the employer actually selected when posting it on the web
+  /// (passed in as [widget.matchedSkills]/[widget.unmatchedSkills]), never
+  /// a canonical role's full skill list. This keeps the number shown here
+  /// consistent with every other screen that shows a match percentage for
+  /// the same job. The CSV role lookup is only used for its description
+  /// text, as a fallback.
   Future<void> _loadMatchResult() async {
     setState(() {
       _loading = true;
@@ -104,25 +99,16 @@ class _JobDetailPageState extends State<JobDetailPage> {
     try {
       final roles = await loadJobRoles();
       final role = findBestRoleForTitle(roles, widget.title);
-      final mySkills = readMySkillKeys(SessionStore.user);
-
-      var matched = const <String>[];
-      var missing = const <String>[];
-      var score = widget.matchPercentage;
-
-      if (role != null && role.skills.isNotEmpty) {
-        final split = splitSkillsByOwnership(role.skills, mySkills);
-        matched = split.matched;
-        missing = split.unmatched;
-        score = (matched.length / role.skills.length * 100).round();
-      }
 
       final result = JobMatchResult(
         jobTitle: widget.title,
-        matchScore: score,
-        matchedSkills: matched,
-        missingSkills: missing,
-        recommendation: _recommendationFor(score, missing),
+        matchScore: widget.matchPercentage,
+        matchedSkills: widget.matchedSkills,
+        missingSkills: widget.unmatchedSkills,
+        recommendation: _recommendationFor(
+          widget.matchPercentage,
+          widget.unmatchedSkills,
+        ),
       );
 
       if (!mounted) return;
@@ -131,7 +117,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
         _csvDescription = role?.description;
         _loading = false;
       });
-      _loadTrainingPathway(widget.title);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -150,12 +135,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
       return 'Low match — consider gaining experience in ${missing.take(3).join(', ')}.';
     }
     return 'No recommendation available.';
-  }
-
-  Future<void> _loadTrainingPathway(String roleTitle) async {
-    final pathway = await trainingPathwayForRole(roleTitle);
-    if (!mounted) return;
-    setState(() => _trainingPathway = pathway);
   }
 
   Future<void> _applyNow() async {
@@ -337,10 +316,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
               missingSkills: result.missingSkills,
             ),
             const SizedBox(height: 16),
-            RecommendationCard(
-              recommendation: result.recommendation,
-              trainingPathway: _trainingPathway,
-            ),
+            RecommendationCard(recommendation: result.recommendation),
           ],
         ),
       ),
@@ -702,14 +678,9 @@ class SkillRow extends StatelessWidget {
 }
 
 class RecommendationCard extends StatelessWidget {
-  const RecommendationCard({
-    super.key,
-    required this.recommendation,
-    this.trainingPathway,
-  });
+  const RecommendationCard({super.key, required this.recommendation});
 
   final String recommendation;
-  final TrainingPathway? trainingPathway;
 
   static const _kPlaceholders = {
     '',
@@ -720,54 +691,40 @@ class RecommendationCard extends StatelessWidget {
   bool get _hasRecommendation =>
       !_kPlaceholders.contains(recommendation.trim().toLowerCase());
 
-  bool get _hasLinks => trainingPathway?.links.isNotEmpty ?? false;
-
   @override
   Widget build(BuildContext context) {
-    final showRecommendation = _hasRecommendation;
-    final showLinks = _hasLinks;
-    if (!showRecommendation && !showLinks) return const SizedBox.shrink();
+    if (!_hasRecommendation) return const SizedBox.shrink();
 
     return _InfoCard(
       title: 'Recommendation',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (showRecommendation)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDFA),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF99F6E4)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.auto_awesome_outlined,
-                    color: Color(0xFF0F766E),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      recommendation.trim(),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF134E4A),
-                        height: 1.45,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDFA),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF99F6E4)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.auto_awesome_outlined,
+              color: Color(0xFF0F766E),
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                recommendation.trim(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF134E4A),
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          if (showLinks) ...[
-            if (showRecommendation) const SizedBox(height: 16),
-            TrainingLinksList(pathway: trainingPathway!),
           ],
-        ],
+        ),
       ),
     );
   }

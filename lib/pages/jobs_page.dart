@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'job_detail_page.dart';
-import '../models/job_role_skills.dart';
 import '../services/applications_api.dart';
-import '../services/job_roles_data.dart';
 import '../services/job_skill_matcher.dart';
 import '../services/jobs_api.dart';
 import '../services/notification_store.dart';
@@ -29,6 +27,7 @@ class _JobsPageState extends State<JobsPage> {
   String? _error;
   String? _jobTypeFilter;
   double _minMatch = 0;
+  bool _hasAppliedToAllJobs = false;
 
   @override
   void initState() {
@@ -46,29 +45,27 @@ class _JobsPageState extends State<JobsPage> {
     try {
       final results = await Future.wait([
         fetchJobsRaw(),
-        loadJobRoles(),
         fetchMyApplications().catchError(
           (_) => <Map<String, dynamic>>[],
         ),
       ]);
-      final raw = results[0] as List<Map<String, dynamic>>;
-      final roles = results[1] as List<JobRoleSkills>;
-      final applications = results[2] as List<Map<String, dynamic>>;
+      final raw = results[0];
+      final applications = results[1];
       final appliedJobIds = applications
           .map((a) => (a['jobId'] as Object?)?.toString().trim() ?? '')
           .where((id) => id.isNotEmpty)
           .toSet();
-      final list = applyCsvSkillMatch(
-        jobs: raw
-            .map(Job.fromJson)
+      final allJobs = raw.map(Job.fromJson).toList();
+      final list = applyOwnSkillMatch(
+        jobs: allJobs
             .where((j) => !appliedJobIds.contains(j.id))
             .toList(),
-        roles: roles,
         mySkillKeys: readMySkillKeys(SessionStore.user),
       );
       if (!mounted) return;
       setState(() {
         _jobs = list;
+        _hasAppliedToAllJobs = allJobs.isNotEmpty && list.isEmpty;
         _loading = false;
         _error = null;
       });
@@ -373,8 +370,10 @@ class _JobsPageState extends State<JobsPage> {
                           padding: const EdgeInsets.symmetric(vertical: 32),
                           child: Center(
                             child: Text(
-                              _jobs.isEmpty
-                                  ? 'No job postings yet. Add documents to your jobs collection in MongoDB, or set JOBS_COLLECTION in backend/.env if they live in another collection.'
+                              _hasAppliedToAllJobs
+                                  ? "You've applied to all available jobs. Check back later for new postings."
+                                  : _jobs.isEmpty
+                                  ? 'No job postings yet. Check back soon!'
                                   : 'No jobs match your search.',
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.bodyMedium

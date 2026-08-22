@@ -123,6 +123,16 @@ String? _bestKeywordMatch(String roleTitle) {
   return bestPathway;
 }
 
+/// All bundled training/certification pathways, sorted by name. Used by
+/// the Pathway tab to let users browse certifications directly by skill
+/// area instead of picking a job role.
+Future<List<TrainingPathway>> allTrainingPathways() async {
+  await _ensureLoaded();
+  final list = _pathwaysByName!.values.toList();
+  list.sort((a, b) => a.name.compareTo(b.name));
+  return list;
+}
+
 /// Looks up the verified training/certification pathway for a job role
 /// title. Tries an exact (case-insensitive) match against the bundled
 /// career-pathway dataset first, then a seniority-stripped match, then
