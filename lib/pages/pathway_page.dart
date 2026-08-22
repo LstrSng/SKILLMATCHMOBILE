@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/training_pathway.dart';
 import '../services/pathway_links_data.dart';
@@ -6,9 +7,6 @@ import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/training_pathway_card.dart';
-
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE5E7EB);
 
 class PathwayPage extends StatefulWidget {
   const PathwayPage({super.key});
@@ -18,10 +16,20 @@ class PathwayPage extends StatefulWidget {
 }
 
 class _PathwayPageState extends State<PathwayPage> {
+  final _searchController = TextEditingController();
   bool _loading = true;
   String? _error;
   List<TrainingPathway> _pathways = [];
-  String _query = '';
+  String _selectedCategory = 'All';
+
+  static const _categories = [
+    'All',
+    'Cloud',
+    'Cybersecurity',
+    'Data',
+    'DevOps',
+    'Developer',
+  ];
 
   @override
   void initState() {
@@ -51,6 +59,12 @@ class _PathwayPageState extends State<PathwayPage> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const AppTopBar(),
@@ -75,67 +89,178 @@ class _PathwayPageState extends State<PathwayPage> {
   }
 
   Widget _buildContent(BuildContext context) {
-    final q = _query.trim().toLowerCase();
-    final filtered = q.isEmpty
-        ? _pathways
-        : _pathways.where((p) => p.name.toLowerCase().contains(q)).toList();
-    final horizontalPadding = MediaQuery.of(context).size.width > 600 ? 32.0 : 16.0;
+    final q = _searchController.text.trim().toLowerCase();
+    final filtered = _pathways.where((p) {
+      if (_selectedCategory != 'All' &&
+          !p.name.toLowerCase().contains(_selectedCategory.toLowerCase())) {
+        return false;
+      }
+      if (q.isEmpty) return true;
+      return p.name.toLowerCase().contains(q) ||
+          p.links.any((l) => l.label.toLowerCase().contains(q));
+    }).toList();
 
-    return Column(
-      children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(horizontalPadding, 16, horizontalPadding, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Certifications',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Browse skill areas and find where to get certified',
-                style: TextStyle(fontSize: 16, color: _kGray),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                onChanged: (v) => setState(() => _query = v),
-                decoration: InputDecoration(
-                  hintText: 'Search (e.g. Cloud, Cybersecurity, Java)',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: AppColors.surfaceMuted,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: _kBorder),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: _kBorder),
+    final horizontalPadding =
+        MediaQuery.of(context).size.width > 600 ? 32.0 : 16.0;
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.primary,
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              16,
+              horizontalPadding,
+              12,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Certifications & Pathways',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.4,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                const Text(
+                  'Browse industry certifications to boost your job matches',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Search field
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderSoft),
+                    boxShadow: const [AppColors.subtleShadow],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (v) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Search pathways (e.g. AWS, Cyber, Python)...',
+                      hintStyle: const TextStyle(
+                        color: AppColors.textFaint,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Category Chips
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _categories.map((cat) {
+                      final selected = _selectedCategory == cat;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _selectedCategory = cat);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: selected ? AppColors.primary : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: selected ? AppColors.primary : AppColors.borderSoft,
+                              ),
+                              boxShadow: selected
+                                  ? const [
+                                      BoxShadow(
+                                        color: Color(0x332563EB),
+                                        blurRadius: 6,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ]
+                                  : const [AppColors.subtleShadow],
+                            ),
+                            child: Text(
+                              cat,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                                color: selected ? Colors.white : AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        Expanded(
-          child: filtered.isEmpty
-              ? const Center(child: Text('No matching certification pathways.'))
-              : ListView.builder(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    0,
-                    horizontalPadding,
-                    100,
+          Expanded(
+            child: filtered.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 48),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.search_off_rounded, size: 36, color: AppColors.textFaint),
+                          SizedBox(height: 12),
+                          Text(
+                            'No matching certification pathways found.',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      4,
+                      horizontalPadding,
+                      100,
+                    ),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, i) => _PathwayTile(
+                      key: ValueKey(filtered[i].name),
+                      pathway: filtered[i],
+                    ),
                   ),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, i) => _PathwayTile(
-                    key: ValueKey(filtered[i].name),
-                    pathway: filtered[i],
-                  ),
-                ),
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -159,23 +284,36 @@ class _PathwayTileState extends State<_PathwayTile> {
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
-      onTap: () => setState(() => _expanded = !_expanded),
+      padding: const EdgeInsets.all(16),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        setState(() => _expanded = !_expanded);
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x222563EB),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: const Icon(
-                  Icons.workspace_premium,
+                  Icons.workspace_premium_rounded,
                   color: Colors.white,
-                  size: 20,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 12),
@@ -185,29 +323,41 @@ class _PathwayTileState extends State<_PathwayTile> {
                   children: [
                     Text(
                       pathway.name,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       count == 0
                           ? 'No verified resources yet'
-                          : '$count resource${count == 1 ? '' : 's'}',
-                      style: const TextStyle(fontSize: 12, color: _kGray),
+                          : '$count verified certification${count == 1 ? '' : 's'}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                _expanded ? Icons.expand_less : Icons.expand_more,
-                color: _kGray,
+              AnimatedRotation(
+                turns: _expanded ? 0.5 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.textSecondary,
+                  size: 22,
+                ),
               ),
             ],
           ),
           if (_expanded) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: AppColors.borderSoft),
             const SizedBox(height: 12),
-            const Divider(height: 1, color: _kBorder),
-            const SizedBox(height: 12),
-            TrainingLinksList(pathway: pathway),
+            TrainingPathwayCard(pathway: pathway),
           ],
         ],
       ),

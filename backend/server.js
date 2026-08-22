@@ -408,32 +408,153 @@ app.get("/api/jobs/:id/company", requireDb, async (req, res) => {
     const jobDoc = await Job.findById(id).lean();
     if (!jobDoc) return res.status(404).json({ message: "Job not found." });
 
-    if (!jobDoc.postedBy || !mongoose.Types.ObjectId.isValid(jobDoc.postedBy)) {
+    let poster = null;
+    if (jobDoc.postedBy && mongoose.Types.ObjectId.isValid(jobDoc.postedBy)) {
+      poster = await EmployerAccount.findById(jobDoc.postedBy).lean();
+    }
+
+    const name = String(
+      poster?.companyName ||
+      poster?.company ||
+      poster?.name ||
+      poster?.organization ||
+      jobDoc.company ||
+      jobDoc.companyName ||
+      ""
+    ).trim();
+
+    if (!poster && !name) {
       return res.status(404).json({ message: "No company info for this job." });
     }
 
-    const poster = await EmployerAccount.findById(jobDoc.postedBy).lean();
-    if (!poster) return res.status(404).json({ message: "Company not found." });
+    const bio = String(
+      poster?.companyBio ||
+      poster?.bio ||
+      poster?.about ||
+      poster?.description ||
+      poster?.overview ||
+      jobDoc.companyBio ||
+      jobDoc.companyDescription ||
+      ""
+    ).trim();
 
-    const contactName = [poster.firstName, poster.lastName]
-      .map((v) => String(v ?? "").trim())
-      .filter(Boolean)
-      .join(" ");
+    const website = String(
+      poster?.website ||
+      poster?.companyWebsite ||
+      jobDoc.companyWebsite ||
+      jobDoc.website ||
+      ""
+    ).trim();
+
+    const location = String(
+      poster?.location ||
+      poster?.companyLocation ||
+      poster?.address ||
+      jobDoc.location ||
+      jobDoc.companyLocation ||
+      ""
+    ).trim();
+
+    const contactNumber = String(
+      poster?.contactNumber ||
+      poster?.phone ||
+      poster?.phoneNumber ||
+      poster?.contact ||
+      jobDoc.contactNumber ||
+      ""
+    ).trim();
+
+    const email = String(
+      poster?.email ||
+      poster?.companyEmail ||
+      poster?.contactEmail ||
+      jobDoc.email ||
+      jobDoc.contactEmail ||
+      ""
+    ).trim();
+
+    const logoUrl = String(
+      poster?.logoUrl ||
+      poster?.logo ||
+      poster?.companyLogo ||
+      poster?.avatarUrl ||
+      poster?.avatar ||
+      poster?.profilePicture ||
+      jobDoc.logoUrl ||
+      jobDoc.companyLogo ||
+      jobDoc.logo ||
+      ""
+    ).trim();
+
+    const bannerUrl = String(
+      poster?.bannerUrl ||
+      poster?.banner ||
+      poster?.coverUrl ||
+      poster?.coverImage ||
+      poster?.headerImage ||
+      poster?.companyBanner ||
+      jobDoc.bannerUrl ||
+      jobDoc.coverUrl ||
+      jobDoc.banner ||
+      ""
+    ).trim();
+
+    const industry = String(
+      poster?.industry ||
+      poster?.category ||
+      poster?.sector ||
+      jobDoc.industry ||
+      ""
+    ).trim();
+
+    const companySize = String(
+      poster?.companySize ||
+      poster?.size ||
+      poster?.employeeCount ||
+      poster?.employees ||
+      jobDoc.companySize ||
+      ""
+    ).trim();
+
+    const contactName = poster
+      ? [poster.firstName, poster.lastName]
+          .map((v) => String(v ?? "").trim())
+          .filter(Boolean)
+          .join(" ")
+      : String(jobDoc.contactPerson || jobDoc.contactName || "").trim();
+
+    const memberSince = poster?.createdAt
+      ? new Date(poster.createdAt).toISOString()
+      : (jobDoc.createdAt ? new Date(jobDoc.createdAt).toISOString() : "");
+
+    const rawPhotos =
+      poster?.photos ||
+      poster?.images ||
+      poster?.companyImages ||
+      poster?.gallery ||
+      jobDoc.photos ||
+      jobDoc.images ||
+      [];
+    const photos = Array.isArray(rawPhotos)
+      ? rawPhotos.map((p) => String(p ?? "").trim()).filter(Boolean)
+      : [];
 
     return res.json({
       company: {
-        name: String(poster.companyName ?? ""),
-        bio: String(poster.companyBio ?? ""),
-        website: String(poster.website ?? ""),
-        location: String(poster.location ?? ""),
-        contactNumber: String(poster.contactNumber ?? ""),
-        logoUrl: String(poster.logoUrl ?? ""),
-        bannerUrl: String(poster.bannerUrl ?? ""),
-        email: String(poster.email ?? ""),
+        name: name || "Company",
+        bio,
+        website,
+        location,
+        contactNumber,
+        logoUrl,
+        bannerUrl,
+        email,
         contactName,
-        memberSince: poster.createdAt
-          ? new Date(poster.createdAt).toISOString()
-          : "",
+        industry,
+        companySize,
+        memberSince,
+        photos,
+        jobTitle: String(jobDoc.title || jobDoc.jobTitle || "").trim(),
       },
     });
   } catch (err) {

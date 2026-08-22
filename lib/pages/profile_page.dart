@@ -5,7 +5,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../config/cloudinary_config.dart';
 import '../models/skill_assessment.dart';
+import '../services/cloudinary_service.dart';
 import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
@@ -199,34 +202,46 @@ class _ProfilePageState extends State<ProfilePage> {
     _load();
   }
 
-  Map<String, String>? _resumeData() {
+  Map<String, dynamic>? _resumeData() {
     final raw = _profileData()['resume'];
     if (raw is! Map) return null;
     final name = (raw['name'] as Object?)?.toString().trim() ?? '';
-    final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
+    final url = (raw['url'] as Object?)?.toString().trim() ?? '';
     final data = (raw['data'] as Object?)?.toString().trim() ?? '';
+    final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
+    final publicId = (raw['publicId'] as Object?)?.toString().trim() ?? '';
+    final size = (raw['size'] as num?)?.toInt() ?? 0;
     final updatedAt = (raw['updatedAt'] as Object?)?.toString().trim() ?? '';
-    if (name.isEmpty || data.isEmpty) return null;
+    if (name.isEmpty && url.isEmpty && data.isEmpty) return null;
     return {
-      'name': name,
-      'mimeType': mimeType,
+      'name': name.isNotEmpty ? name : 'Resume',
+      'url': url,
       'data': data,
+      'mimeType': mimeType,
+      'publicId': publicId,
+      'size': size,
       'updatedAt': updatedAt,
     };
   }
 
-  Map<String, String>? _certificationData() {
+  Map<String, dynamic>? _certificationData() {
     final raw = _profileData()['certification'];
     if (raw is! Map) return null;
     final name = (raw['name'] as Object?)?.toString().trim() ?? '';
-    final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
+    final url = (raw['url'] as Object?)?.toString().trim() ?? '';
     final data = (raw['data'] as Object?)?.toString().trim() ?? '';
+    final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
+    final publicId = (raw['publicId'] as Object?)?.toString().trim() ?? '';
+    final size = (raw['size'] as num?)?.toInt() ?? 0;
     final updatedAt = (raw['updatedAt'] as Object?)?.toString().trim() ?? '';
-    if (name.isEmpty || data.isEmpty) return null;
+    if (name.isEmpty && url.isEmpty && data.isEmpty) return null;
     return {
-      'name': name,
-      'mimeType': mimeType,
+      'name': name.isNotEmpty ? name : 'Certification',
+      'url': url,
       'data': data,
+      'mimeType': mimeType,
+      'publicId': publicId,
+      'size': size,
       'updatedAt': updatedAt,
     };
   }
@@ -252,6 +267,23 @@ class _ProfilePageState extends State<ProfilePage> {
     return '${months[parsed.month - 1]} ${parsed.day}, ${parsed.year}';
   }
 
+  String _fileSubtitle(
+    Map<String, dynamic>? fileData, {
+    String fallback = 'PDF, DOC, DOCX, or Image (max 10MB)',
+  }) {
+    if (fileData == null) return fallback;
+    final parts = <String>[];
+    final size = fileData['size'];
+    if (size is int && size > 0) {
+      parts.add(CloudinaryService.formatFileSize(size));
+    }
+    final updatedAt = (fileData['updatedAt'] as Object?)?.toString() ?? '';
+    if (updatedAt.isNotEmpty) {
+      parts.add(_resumeDateLabel(updatedAt));
+    }
+    return parts.isEmpty ? 'Uploaded recently' : parts.join(' • ');
+  }
+
   String _resumeMimeType(String fileName) {
     final lower = fileName.toLowerCase();
     if (lower.endsWith('.pdf')) return 'application/pdf';
@@ -259,6 +291,8 @@ class _ProfilePageState extends State<ProfilePage> {
     if (lower.endsWith('.docx')) {
       return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     }
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
     return 'application/octet-stream';
   }
 
@@ -273,23 +307,117 @@ class _ProfilePageState extends State<ProfilePage> {
     return builder.takeBytes();
   }
 
+  Future<void> _viewDocument(String? url, String? name) async {
+    final cleanUrl = url?.trim() ?? '';
+    if (cleanUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No web link available for this document.')),
+      );
+      return;
+    }
+    final uri = Uri.tryParse(cleanUrl);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open ${name ?? 'document'}.')),
+      );
+    }
+  }
+
+  Future<void> _removeResume() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Remove Resume'),
+        content: const Text('Are you sure you want to remove your resume?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      final profile = _profileData();
+      profile.remove('resume');
+      final updated = await updateMyProfile({'profile': profile});
+      if (!mounted) return;
+      setState(() => _user = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Resume removed successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to remove resume: $e')),
+      );
+    }
+  }
+
+  Future<void> _removeCertification() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Remove Certification'),
+        content: const Text('Are you sure you want to remove your certification?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      final profile = _profileData();
+      profile.remove('certification');
+      final updated = await updateMyProfile({'profile': profile});
+      if (!mounted) return;
+      setState(() => _user = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Certification removed successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to remove certification: $e')),
+      );
+    }
+  }
+
   Future<void> _uploadResume() async {
     if (_uploadingResume) return;
     try {
       final picked = await FilePicker.platform.pickFiles(
-        type: FileType.any,
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'],
         withData: true,
         withReadStream: true,
       );
       if (picked == null || picked.files.isEmpty) return;
       final file = picked.files.first;
       final ext = (file.extension ?? '').toLowerCase();
-      const allowed = {'pdf', 'doc', 'docx'};
+      const allowed = {'pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'};
       if (!allowed.contains(ext)) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please choose a PDF, DOC, or DOCX file.'),
+            content: Text('Please choose a PDF, DOC, DOCX, or Image file.'),
           ),
         );
         return;
@@ -303,25 +431,46 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      const maxBytes = 5 * 1024 * 1024;
+      const maxBytes = 10 * 1024 * 1024; // 10MB
       if (bytes.length > maxBytes) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Resume must be 5MB or smaller.')),
+          const SnackBar(content: Text('Resume must be 10MB or smaller.')),
         );
         return;
       }
 
+      setState(() => _uploadingResume = true);
+
       final now = DateTime.now().toUtc().toIso8601String();
       final profile = _profileData();
-      profile['resume'] = {
-        'name': file.name,
-        'mimeType': _resumeMimeType(file.name),
-        'data': base64Encode(bytes),
-        'updatedAt': now,
-      };
 
-      setState(() => _uploadingResume = true);
+      if (CloudinaryConfig.isConfigured) {
+        final result = await CloudinaryService.uploadResume(
+          bytes: bytes,
+          fileName: file.name,
+        );
+        profile['resume'] = {
+          'name': file.name,
+          'url': result.secureUrl,
+          'publicId': result.publicId,
+          'resourceType': result.resourceType,
+          'format': result.format,
+          'mimeType': _resumeMimeType(file.name),
+          'size': bytes.length,
+          'updatedAt': now,
+        };
+      } else {
+        // Fallback to base64 encoding if Cloudinary is not configured yet
+        profile['resume'] = {
+          'name': file.name,
+          'mimeType': _resumeMimeType(file.name),
+          'data': base64Encode(bytes),
+          'size': bytes.length,
+          'updatedAt': now,
+        };
+      }
+
       final updated = await updateMyProfile({'profile': profile});
       if (!mounted) return;
       setState(() {
@@ -334,7 +483,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       final message = e.toString();
       final friendly = message.contains('(413)')
-          ? 'Upload is too large for the server. Restart backend with the latest code or use a smaller file.'
+          ? 'Upload is too large for the server. Configure Cloudinary in lib/config/cloudinary_config.dart for unlimited fast cloud storage.'
           : 'Upload failed: $message';
       ScaffoldMessenger.of(
         context,
@@ -348,19 +497,20 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_uploadingCertification) return;
     try {
       final picked = await FilePicker.platform.pickFiles(
-        type: FileType.any,
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'],
         withData: true,
         withReadStream: true,
       );
       if (picked == null || picked.files.isEmpty) return;
       final file = picked.files.first;
       final ext = (file.extension ?? '').toLowerCase();
-      const allowed = {'pdf', 'doc', 'docx'};
+      const allowed = {'pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'};
       if (!allowed.contains(ext)) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please choose a PDF, DOC, or DOCX file.'),
+            content: Text('Please choose a PDF, DOC, DOCX, or Image file.'),
           ),
         );
         return;
@@ -374,27 +524,48 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      const maxBytes = 5 * 1024 * 1024;
+      const maxBytes = 10 * 1024 * 1024; // 10MB
       if (bytes.length > maxBytes) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Certification must be 5MB or smaller.'),
+            content: Text('Certification must be 10MB or smaller.'),
           ),
         );
         return;
       }
 
+      setState(() => _uploadingCertification = true);
+
       final now = DateTime.now().toUtc().toIso8601String();
       final profile = _profileData();
-      profile['certification'] = {
-        'name': file.name,
-        'mimeType': _resumeMimeType(file.name),
-        'data': base64Encode(bytes),
-        'updatedAt': now,
-      };
 
-      setState(() => _uploadingCertification = true);
+      if (CloudinaryConfig.isConfigured) {
+        final result = await CloudinaryService.uploadCertification(
+          bytes: bytes,
+          fileName: file.name,
+        );
+        profile['certification'] = {
+          'name': file.name,
+          'url': result.secureUrl,
+          'publicId': result.publicId,
+          'resourceType': result.resourceType,
+          'format': result.format,
+          'mimeType': _resumeMimeType(file.name),
+          'size': bytes.length,
+          'updatedAt': now,
+        };
+      } else {
+        // Fallback to base64 encoding if Cloudinary is not configured yet
+        profile['certification'] = {
+          'name': file.name,
+          'mimeType': _resumeMimeType(file.name),
+          'data': base64Encode(bytes),
+          'size': bytes.length,
+          'updatedAt': now,
+        };
+      }
+
       final updated = await updateMyProfile({'profile': profile});
       if (!mounted) return;
       setState(() {
@@ -407,7 +578,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       final message = e.toString();
       final friendly = message.contains('(413)')
-          ? 'Upload is too large for the server. Restart backend with the latest code or use a smaller file.'
+          ? 'Upload is too large for the server. Configure Cloudinary in lib/config/cloudinary_config.dart for unlimited fast cloud storage.'
           : 'Upload failed: $message';
       ScaffoldMessenger.of(
         context,
@@ -828,9 +999,25 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Resume',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Resume',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      if (resume != null)
+                        TextButton.icon(
+                          onPressed: _uploadingResume ? null : _removeResume,
+                          icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
+                          label: const Text('Remove', style: TextStyle(fontSize: 12, color: AppColors.danger)),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -859,6 +1046,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               resume == null
                                   ? 'No resume uploaded yet'
                                   : (resume['name'] ?? 'Resume'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -866,9 +1055,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              resume == null
-                                  ? 'PDF, DOC, or DOCX (max 5MB)'
-                                  : _resumeDateLabel(resume['updatedAt'] ?? ''),
+                              _fileSubtitle(resume),
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF6B7280),
@@ -877,13 +1064,20 @@ class _ProfilePageState extends State<ProfilePage> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      if (resume != null && (resume['url'] as String? ?? '').isNotEmpty)
+                        IconButton(
+                          tooltip: 'View resume',
+                          icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFF2563EB)),
+                          onPressed: () => _viewDocument(resume['url'], resume['name']),
+                        ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF2563EB),
                           side: const BorderSide(color: Color(0xFFE5E7EB)),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
+                            horizontal: 14,
                             vertical: 8,
                           ),
                           shape: RoundedRectangleBorder(
@@ -919,9 +1113,25 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Certification',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Certification',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      if (certification != null)
+                        TextButton.icon(
+                          onPressed: _uploadingCertification ? null : _removeCertification,
+                          icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
+                          label: const Text('Remove', style: TextStyle(fontSize: 12, color: AppColors.danger)),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -950,6 +1160,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               certification == null
                                   ? 'No certification uploaded yet'
                                   : (certification['name'] ?? 'Certification'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -957,11 +1169,10 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              certification == null
-                                  ? 'PDF, DOC, or DOCX (max 5MB)'
-                                  : _resumeDateLabel(
-                                      certification['updatedAt'] ?? '',
-                                    ),
+                              _fileSubtitle(
+                                certification,
+                                fallback: 'PDF, DOC, DOCX, PNG, or JPG (max 10MB)',
+                              ),
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF6B7280),
@@ -970,13 +1181,20 @@ class _ProfilePageState extends State<ProfilePage> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      if (certification != null && (certification['url'] as String? ?? '').isNotEmpty)
+                        IconButton(
+                          tooltip: 'View certification',
+                          icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFF2563EB)),
+                          onPressed: () => _viewDocument(certification['url'], certification['name']),
+                        ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF2563EB),
                           side: const BorderSide(color: Color(0xFFE5E7EB)),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
+                            horizontal: 14,
                             vertical: 8,
                           ),
                           shape: RoundedRectangleBorder(
@@ -1205,6 +1423,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
   final _imagePicker = ImagePicker();
   bool _saving = false;
+  bool _uploadingAvatar = false;
 
   @override
   void initState() {
@@ -1296,26 +1515,66 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   }
 
   Future<void> _pickAvatar() async {
-    if (_saving) return;
+    if (_saving || _uploadingAvatar) return;
     try {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take a Photo'),
+                onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (source == null) return;
+
       final file = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-        maxWidth: 1024,
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1200,
       );
       if (file == null) return;
+
+      setState(() => _uploadingAvatar = true);
       final bytes = await file.readAsBytes();
-      final mimeType = _mimeTypeFromPath(file.path);
-      final dataUri = 'data:$mimeType;base64,${base64Encode(bytes)}';
-      if (!mounted) return;
-      setState(() {
-        _avatarUrl = dataUri;
-      });
+
+      if (CloudinaryConfig.isConfigured) {
+        final result = await CloudinaryService.uploadProfilePicture(
+          bytes: bytes,
+          fileName: file.name.isNotEmpty ? file.name : 'avatar.jpg',
+        );
+        if (!mounted) return;
+        setState(() {
+          _avatarUrl = result.secureUrl;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Avatar uploaded to Cloudinary!')),
+        );
+      } else {
+        final mimeType = _mimeTypeFromPath(file.path);
+        final dataUri = 'data:$mimeType;base64,${base64Encode(bytes)}';
+        if (!mounted) return;
+        setState(() {
+          _avatarUrl = dataUri;
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not pick image: $e')));
+      ).showSnackBar(SnackBar(content: Text('Avatar upload failed: $e')));
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
     }
   }
 
@@ -1508,13 +1767,27 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                       runSpacing: 8,
                       children: [
                         OutlinedButton.icon(
-                          onPressed: _saving ? null : _pickAvatar,
-                          icon: const Icon(Icons.upload),
-                          label: const Text('Upload photo'),
+                          onPressed: (_saving || _uploadingAvatar)
+                              ? null
+                              : _pickAvatar,
+                          icon: _uploadingAvatar
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.upload),
+                          label: Text(
+                            _uploadingAvatar
+                                ? 'Uploading...'
+                                : (_avatarUrl.trim().isEmpty
+                                    ? 'Upload photo'
+                                    : 'Change photo'),
+                          ),
                         ),
                         if (_avatarUrl.trim().isNotEmpty)
                           TextButton(
-                            onPressed: _saving
+                            onPressed: (_saving || _uploadingAvatar)
                                 ? null
                                 : () => setState(() => _avatarUrl = ''),
                             child: const Text('Remove'),

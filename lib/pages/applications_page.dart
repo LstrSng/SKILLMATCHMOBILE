@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../models/job_application.dart';
 import '../services/applications_api.dart';
 import '../services/jobs_api.dart';
+import '../services/navigation_service.dart';
 import '../services/notification_store.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
@@ -43,11 +46,6 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
       final raw = await fetchMyApplications();
       await NotificationStore.syncApplicationUpdatesFromList(raw);
 
-      // Application snapshots freeze the company name as of the moment the
-      // user applied. If that snapshot predates the job having a resolved
-      // company (or the employer filling in their company name), it stays
-      // blank forever. Backfill from the live jobs list so the card always
-      // reflects the current company name when we can find one.
       final jobs = await fetchJobsRaw().catchError(
         (_) => <Map<String, dynamic>>[],
       );
@@ -122,6 +120,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
             )
           : RefreshIndicator(
               onRefresh: () => _load(silent: true),
+              color: AppColors.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.symmetric(
@@ -133,49 +132,105 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Header & Segmented Controller
                       const Text(
                         'Applications',
                         style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.4,
                         ),
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Track status of your job applications',
+                        'Track the status of all your job submissions',
                         style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF6B7280),
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                      if (withdrawnApplications.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _showWithdrawn = !_showWithdrawn;
-                            });
-                          },
-                          icon: Icon(
-                            _showWithdrawn
-                                ? Icons.list_alt
-                                : Icons.visibility_outlined,
-                          ),
-                          label: Text(
-                            _showWithdrawn
-                                ? 'View Active Applications'
-                                : 'View Withdrawn Applications (${withdrawnApplications.length})',
-                          ),
+                      const SizedBox(height: 16),
+
+                      // Segmented Tab Switcher
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceMuted,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.borderSoft),
                         ),
-                      ],
-                      const SizedBox(height: 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _SegmentTab(
+                                label: 'Active (${activeApplications.length})',
+                                isSelected: !_showWithdrawn,
+                                onTap: () => setState(() => _showWithdrawn = false),
+                              ),
+                            ),
+                            Expanded(
+                              child: _SegmentTab(
+                                label: 'Withdrawn (${withdrawnApplications.length})',
+                                isSelected: _showWithdrawn,
+                                onTap: () => setState(() => _showWithdrawn = true),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
                       if (visibleApplications.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 32),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 48),
                           child: Center(
-                            child: Text(
-                              'No applications to show in this list.',
-                              textAlign: TextAlign.center,
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceMuted,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Icon(
+                                    Icons.business_center_outlined,
+                                    size: 32,
+                                    color: AppColors.textFaint,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _showWithdrawn
+                                      ? 'No withdrawn applications.'
+                                      : 'No active applications yet.',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _showWithdrawn
+                                      ? 'Applications you withdraw will be archived here.'
+                                      : 'Find exciting job matches and submit your application.',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                if (!_showWithdrawn) ...[
+                                  const SizedBox(height: 18),
+                                  FilledButton.icon(
+                                    onPressed: () => AppNavigation.switchTab(AppTab.jobs),
+                                    icon: const Icon(Icons.explore_rounded, size: 18),
+                                    label: const Text('Browse Job Matches'),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         )
@@ -184,7 +239,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                           children: visibleApplications
                               .map(
                                 (app) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.only(bottom: 14),
                                   child: _ApplicationCard(
                                     application: app,
                                     onChanged: () => _load(silent: true),
@@ -193,12 +248,61 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                               )
                               .toList(),
                         ),
-                      const SizedBox(height: 100),
+                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
               ),
             ),
+    );
+  }
+}
+
+class _SegmentTab extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SegmentTab({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: isSelected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x0F000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -226,7 +330,7 @@ class _ApplicationCard extends StatelessWidget {
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
+                backgroundColor: AppColors.danger,
               ),
               child: const Text('Withdraw'),
             ),
@@ -321,13 +425,35 @@ class _ApplicationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderSoft),
+                ),
+                child: Center(
+                  child: Text(
+                    application.company.isNotEmpty
+                        ? application.company.substring(0, 1).toUpperCase()
+                        : 'J',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,18 +461,19 @@ class _ApplicationCard extends StatelessWidget {
                     Text(
                       application.jobTitle,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       application.company.isNotEmpty
-                          ? '${application.company} • ${application.dateApplied}'
-                          : application.dateApplied,
+                          ? '${application.company} • Applied ${application.dateApplied}'
+                          : 'Applied ${application.dateApplied}',
                       style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6B7280),
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -358,44 +485,41 @@ class _ApplicationCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _ApplicationTimeline(status: application.currentStatus),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: AppColors.borderSoft),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               TextButton.icon(
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primary,
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () => _openDetails(context),
                 icon: const Icon(Icons.visibility_outlined, size: 16),
                 label: const Text(
-                  'Details',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  'View Job Details',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
               ),
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: application.currentStatus == 'Withdrawn'
-                      ? AppColors.textFaint
-                      : AppColors.danger,
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 0),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              if (application.currentStatus != 'Withdrawn')
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => _confirmWithdraw(context),
+                  icon: const Icon(Icons.cancel_outlined, size: 16),
+                  label: const Text(
+                    'Withdraw',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ),
-                onPressed: application.currentStatus == 'Withdrawn'
-                    ? null
-                    : () => _confirmWithdraw(context),
-                icon: const Icon(Icons.cancel_outlined, size: 16),
-                label: const Text(
-                  'Withdraw',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ),
             ],
           ),
         ],
@@ -416,15 +540,15 @@ class _StatusBadge extends StatelessWidget {
       case 'Screening':
         return const Color(0xFFFEF3C7);
       case 'Interview':
-        return const Color(0xFFDEEEFF);
+        return const Color(0xFFEEF2FF);
       case 'Offer':
-        return const Color(0xFFDCFCE7);
       case 'Hired':
-        return const Color(0xFFDCFCE7);
+        return const Color(0xFFECFDF5);
       case 'Rejected':
+      case 'Withdrawn':
         return const Color(0xFFFEF2F2);
       default:
-        return const Color(0xFFE5E7EB);
+        return const Color(0xFFF1F5F9);
     }
   }
 
@@ -433,49 +557,35 @@ class _StatusBadge extends StatelessWidget {
       case 'Applied':
         return const Color(0xFF2563EB);
       case 'Screening':
-        return const Color(0xFFB45309);
+        return const Color(0xFFD97706);
       case 'Interview':
-        return const Color(0xFF2563EB);
+        return const Color(0xFF4F46E5);
       case 'Offer':
-        return const Color(0xFF10B981);
       case 'Hired':
-        return const Color(0xFF10B981);
+        return const Color(0xFF059669);
       case 'Rejected':
+      case 'Withdrawn':
         return const Color(0xFFDC2626);
       default:
-        return const Color(0xFF6B7280);
+        return const Color(0xFF64748B);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: _backgroundColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: _textColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            status,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: _textColor,
-            ),
-          ),
-        ],
+      child: Text(
+        status,
+        style: TextStyle(
+          color: _textColor,
+          fontWeight: FontWeight.w800,
+          fontSize: 11,
+        ),
       ),
     );
   }
@@ -486,152 +596,98 @@ class _ApplicationTimeline extends StatelessWidget {
 
   const _ApplicationTimeline({required this.status});
 
-  bool _isCompleted(String stage) {
-    const stages = ['Applied', 'Screening', 'Interview', 'Offer'];
-    // Terminal statuses like "Rejected" or "Withdrawn" aren't in `stages`, so
-    // indexOf would return -1 and make even "Applied" look incomplete even
-    // though the applicant did apply. Treat any unknown status as having at
-    // least reached "Applied". "Hired" comes after an accepted "Offer", so
-    // it should light up the whole timeline instead.
-    final rawIndex = status == 'Hired' ? stages.length - 1 : stages.indexOf(status);
-    final currentIndex = rawIndex == -1 ? 0 : rawIndex;
-    final stageIndex = stages.indexOf(stage);
-    return stageIndex <= currentIndex;
+  static const _steps = ['Applied', 'Screening', 'Interview', 'Offer'];
+
+  int get _currentStepIndex {
+    switch (status) {
+      case 'Applied':
+        return 0;
+      case 'Screening':
+        return 1;
+      case 'Interview':
+        return 2;
+      case 'Offer':
+      case 'Hired':
+        return 3;
+      case 'Rejected':
+      case 'Withdrawn':
+        return -1;
+      default:
+        return 0;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    const stages = ['Applied', 'Screening', 'Interview', 'Offer'];
-    final timelineChildren = <Widget>[];
+    final stepIndex = _currentStepIndex;
+    final isNegative = status == 'Rejected' || status == 'Withdrawn';
 
-    for (int i = 0; i < stages.length; i++) {
-      timelineChildren.add(
-        Expanded(
-          child: Center(
-            child: Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: _isCompleted(stages[i])
-                    ? const Color(0xFF00D9A3)
-                    : const Color(0xFFE5E7EB),
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      if (i < stages.length - 1) {
-        timelineChildren.add(
-          Expanded(
-            child: Container(
-              height: 2,
-              color: _isCompleted(stages[i + 1])
-                  ? const Color(0xFF00D9A3)
-                  : const Color(0xFFE5E7EB),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-            ),
-          ),
-        );
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Row(children: timelineChildren),
-        const SizedBox(height: 8),
-        Row(
-          children: stages
-              .map(
-                (stage) => Expanded(
-                  child: Center(
-                    child: Text(
-                      stage,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: _isCompleted(stage)
-                            ? const Color(0xFF00D9A3)
-                            : const Color(0xFF9CA3AF),
+        for (int i = 0; i < _steps.length; i++) ...[
+          Expanded(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: i == 0
+                          ? const SizedBox.shrink()
+                          : Container(
+                              height: 2,
+                              color: (!isNegative && i <= stepIndex)
+                                  ? AppColors.primary
+                                  : AppColors.borderSoft,
+                            ),
+                    ),
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isNegative
+                            ? const Color(0xFFEF4444)
+                            : (i <= stepIndex
+                                ? AppColors.primary
+                                : Colors.white),
+                        border: Border.all(
+                          color: isNegative
+                              ? const Color(0xFFEF4444)
+                              : (i <= stepIndex
+                                  ? AppColors.primary
+                                  : AppColors.borderSoft),
+                          width: 2,
+                        ),
                       ),
                     ),
+                    Expanded(
+                      child: i == _steps.length - 1
+                          ? const SizedBox.shrink()
+                          : Container(
+                              height: 2,
+                              color: (!isNegative && i < stepIndex)
+                                  ? AppColors.primary
+                                  : AppColors.borderSoft,
+                            ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _steps[i],
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: (i == stepIndex) ? FontWeight.w700 : FontWeight.w500,
+                    color: (i <= stepIndex && !isNegative)
+                        ? AppColors.textPrimary
+                        : AppColors.textFaint,
                   ),
                 ),
-              )
-              .toList(),
-        ),
+              ],
+            ),
+          ),
+        ],
       ],
-    );
-  }
-}
-
-class JobApplication {
-  final String id;
-  final String jobId;
-  final String jobTitle;
-  final String company;
-  final String dateApplied;
-  final String currentStatus;
-  final DateTime appliedDate;
-  final Map<String, dynamic> jobSnapshot;
-
-  JobApplication({
-    required this.id,
-    required this.jobId,
-    required this.jobTitle,
-    required this.company,
-    required this.dateApplied,
-    required this.currentStatus,
-    required this.appliedDate,
-    required this.jobSnapshot,
-  });
-
-  static String _fmtDate(DateTime d) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[d.month - 1]} ${d.day}, ${d.year}';
-  }
-
-  factory JobApplication.fromJson(
-    Map<String, dynamic> json, {
-    String? liveCompany,
-  }) {
-    final snap = json['jobSnapshot'];
-    final s = snap is Map ? snap : const {};
-    final snapMap = s.map((k, v) => MapEntry(k.toString(), v));
-    final createdAtRaw = json['createdAt'];
-    DateTime createdAt = DateTime.now();
-    if (createdAtRaw is String) {
-      createdAt = DateTime.tryParse(createdAtRaw) ?? createdAt;
-    }
-
-    final snapshotCompany = (s['company'] as String?)?.trim() ?? '';
-
-    return JobApplication(
-      id: (json['_id'] as Object?)?.toString().trim() ?? '',
-      jobId: (json['jobId'] as Object?)?.toString().trim() ?? '',
-      jobTitle: (s['title'] as String?)?.trim() ?? 'Untitled role',
-      company: snapshotCompany.isNotEmpty
-          ? snapshotCompany
-          : (liveCompany?.trim() ?? ''),
-      dateApplied: _fmtDate(createdAt),
-      currentStatus: (json['status'] as String?)?.trim() ?? 'Applied',
-      appliedDate: createdAt,
-      jobSnapshot: snapMap,
     );
   }
 }

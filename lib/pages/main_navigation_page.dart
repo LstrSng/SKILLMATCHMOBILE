@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dashboard_page.dart';
 import 'jobs_page.dart';
 import 'pathway_page.dart';
 import 'profile_page.dart';
 import 'applications_page.dart';
+import '../services/navigation_service.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 
 class MainNavigationPage extends StatefulWidget {
@@ -26,34 +28,33 @@ class _NavItem {
 }
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
-  int _currentIndex = 0;
   late final List<Widget> _pages;
 
   static const _items = [
     _NavItem(
       label: 'Dashboard',
       outlinedIcon: Icons.dashboard_outlined,
-      filledIcon: Icons.dashboard,
+      filledIcon: Icons.dashboard_rounded,
     ),
     _NavItem(
       label: 'Jobs',
-      outlinedIcon: Icons.search_outlined,
-      filledIcon: Icons.search,
+      outlinedIcon: Icons.explore_outlined,
+      filledIcon: Icons.explore_rounded,
     ),
     _NavItem(
       label: 'Pathway',
-      outlinedIcon: Icons.route_outlined,
-      filledIcon: Icons.route,
+      outlinedIcon: Icons.alt_route_outlined,
+      filledIcon: Icons.alt_route_rounded,
     ),
     _NavItem(
       label: 'Applied',
       outlinedIcon: Icons.business_center_outlined,
-      filledIcon: Icons.business_center,
+      filledIcon: Icons.business_center_rounded,
     ),
     _NavItem(
       label: 'Profile',
-      outlinedIcon: Icons.person_outline,
-      filledIcon: Icons.person,
+      outlinedIcon: Icons.person_outline_rounded,
+      filledIcon: Icons.person_rounded,
     ),
   ];
 
@@ -69,47 +70,56 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     ];
   }
 
+  void _onTabSelected(int index) {
+    HapticFeedback.selectionClick();
+    AppNavigation.switchToIndex(index);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // IndexedStack keeps every tab's widget (and its State — selected
-      // role, scroll position, loaded data, etc.) alive in the tree even
-      // while hidden, instead of disposing and rebuilding it from scratch
-      // every time you switch tabs.
-      body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 24,
-              offset: Offset(0, -6),
+    return ValueListenableBuilder<int>(
+      valueListenable: AppNavigation.currentTab,
+      builder: (context, currentIndex, _) {
+        return Scaffold(
+          body: IndexedStack(
+            index: currentIndex,
+            children: _pages,
+          ),
+          bottomNavigationBar: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                top: BorderSide(color: AppColors.borderSoft, width: 1),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x0A0F172A),
+                  blurRadius: 20,
+                  offset: Offset(0, -4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: SafeArea(
-            child: SizedBox(
-              height: 64,
-              child: Row(
-                children: [
-                  for (var i = 0; i < _items.length; i++)
-                    Expanded(
-                      child: _NavButton(
-                        item: _items[i],
-                        selected: i == _currentIndex,
-                        onTap: () => setState(() => _currentIndex = i),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    for (var i = 0; i < _items.length; i++)
+                      Expanded(
+                        child: _NavButton(
+                          item: _items[i],
+                          selected: i == currentIndex,
+                          onTap: () => _onTabSelected(i),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -127,23 +137,48 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primary : AppColors.textFaint;
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(selected ? item.filledIcon : item.outlinedIcon, color: color, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            item.label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: color,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primarySoftBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedScale(
+              scale: selected ? 1.08 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              child: Icon(
+                selected ? item.filledIcon : item.outlinedIcon,
+                color: selected ? AppColors.primary : AppColors.textFaint,
+                size: 22,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 3),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppColors.primary : AppColors.textSecondary,
+                letterSpacing: selected ? -0.2 : 0,
+              ),
+              child: Text(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

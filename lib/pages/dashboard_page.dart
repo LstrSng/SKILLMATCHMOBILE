@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'applications_page.dart';
+import 'package:flutter/services.dart';
 import 'job_detail_page.dart';
-import 'jobs_page.dart';
 import 'skill_assessment_page.dart';
+import '../models/job.dart';
+import '../models/job_application.dart';
 import '../services/applications_api.dart';
 import '../services/job_skill_matcher.dart';
 import '../services/jobs_api.dart';
+import '../services/navigation_service.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import '../services/skill_assessment_engine.dart';
@@ -64,8 +66,6 @@ class _DashboardPageState extends State<DashboardPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      // Keep showing whatever we already have (e.g. the cached session
-      // profile) instead of blocking the whole dashboard on one failed call.
       setState(() {
         _loading = false;
         _error = e.toString();
@@ -92,7 +92,11 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     final profileData = _profile['profile'];
-    final hasResume = profileData is Map && profileData['resume'] is Map;
+    final hasResume = profileData is Map &&
+        profileData['resume'] is Map &&
+        ((profileData['resume']['url'] as Object?)?.toString().trim().isNotEmpty == true ||
+            (profileData['resume']['data'] as Object?)?.toString().trim().isNotEmpty == true ||
+            (profileData['resume']['name'] as Object?)?.toString().trim().isNotEmpty == true);
 
     final checks = [
       has('firstName'),
@@ -138,7 +142,6 @@ class _DashboardPageState extends State<DashboardPage> {
     _load();
   }
 
-  /// Application counts for the last 7 calendar days (oldest to newest).
   List<int> _weeklyActivity() {
     final today = DateTime.now();
     final startOfToday = DateTime(today.year, today.month, today.day);
@@ -174,41 +177,100 @@ class _DashboardPageState extends State<DashboardPage> {
     final topMatches = _topMatches();
 
     return Scaffold(
-      // backgroundColor: uses theme
       appBar: const AppTopBar(),
       body: RefreshIndicator(
         onRefresh: _load,
+        color: AppColors.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(
             horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
-            vertical: 20,
+            vertical: 16,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name.isEmpty ? 'Welcome back' : 'Welcome back, $name',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                      fontSize: 24,
-                    ),
+              // Hero Welcome Section
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Here\'s your career optimization overview.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: const Color(0xFF6B7280),
-                      fontSize: 14,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x332563EB),
+                      blurRadius: 16,
+                      offset: Offset(0, 6),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name.isEmpty ? 'Hello, Jobseeker!' : 'Hello, $name 👋',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Your career optimization overview',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFFBFDBFE),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Quick Action Pills
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _HeroActionChip(
+                            icon: Icons.explore_rounded,
+                            label: 'Explore Jobs',
+                            onTap: () => AppNavigation.switchTab(AppTab.jobs),
+                          ),
+                          const SizedBox(width: 8),
+                          _HeroActionChip(
+                            icon: Icons.alt_route_rounded,
+                            label: 'Pathways',
+                            onTap: () => AppNavigation.switchTab(AppTab.pathway),
+                          ),
+                          const SizedBox(width: 8),
+                          _HeroActionChip(
+                            icon: Icons.person_rounded,
+                            label: 'My Profile',
+                            onTap: () => AppNavigation.switchTab(AppTab.profile),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               if (_loading)
                 const Padding(
@@ -217,179 +279,255 @@ class _DashboardPageState extends State<DashboardPage> {
                 )
               else ...[
                 if (_error != null) ...[
-                  Text(
-                    'Some data could not be refreshed: $_error',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFFDC2626),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.dangerBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.dangerBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline, color: AppColors.danger, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Could not refresh live data: $_error',
+                            style: const TextStyle(color: AppColors.danger, fontSize: 13),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                 ],
+
+                // Interactive Stat Cards Grid
                 GridView.count(
-                  crossAxisCount: MediaQuery.of(context).size.width > 600
-                      ? 4
-                      : 2,
+                  crossAxisCount: MediaQuery.of(context).size.width > 600 ? 4 : 2,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 1.1,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  childAspectRatio: 1.15,
                   children: [
                     _StatCard(
-                      label: 'Profile',
+                      label: 'Profile Score',
                       value: '${(profileCompletion * 100).round()}%',
-                      icon: Icons.trending_up,
+                      icon: Icons.person_outline_rounded,
+                      iconBgColor: const Color(0xFFEEF2FF),
+                      iconColor: const Color(0xFF4F46E5),
                       hasProgress: true,
                       progress: profileCompletion,
-                      subtitle: '',
+                      onTap: () => AppNavigation.switchTab(AppTab.profile),
                     ),
                     _StatCard(
-                      label: 'Matches',
+                      label: 'Job Matches',
                       value: '$matches',
-                      icon: Icons.business,
-                      subtitle: matches == 0 ? 'No jobs yet' : 'Available now',
+                      icon: Icons.work_outline_rounded,
+                      iconBgColor: const Color(0xFFEFF6FF),
+                      iconColor: AppColors.primary,
+                      subtitle: matches == 0 ? 'No open jobs' : '$matches available',
+                      onTap: () => AppNavigation.switchTab(AppTab.jobs),
                     ),
                     _StatCard(
-                      label: 'Avg Match',
+                      label: 'Avg Skill Match',
                       value: _jobs.isEmpty ? '—' : '$avgMatch%',
-                      icon: Icons.flash_on,
-                      subtitle: _jobs.isEmpty ? '' : 'Across $matches jobs',
+                      icon: Icons.bolt_rounded,
+                      iconBgColor: const Color(0xFFFEF3C7),
+                      iconColor: const Color(0xFFD97706),
+                      subtitle: _jobs.isEmpty ? 'No jobs' : 'Overall rating',
+                      onTap: () => AppNavigation.switchTab(AppTab.jobs),
                     ),
                     _StatCard(
-                      label: 'Applied',
+                      label: 'Applications',
                       value: '$applied',
-                      icon: Icons.business_center,
-                      subtitle: applied == 0 ? 'None yet' : 'Total submitted',
+                      icon: Icons.assignment_outlined,
+                      iconBgColor: const Color(0xFFECFDF5),
+                      iconColor: const Color(0xFF059669),
+                      subtitle: applied == 0 ? 'None yet' : 'Track status',
+                      onTap: () => AppNavigation.switchTab(AppTab.applied),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
+                // Skill Assessment Banner
                 if (!_hasAnyAssessment()) ...[
-                  AppCard(
-                    padding: const EdgeInsets.all(20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: const [AppColors.subtleShadow],
+                    ),
                     child: Row(
                       children: [
                         Container(
-                          width: 44,
-                          height: 44,
+                          width: 48,
+                          height: 48,
                           decoration: BoxDecoration(
-                            gradient: AppColors.primaryGradient,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                            ),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
                             Icons.quiz_outlined,
                             color: Colors.white,
-                            size: 22,
+                            size: 24,
                           ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Find your skill level',
+                            children: const [
+                              Text(
+                                'Boost Your Job Matches',
                                 style: TextStyle(
                                   fontSize: 15,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              SizedBox(height: 2),
                               Text(
-                                'Take a short adaptive quiz to improve your job matches.',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: const Color(0xFF6B7280)),
+                                'Take a 3-min adaptive assessment to prove verified skills.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(width: 8),
-                        TextButton(
+                        FilledButton(
                           onPressed: _openAssessment,
-                          child: const Text('Start'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF8B5CF6),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Start', style: TextStyle(fontWeight: FontWeight.w700)),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                 ],
 
+                // Top Matches Section
                 AppCard(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Top Matches',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black,
+                          Row(
+                            children: const [
+                              Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 22),
+                              SizedBox(width: 8),
+                              Text(
+                                'Top Matches for You',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
                                 ),
+                              ),
+                            ],
                           ),
                           TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const JobsPage(),
+                            onPressed: () => AppNavigation.switchTab(AppTab.jobs),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Row(
+                              children: const [
+                                Text(
+                                  'View all',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
                                 ),
-                              );
-                            },
-                            child: const Text(
-                              'View all',
-                              style: TextStyle(
-                                color: Color(0xFF2563EB),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
+                                SizedBox(width: 2),
+                                Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       if (topMatches.isEmpty)
-                        Text(
-                          'No job matches yet. Check back soon.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: const Color(0xFF6B7280)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(Icons.work_off_outlined, size: 36, color: Colors.grey.shade400),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'No open job matches yet.',
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
                         )
                       else
                         for (var i = 0; i < topMatches.length; i++) ...[
-                          if (i > 0) const SizedBox(height: 12),
+                          if (i > 0) const SizedBox(height: 10),
                           _JobMatchCard(job: topMatches[i]),
                         ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
+                // Weekly Activity Section
                 AppCard(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Weekly Activity',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Weekly Activity',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            '$applied total applied',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      const Text(
                         'Applications submitted over the last 7 days',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF6B7280),
-                        ),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       SizedBox(
-                        height: 160,
+                        height: 150,
                         child: CustomPaint(
                           size: Size.infinite,
                           painter: BarChartPainter(
@@ -402,7 +540,52 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
               ],
-              const SizedBox(height: 100),
+              const SizedBox(height: 80),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _HeroActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.18),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
             ],
           ),
         ),
@@ -415,78 +598,110 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final Color iconBgColor;
+  final Color iconColor;
   final String subtitle;
   final bool hasProgress;
   final double progress;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.label,
     required this.value,
     required this.icon,
-    required this.subtitle,
+    required this.iconBgColor,
+    required this.iconColor,
+    this.subtitle = '',
     this.hasProgress = false,
     this.progress = 0,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 0,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap?.call();
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderSoft),
+            boxShadow: const [AppColors.subtleShadow],
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: iconBgColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: iconColor, size: 18),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 12,
+                    color: AppColors.textFaint,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 24,
+                  letterSpacing: -0.5,
+                  color: AppColors.textPrimary,
+                ),
+              ),
               Text(
                 label,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(9),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
                 ),
-                child: Icon(icon, color: Colors.white, size: 15),
               ),
+              if (hasProgress) ...[
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 4,
+                    backgroundColor: const Color(0xFFEEF2FF),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4F46E5)),
+                  ),
+                ),
+              ] else if (subtitle.isNotEmpty) ...[
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textFaint,
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              fontSize: 26,
-            ),
-          ),
-          if (hasProgress) ...[
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 6,
-                backgroundColor: AppColors.border,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.primary,
-                ),
-              ),
-            ),
-          ] else if (subtitle.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontSize: 12),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -499,77 +714,111 @@ class _JobMatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        final applicantId =
-            (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString();
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => JobDetailPage(
-              jobId: job.id,
-              applicantId: applicantId,
-              title: job.title,
-              company: job.company,
-              location: job.location,
-              salary: job.salary,
-              jobType: job.jobType,
-              postedDate: job.postedDate,
-              matchPercentage: job.matchPercentage,
-              description: job.description,
-              matchedSkills: job.matchedSkills,
-              unmatchedSkills: job.unmatchedSkills,
+    final matchColor = AppColors.matchColor(job.matchPercentage);
+    final matchBg = AppColors.matchBgColor(job.matchPercentage);
+
+    return Material(
+      color: AppColors.surfaceMuted,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          final applicantId =
+              (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => JobDetailPage(
+                jobId: job.id,
+                applicantId: applicantId,
+                title: job.title,
+                company: job.company,
+                location: job.location,
+                salary: job.salary,
+                jobType: job.jobType,
+                postedDate: job.postedDate,
+                matchPercentage: job.matchPercentage,
+                description: job.description,
+                matchedSkills: job.matchedSkills,
+                unmatchedSkills: job.unmatchedSkills,
+              ),
             ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.borderSoft),
           ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    job.title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    job.company,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6B7280),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0EA5A5),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${job.matchPercentage}%',
-                style: const TextStyle(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
                   color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderSoft),
+                ),
+                child: Center(
+                  child: Text(
+                    job.company.isNotEmpty ? job.company.substring(0, 1).toUpperCase() : 'J',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      job.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${job.company}${job.location.isNotEmpty ? " • ${job.location}" : ""}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: matchBg,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${job.matchPercentage}%',
+                  style: TextStyle(
+                    color: matchColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -585,11 +834,15 @@ class BarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint barPaint = Paint()
-      ..color = const Color(0xFF2563EB)
-      ..strokeWidth = 2;
+      ..shader = const LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
+    final Paint emptyBarPaint = Paint()..color = const Color(0xFFF1F5F9);
     final Paint gridPaint = Paint()
-      ..color = const Color(0xFFE5E7EB)
+      ..color = const Color(0xFFF1F5F9)
       ..strokeWidth = 1;
 
     final TextPainter textPaint = TextPainter(textDirection: TextDirection.ltr);
@@ -597,55 +850,62 @@ class BarChartPainter extends CustomPainter {
     final maxValue = values.isEmpty
         ? 1.0
         : values
-              .fold<int>(0, (m, v) => v > m ? v : m)
-              .clamp(1, 1 << 30)
-              .toDouble();
+            .fold<int>(0, (m, v) => v > m ? v : m)
+            .clamp(1, 1 << 30)
+            .toDouble();
 
-    final barWidth = size.width / (values.length * 2 + 2);
-    final chartHeight = size.height * 0.75;
-    final padding = size.height * 0.1;
+    final barWidth = size.width / (values.length * 2 + 1);
+    final chartHeight = size.height * 0.70;
+    final padding = size.height * 0.08;
 
-    // Draw grid lines: always 4 evenly spaced steps from 0 to maxValue, so
-    // the labels line up with the real scale no matter how big it gets.
-    const gridDivisions = 4;
+    // Draw horizontal grid lines
+    const gridDivisions = 3;
     for (int step = 0; step <= gridDivisions; step++) {
       final fraction = step / gridDivisions;
       final y = padding + (chartHeight * (1 - fraction));
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-
-      final label = (maxValue * fraction).round();
-      final textSpan = TextSpan(
-        text: '$label',
-        style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
-      );
-      textPaint.text = textSpan;
-      textPaint.layout();
-      textPaint.paint(canvas, Offset(-20, y - 6));
     }
 
-    // Draw bars and labels
+    // Draw bars
     for (int i = 0; i < values.length; i++) {
       final barHeight = (chartHeight * values[i]) / maxValue;
-      final x = barWidth * (2 * i + 1.5);
+      final x = barWidth * (2 * i + 1.2);
       final y = padding + chartHeight - barHeight;
 
+      // Draw light background bar
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(x - barWidth / 2, y, barWidth, barHeight),
-          const Radius.circular(4),
+          Rect.fromLTWH(x - barWidth / 2, padding, barWidth, chartHeight),
+          const Radius.circular(6),
         ),
-        barPaint,
+        emptyBarPaint,
       );
 
+      // Draw active value bar
+      if (barHeight > 0) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(x - barWidth / 2, y, barWidth, barHeight),
+            const Radius.circular(6),
+          ),
+          barPaint,
+        );
+      }
+
+      final isToday = i == values.length - 1;
       final textSpan = TextSpan(
         text: days[i],
-        style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+        style: TextStyle(
+          color: isToday ? AppColors.primary : AppColors.textSecondary,
+          fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+          fontSize: 11,
+        ),
       );
       textPaint.text = textSpan;
       textPaint.layout();
       textPaint.paint(
         canvas,
-        Offset(x - textPaint.width / 2, padding + chartHeight + 5),
+        Offset(x - textPaint.width / 2, padding + chartHeight + 6),
       );
     }
   }

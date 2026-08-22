@@ -1,4 +1,4 @@
-import '../pages/jobs_page.dart';
+import '../models/job.dart';
 import 'job_roles_data.dart';
 
 /// Reads the signed-in user's own profile skills as a lowercased,
@@ -18,10 +18,6 @@ Set<String> readMySkillKeys(Map<String, dynamic>? user) {
 /// actually selected when posting it — [Job.matchedSkills] ∪
 /// [Job.unmatchedSkills] as returned by the API) into matched/unmatched
 /// against [mySkillKeys], and recomputes the match percentage from that.
-/// Never substitutes a different skill list — only the skills the job was
-/// actually posted with are ever shown. Used by every screen that shows
-/// job match data (Jobs list, Dashboard) so the numbers agree everywhere.
-/// Result is sorted by match percentage, highest first.
 List<Job> applyOwnSkillMatch({
   required List<Job> jobs,
   required Set<String> mySkillKeys,
