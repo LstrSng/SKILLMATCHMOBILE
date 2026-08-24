@@ -517,14 +517,18 @@ class JobHeaderCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              company,
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600,
-                                color: onCompanyTap != null
-                                    ? tokens.primary
-                                    : tokens.textSecondary,
+                            Flexible(
+                              child: Text(
+                                company,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: onCompanyTap != null
+                                      ? tokens.primary
+                                      : tokens.textSecondary,
+                                ),
                               ),
                             ),
                             if (onCompanyTap != null) ...[

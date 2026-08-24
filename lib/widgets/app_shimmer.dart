@@ -141,13 +141,13 @@ class JobCardSkeleton extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-            // Metadata pills row
-            const Row(
+            // Metadata pills skeleton
+            const Wrap(
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 ShimmerBox(width: 80, height: 22, borderRadius: 8),
-                SizedBox(width: 6),
                 ShimmerBox(width: 70, height: 22, borderRadius: 8),
-                SizedBox(width: 6),
                 ShimmerBox(width: 75, height: 22, borderRadius: 8),
               ],
             ),
@@ -166,12 +166,12 @@ class JobCardSkeleton extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Skill chips skeleton
-            const Row(
+            const Wrap(
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 ShimmerBox(width: 65, height: 24, borderRadius: 10),
-                SizedBox(width: 6),
                 ShimmerBox(width: 80, height: 24, borderRadius: 10),
-                SizedBox(width: 6),
                 ShimmerBox(width: 70, height: 24, borderRadius: 10),
               ],
             ),
@@ -219,12 +219,12 @@ class JobDetailSkeleton extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Row(
+                  const Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       ShimmerBox(width: 90, height: 24, borderRadius: 8),
-                      SizedBox(width: 8),
                       ShimmerBox(width: 80, height: 24, borderRadius: 8),
-                      SizedBox(width: 8),
                       ShimmerBox(width: 85, height: 24, borderRadius: 8),
                     ],
                   ),
