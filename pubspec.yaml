@@ -27,6 +27,7 @@ flutter:
   assets:
     - assets/data/IT_Job_Roles_Skills.csv
     - assets/data/career_pathway_links.json
+    - assets/data/psf_assessments.json
     - assets/images/app_icon.jpeg
 
 flutter_launcher_icons:

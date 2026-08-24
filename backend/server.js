@@ -11,6 +11,7 @@ import Application from "./models/application.js";
 import Otp from "./models/otp.js";
 import TrustedDevice from "./models/trusted_device.js";
 import EmployerAccount from "./models/employer_account.js";
+import Assessment from "./models/assessment.js";
 import { normalizeJobDoc } from "./jobNormalize.js";
 import { generateNumericOtp, hashOtp } from "./utils/otp.js";
 import { generateDeviceToken, hashDeviceToken } from "./utils/device_token.js";
@@ -560,6 +561,209 @@ app.get("/api/jobs/:id/company", requireDb, async (req, res) => {
   } catch (err) {
     console.error("Company details error:", err);
     return res.status(500).json({ message: "Could not load company details." });
+  }
+});
+
+// ==========================================
+// Assessment APIs (MongoDB backed)
+// ==========================================
+
+// List all published assessments from MongoDB
+app.get("/api/assessments", requireDb, async (req, res) => {
+  try {
+    const { track, search, roleId } = req.query ?? {};
+    const filter = { isPublished: { $ne: false } };
+
+    if (track && String(track).trim() && String(track).trim().toLowerCase() !== "all") {
+      filter.track = String(track).trim();
+    }
+    if (roleId && String(roleId).trim()) {
+      filter.roleId = String(roleId).trim();
+    }
+    if (search && String(search).trim()) {
+      const q = String(search).trim();
+      filter.$or = [
+        { title: { $regex: q, $options: "i" } },
+        { roleTitle: { $regex: q, $options: "i" } },
+        { roleId: { $regex: q, $options: "i" } },
+        { track: { $regex: q, $options: "i" } },
+      ];
+    }
+
+    const docs = await Assessment.find(filter)
+      .sort({ track: 1, roleTitle: 1 })
+      .lean();
+
+    const assessments = docs.map((d) => ({
+      _id: String(d._id),
+      roleId: d.roleId || "",
+      roleTitle: d.roleTitle || d.title || "",
+      title: d.title || "",
+      track: d.track || "General",
+      description: d.description || "",
+      passingScorePercentage: Number(d.passingScorePercentage) || 70,
+      timeLimitMinutes: Number(d.timeLimitMinutes) || 25,
+      questionsCount: Array.isArray(d.questions) ? d.questions.length : 0,
+      questions: Array.isArray(d.questions)
+        ? d.questions.map((q) => ({
+            questionId: q.questionId || String(q._id || ""),
+            prompt: q.prompt || "",
+            type: q.type || "multiple_choice",
+            options: Array.isArray(q.options) ? q.options : [],
+            correctAnswer: q.correctAnswer || "",
+            explanation: q.explanation || "",
+            competency: q.competency || "",
+            skillType: q.skillType || "Functional Competency",
+            difficulty: q.difficulty || "Mid-Level",
+            points: Number(q.points) || 5,
+            timeLimitSeconds: Number(q.timeLimitSeconds) || 120,
+          }))
+        : [],
+    }));
+
+    return res.json({ assessments, total: assessments.length });
+  } catch (err) {
+    console.error("Fetch assessments error:", err);
+    return res.status(500).json({ message: "Could not load assessments." });
+  }
+});
+
+// Get a single assessment with full questions by ID or roleId
+app.get("/api/assessments/:id", requireDb, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let doc = null;
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      doc = await Assessment.findById(id).lean();
+    }
+    if (!doc) {
+      doc = await Assessment.findOne({ roleId: id }).lean();
+    }
+    if (!doc) {
+      return res.status(404).json({ message: "Assessment not found." });
+    }
+
+    const assessment = {
+      _id: String(doc._id),
+      roleId: doc.roleId || "",
+      roleTitle: doc.roleTitle || doc.title || "",
+      title: doc.title || "",
+      track: doc.track || "General",
+      description: doc.description || "",
+      passingScorePercentage: Number(doc.passingScorePercentage) || 70,
+      timeLimitMinutes: Number(doc.timeLimitMinutes) || 25,
+      questionsCount: Array.isArray(doc.questions) ? doc.questions.length : 0,
+      questions: Array.isArray(doc.questions)
+        ? doc.questions.map((q) => ({
+            questionId: q.questionId || String(q._id || ""),
+            prompt: q.prompt || "",
+            type: q.type || "multiple_choice",
+            options: Array.isArray(q.options) ? q.options : [],
+            correctAnswer: q.correctAnswer || "",
+            explanation: q.explanation || "",
+            competency: q.competency || "",
+            skillType: q.skillType || "Functional Competency",
+            difficulty: q.difficulty || "Mid-Level",
+            points: Number(q.points) || 5,
+            timeLimitSeconds: Number(q.timeLimitSeconds) || 120,
+          }))
+        : [],
+    };
+
+    return res.json({ assessment });
+  } catch (err) {
+    console.error("Fetch single assessment error:", err);
+    return res.status(500).json({ message: "Could not load assessment details." });
+  }
+});
+
+// Submit assessment results and persist to MongoDB user profile
+app.post("/api/assessments/:id/submit", requireDb, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let doc = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      doc = await Assessment.findById(id).lean();
+    }
+    if (!doc) {
+      doc = await Assessment.findOne({ roleId: id }).lean();
+    }
+
+    const body = req.body ?? {};
+    const correctCount = Number(body.correctCount) || 0;
+    const totalCount = Number(body.totalCount) || (doc?.questions?.length ?? 0) || 1;
+    const percentage = Math.round((correctCount / totalCount) * 100);
+    const passingThreshold = Number(doc?.passingScorePercentage) || 70;
+    const passed = percentage >= passingThreshold;
+
+    let level = "Beginner";
+    if (percentage >= 85) level = "Job-ready";
+    else if (percentage >= 70) level = "Advanced";
+    else if (percentage >= 50) level = "Intermediate";
+
+    const result = {
+      assessmentId: doc ? String(doc._id) : id,
+      roleId: doc?.roleId || id,
+      roleTitle: doc?.roleTitle || doc?.title || "Skill Assessment",
+      track: doc?.track || "General",
+      level,
+      scorePercentage: percentage,
+      correctCount,
+      totalCount,
+      passed,
+      passingScorePercentage: passingThreshold,
+      takenAt: new Date().toISOString(),
+    };
+
+    // If authenticated, update user document
+    const token = getBearerToken(req);
+    let updatedUser = null;
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded?.id) {
+          const user = await User.findById(decoded.id);
+          if (user) {
+            const currentProfile = (user.profile && typeof user.profile === "object") ? { ...user.profile } : {};
+            const currentAssessments = (currentProfile.skillAssessments && typeof currentProfile.skillAssessments === "object")
+              ? { ...currentProfile.skillAssessments }
+              : {};
+
+            const categoryKey = doc?.roleId || id;
+            currentAssessments[categoryKey] = {
+              level,
+              ability: (percentage / 25).toFixed(2),
+              correctCount,
+              totalCount,
+              scorePercentage: percentage,
+              passed,
+              roleTitle: result.roleTitle,
+              track: result.track,
+              takenAt: result.takenAt,
+            };
+
+            currentProfile.skillAssessments = currentAssessments;
+            user.profile = currentProfile;
+            user.markModified("profile");
+            await user.save();
+            updatedUser = userPublic(user.toObject());
+          }
+        }
+      } catch (authErr) {
+        console.warn("Could not save to authenticated user:", authErr.message);
+      }
+    }
+
+    return res.json({
+      ok: true,
+      result,
+      user: updatedUser,
+      message: passed ? "Congratulations! You passed the assessment." : "Assessment completed.",
+    });
+  } catch (err) {
+    console.error("Submit assessment error:", err);
+    return res.status(500).json({ message: "Could not submit assessment." });
   }
 });
 
