@@ -36,21 +36,8 @@ class MyApp extends StatelessWidget {
               child: child!,
             );
           },
-          theme: buildAppTheme(),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF2563EB),
-              brightness: Brightness.dark,
-            ),
-            useMaterial3: true,
-            scaffoldBackgroundColor: const Color(0xFF111827),
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF1F2937),
-              foregroundColor: Colors.white,
-              elevation: 0,
-            ),
-            cardColor: const Color(0xFF1F2937),
-          ),
+          theme: buildLightTheme(),
+          darkTheme: buildDarkTheme(),
           home: const SplashPage(),
         );
       },

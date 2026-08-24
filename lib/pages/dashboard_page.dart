@@ -12,8 +12,7 @@ import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
-import '../widgets/app_card.dart';
-import '../widgets/app_top_bar.dart';
+import '../widgets/widgets.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -714,9 +713,6 @@ class _JobMatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final matchColor = AppColors.matchColor(job.matchPercentage);
-    final matchBg = AppColors.matchBgColor(job.matchPercentage);
-
     return Material(
       color: AppColors.surfaceMuted,
       borderRadius: BorderRadius.circular(12),
@@ -802,20 +798,10 @@ class _JobMatchCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: matchBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${job.matchPercentage}%',
-                  style: TextStyle(
-                    color: matchColor,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
-                ),
+              MatchScoreBadge(
+                score: job.matchPercentage,
+                variant: MatchScoreBadgeVariant.pill,
+                showLabel: false,
               ),
             ],
           ),

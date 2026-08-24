@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:skillmatch/theme/app_colors.dart';
 
-enum AppToastType { success, info, error }
+enum AppToastType { success, info, error, warning }
 
-/// A floating, rounded, light-card pop-up notification with a colored
-/// icon badge — replaces the plain default `SnackBar` (dark bar, no
-/// icon, docked to the screen edge) used elsewhere in the app.
+/// A floating, rounded, elevated toast notification with an icon badge.
+/// Automatically adapts colors and contrast to Light & Dark themes.
 void showAppToast(
   BuildContext context,
   String message, {
@@ -14,20 +13,27 @@ void showAppToast(
   String? actionLabel,
   VoidCallback? onAction,
 }) {
+  final tokens = context.appColors;
+  final isDark = context.isDarkMode;
+
   late final Color accent;
   late final IconData icon;
   switch (type) {
     case AppToastType.success:
-      accent = AppColors.success;
-      icon = Icons.check_circle;
+      accent = tokens.success;
+      icon = Icons.check_circle_rounded;
       break;
     case AppToastType.error:
-      accent = AppColors.danger;
-      icon = Icons.error_outline;
+      accent = tokens.danger;
+      icon = Icons.error_outline_rounded;
+      break;
+    case AppToastType.warning:
+      accent = tokens.warning;
+      icon = Icons.warning_amber_rounded;
       break;
     case AppToastType.info:
-      accent = AppColors.primary;
-      icon = Icons.info_outline;
+      accent = tokens.primary;
+      icon = Icons.info_outline_rounded;
       break;
   }
 
@@ -36,12 +42,12 @@ void showAppToast(
     ..showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.white,
+        backgroundColor: tokens.cardBackground,
         elevation: 4,
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: AppColors.borderSoft),
+          side: BorderSide(color: tokens.cardBorderSoft),
         ),
         duration: const Duration(seconds: 3),
         content: Row(
@@ -51,7 +57,7 @@ void showAppToast(
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
+                color: accent.withValues(alpha: isDark ? 0.2 : 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: accent, size: 18),
@@ -60,8 +66,8 @@ void showAppToast(
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: tokens.textPrimary,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),

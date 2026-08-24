@@ -5,6 +5,7 @@ import 'package:skillmatch/theme/app_colors.dart';
 import 'notification_bell_button.dart';
 
 /// The standard SkillMatch top bar: brand mark + title, with settings and notifications.
+/// Adapts seamlessly to Light and Dark mode themes.
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   const AppTopBar({
     super.key,
@@ -24,17 +25,19 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
+
     return AppBar(
       elevation: 0,
       scrolledUnderElevation: 0,
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.cardBackground,
       surfaceTintColor: Colors.transparent,
       titleSpacing: 16,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(
           height: 1,
-          color: AppColors.borderSoft,
+          color: tokens.cardBorderSoft,
         ),
       ),
       title: Row(
@@ -44,13 +47,13 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: tokens.primaryGradient,
               borderRadius: BorderRadius.circular(10),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x332563EB),
+                  color: tokens.primary.withValues(alpha: 0.28),
                   blurRadius: 8,
-                  offset: Offset(0, 3),
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -61,11 +64,11 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
           const SizedBox(width: 10),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.3,
-              color: AppColors.textPrimary,
+              color: tokens.textPrimary,
             ),
           ),
         ],
@@ -84,14 +87,14 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
+                  color: tokens.surfaceMuted,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.borderSoft),
+                  border: Border.all(color: tokens.cardBorderSoft),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.settings_outlined,
                   size: 19,
-                  color: AppColors.textSecondary,
+                  color: tokens.textSecondary,
                 ),
               ),
               onPressed: () {

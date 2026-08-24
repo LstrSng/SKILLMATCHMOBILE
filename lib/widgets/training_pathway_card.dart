@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/training_pathway.dart';
 import 'package:skillmatch/theme/app_colors.dart';
+import 'app_card.dart';
 import 'app_toast.dart';
 
 Future<void> _launchTrainingLink(BuildContext context, String url) async {
@@ -25,6 +26,8 @@ class TrainingLinksList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,32 +36,33 @@ class TrainingLinksList extends StatelessWidget {
           (link) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: InkWell(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
               onTap: () => _launchTrainingLink(context, link.url),
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.primarySoftBg,
-                  borderRadius: BorderRadius.circular(8),
+                  color: tokens.primarySoftBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: tokens.cardBorderSoft),
                 ),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+                  horizontal: 14,
+                  vertical: 11,
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.open_in_new,
+                    Icon(
+                      Icons.open_in_new_rounded,
                       size: 16,
-                      color: AppColors.primary,
+                      color: tokens.primary,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         link.label,
-                        style: const TextStyle(
-                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
+                          color: tokens.primary,
                           height: 1.3,
                         ),
                       ),
@@ -69,24 +73,25 @@ class TrainingLinksList extends StatelessWidget {
             ),
           ),
         ),
-        if (pathway.note.isNotEmpty)
+        if (pathway.note.isNotEmpty) ...[
+          const SizedBox(height: 4),
           Text(
             pathway.note,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: AppColors.textSecondary,
+              color: tokens.textSecondary,
               fontStyle: FontStyle.italic,
               height: 1.4,
             ),
           ),
+        ],
       ],
     );
   }
 }
 
 /// Standalone "where to get certified for this pathway" card: title,
-/// subtitle, and a [TrainingLinksList]. Used by the Pathway tab, where
-/// it isn't nested inside another card.
+/// subtitle, and a [TrainingLinksList].
 class TrainingPathwayCard extends StatelessWidget {
   const TrainingPathwayCard({
     super.key,
@@ -101,26 +106,26 @@ class TrainingPathwayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: const EdgeInsets.all(16),
+    final tokens = context.appColors;
+
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Where to train',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: tokens.textPrimary,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle ?? 'Verified resources for the ${pathway.name} pathway',
-            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 13, color: tokens.textSecondary),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           TrainingLinksList(pathway: pathway),
         ],
       ),

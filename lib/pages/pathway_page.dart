@@ -9,7 +9,14 @@ import '../widgets/app_top_bar.dart';
 import '../widgets/training_pathway_card.dart';
 
 class PathwayPage extends StatefulWidget {
-  const PathwayPage({super.key});
+  const PathwayPage({
+    super.key,
+    this.initialQuery,
+    this.initialCategory,
+  });
+
+  final String? initialQuery;
+  final String? initialCategory;
 
   @override
   State<PathwayPage> createState() => _PathwayPageState();
@@ -20,7 +27,7 @@ class _PathwayPageState extends State<PathwayPage> {
   bool _loading = true;
   String? _error;
   List<TrainingPathway> _pathways = [];
-  String _selectedCategory = 'All';
+  late String _selectedCategory = widget.initialCategory ?? 'All';
 
   static const _categories = [
     'All',
@@ -34,6 +41,9 @@ class _PathwayPageState extends State<PathwayPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
+      _searchController.text = widget.initialQuery!.trim();
+    }
     _load();
   }
 

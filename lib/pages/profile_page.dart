@@ -15,8 +15,7 @@ import '../services/session_store.dart';
 import '../services/skill_assessment_bank.dart';
 import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
-import '../widgets/app_card.dart';
-import '../widgets/app_top_bar.dart';
+import '../widgets/widgets.dart';
 import 'skill_assessment_page.dart';
 
 /// Strips a raw phone value down to the 10-digit PH mobile number
@@ -1323,21 +1322,10 @@ class _SkillTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFDEEEFF),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Text(
-        skill,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF2563EB),
-        ),
-      ),
+    return SkillChip(
+      label: skill,
+      status: SkillChipStatus.neutral,
+      size: SkillChipSize.medium,
     );
   }
 }

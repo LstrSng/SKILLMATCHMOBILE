@@ -10,9 +10,7 @@ import '../services/jobs_api.dart';
 import '../services/notification_store.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
-import '../widgets/app_card.dart';
-import '../widgets/app_top_bar.dart';
-import '../widgets/centered_form_width.dart';
+import '../widgets/widgets.dart';
 
 class JobsPage extends StatefulWidget {
   const JobsPage({super.key});
@@ -312,7 +310,18 @@ class _JobsPageState extends State<JobsPage> {
     return Scaffold(
       appBar: const AppTopBar(),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
+                vertical: 16,
+              ),
+              itemCount: 4,
+              itemBuilder: (context, _) => const CenteredFormWidth(
+                maxWidth: 700,
+                child: JobCardSkeleton(),
+              ),
+            )
           : _error != null
           ? Center(
               child: Padding(
@@ -647,7 +656,6 @@ class _JobCard extends StatelessWidget {
     final applicantId =
         (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString();
     final matchColor = AppColors.matchColor(job.matchPercentage);
-    final matchBg = AppColors.matchBgColor(job.matchPercentage);
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 14),
@@ -683,27 +691,30 @@ class _JobCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: job.initialColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1A000000),
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      job.initial,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                Hero(
+                  tag: 'job-avatar-${job.id}',
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: job.initialColor,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x1A000000),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        job.initial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
@@ -713,12 +724,18 @@ class _JobCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        job.title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: AppColors.textPrimary,
+                      Hero(
+                        tag: 'job-title-${job.id}',
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Text(
+                            job.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -733,26 +750,12 @@ class _JobCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: matchBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.bolt_rounded, size: 14, color: matchColor),
-                      const SizedBox(width: 2),
-                      Text(
-                        '${job.matchPercentage}%',
-                        style: TextStyle(
-                          color: matchColor,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                Hero(
+                  tag: 'job-match-${job.id}',
+                  child: MatchScoreBadge(
+                    score: job.matchPercentage,
+                    variant: MatchScoreBadgeVariant.pill,
+                    showLabel: false,
                   ),
                 ),
               ],
@@ -826,7 +829,11 @@ class _JobCard extends StatelessWidget {
               runSpacing: 6,
               children: [
                 ...job.matchedSkills.take(3).map(
-                  (skill) => _SkillBadge(skill: skill, matched: true),
+                  (skill) => SkillChip(
+                    label: skill,
+                    status: SkillChipStatus.matched,
+                    size: SkillChipSize.small,
+                  ),
                 ),
                 if (job.matchedSkills.length > 3)
                   Container(
@@ -888,42 +895,3 @@ class _MetaPill extends StatelessWidget {
   }
 }
 
-class _SkillBadge extends StatelessWidget {
-  final String skill;
-  final bool matched;
-
-  const _SkillBadge({required this.skill, required this.matched});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: matched ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: matched ? const Color(0xFF6EE7B7) : const Color(0xFFFCA5A5),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            matched ? Icons.check_circle_rounded : Icons.cancel_rounded,
-            color: matched ? const Color(0xFF059669) : const Color(0xFFDC2626),
-            size: 12,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            skill,
-            style: TextStyle(
-              color: matched ? const Color(0xFF065F46) : const Color(0xFF991B1B),
-              fontWeight: FontWeight.w700,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

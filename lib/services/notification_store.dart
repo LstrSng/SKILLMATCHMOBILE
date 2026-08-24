@@ -11,19 +11,53 @@ class AppNotification {
   final String title;
   final String message;
   final DateTime createdAt;
+  final String type; // 'application', 'job_match', 'weekly_digest', 'system'
+  final String? targetId; // applicationId or jobId
+  final String? actionLabel; // e.g. 'View Application', 'Explore Job'
+  final bool isRead;
 
   const AppNotification({
     required this.id,
     required this.title,
     required this.message,
     required this.createdAt,
+    this.type = 'system',
+    this.targetId,
+    this.actionLabel,
+    this.isRead = false,
   });
+
+  AppNotification copyWith({
+    String? id,
+    String? title,
+    String? message,
+    DateTime? createdAt,
+    String? type,
+    String? targetId,
+    String? actionLabel,
+    bool? isRead,
+  }) {
+    return AppNotification(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      createdAt: createdAt ?? this.createdAt,
+      type: type ?? this.type,
+      targetId: targetId ?? this.targetId,
+      actionLabel: actionLabel ?? this.actionLabel,
+      isRead: isRead ?? this.isRead,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
     'message': message,
     'createdAt': createdAt.toIso8601String(),
+    'type': type,
+    if (targetId != null) 'targetId': targetId,
+    if (actionLabel != null) 'actionLabel': actionLabel,
+    'isRead': isRead,
   };
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
@@ -34,6 +68,10 @@ class AppNotification {
       createdAt:
           DateTime.tryParse((json['createdAt'] as Object?)?.toString() ?? '') ??
           DateTime.now(),
+      type: (json['type'] as Object?)?.toString() ?? 'system',
+      targetId: (json['targetId'] as Object?)?.toString(),
+      actionLabel: (json['actionLabel'] as Object?)?.toString(),
+      isRead: json['isRead'] == true,
     );
   }
 }
@@ -136,6 +174,29 @@ class NotificationStore {
     await refreshUnreadCount();
   }
 
+  static Future<void> markRead(String notificationId) async {
+    final current = await load();
+    final index = current.indexWhere((n) => n.id == notificationId);
+    if (index != -1) {
+      current[index] = current[index].copyWith(isRead: true);
+      await saveAll(current);
+      await refreshUnreadCount();
+    }
+  }
+
+  static Future<void> delete(String notificationId) async {
+    final current = await load();
+    current.removeWhere((n) => n.id == notificationId);
+    await saveAll(current);
+    await refreshUnreadCount();
+  }
+
+  static Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey());
+    unreadCountNotifier.value = 0;
+  }
+
   static Future<DateTime?> loadLastReadAt() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_lastReadKey());
@@ -146,9 +207,11 @@ class NotificationStore {
   static Future<int> getUnreadCount() async {
     final notifications = await load();
     final lastReadAt = await loadLastReadAt();
-    if (lastReadAt == null) return notifications.length;
+    if (lastReadAt == null) {
+      return notifications.where((n) => !n.isRead).length;
+    }
     return notifications
-        .where((item) => item.createdAt.isAfter(lastReadAt))
+        .where((item) => !item.isRead && item.createdAt.isAfter(lastReadAt))
         .length;
   }
 
@@ -159,6 +222,11 @@ class NotificationStore {
   static Future<void> markAllRead() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastReadKey(), DateTime.now().toIso8601String());
+    final current = await load();
+    if (current.any((n) => !n.isRead)) {
+      final updated = current.map((n) => n.copyWith(isRead: true)).toList();
+      await saveAll(updated);
+    }
     unreadCountNotifier.value = 0;
   }
 
@@ -197,6 +265,9 @@ class NotificationStore {
               title: notificationTitle,
               message: 'Your application status changed from $oldStatus to $status.',
               createdAt: DateTime.now(),
+              type: 'application',
+              targetId: id,
+              actionLabel: 'View Application',
             ),
           );
         }
@@ -225,6 +296,9 @@ class NotificationStore {
               title: notificationTitle,
               message: message,
               createdAt: DateTime.now(),
+              type: 'application',
+              targetId: id,
+              actionLabel: 'View Application',
             ),
           );
         }
@@ -240,9 +314,7 @@ class NotificationStore {
   }
 
   /// Compares freshly fetched job IDs against the set already seen on this
-  /// device and, when the "Job Matches" preference is on, raises a
-  /// notification for genuinely new postings. Call this after loading the
-  /// jobs list (e.g. from the Jobs page).
+  /// device and raises a notification when new postings match.
   static Future<void> syncNewJobMatches(
     List<MapEntry<String, String>> jobs, // (id, title)
   ) async {
@@ -250,8 +322,6 @@ class NotificationStore {
     final seenRaw = prefs.getString(_seenJobIdsKey());
     Set<String> seen;
     if (seenRaw == null) {
-      // First run on this device: seed with the current jobs instead of
-      // notifying about every existing posting at once.
       seen = jobs.map((j) => j.key).where((id) => id.isNotEmpty).toSet();
       await prefs.setString(_seenJobIdsKey(), jsonEncode(seen.toList()));
       return;
@@ -274,22 +344,24 @@ class NotificationStore {
     final enabled = await getPreference(kPrefJobMatches, defaultValue: true);
     if (!enabled) return;
 
-    final message = newJobs.length == 1
-        ? '${newJobs.first.value} was just posted.'
-        : '${newJobs.length} new jobs match your profile.';
+    final isSingle = newJobs.length == 1;
+    final message = isSingle
+        ? '${newJobs.first.value} was just posted and matches your profile.'
+        : '${newJobs.length} new jobs match your skills and experience.';
     await add(
       AppNotification(
         id: 'job-matches:${DateTime.now().millisecondsSinceEpoch}',
         title: 'New Job Matches',
         message: message,
         createdAt: DateTime.now(),
+        type: 'job_match',
+        targetId: isSingle ? newJobs.first.key : null,
+        actionLabel: isSingle ? 'View Job' : 'Explore Matches',
       ),
     );
   }
 
-  /// Adds a weekly summary notification at most once every 7 days, when the
-  /// "Weekly Digest" preference is on. Call this after loading applications
-  /// (e.g. from the Applications page), passing the current active count.
+  /// Adds a weekly summary notification at most once every 7 days.
   static Future<void> maybeAddWeeklyDigest({
     required int activeApplicationCount,
   }) async {
@@ -308,11 +380,13 @@ class NotificationStore {
     await add(
       AppNotification(
         id: 'weekly-digest:${now.millisecondsSinceEpoch}',
-        title: 'Weekly Digest',
+        title: 'Weekly Application Digest',
         message: activeApplicationCount > 0
-            ? 'You have $activeApplicationCount active application${activeApplicationCount == 1 ? '' : 's'} this week. Keep it up!'
-            : 'No active applications this week — check Jobs for new matches.',
+            ? 'You have $activeApplicationCount active application${activeApplicationCount == 1 ? '' : 's'} in progress. Check in to review updates!'
+            : 'No active applications this week — explore the jobs feed for new opportunities.',
         createdAt: now,
+        type: 'weekly_digest',
+        actionLabel: activeApplicationCount > 0 ? 'View Applications' : 'Explore Jobs',
       ),
     );
   }

@@ -11,9 +11,7 @@ import '../services/notification_store.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import 'job_detail_page.dart';
-import '../widgets/app_card.dart';
-import '../widgets/app_top_bar.dart';
-import '../widgets/centered_form_width.dart';
+import '../widgets/widgets.dart';
 
 class ApplicationsPage extends StatefulWidget {
   const ApplicationsPage({super.key});
@@ -22,22 +20,26 @@ class ApplicationsPage extends StatefulWidget {
   State<ApplicationsPage> createState() => _ApplicationsPageState();
 }
 
+enum _ApplicationFilter { all, active, interviewing, archived }
+
 class _ApplicationsPageState extends State<ApplicationsPage> {
   bool _loading = true;
-  bool _showWithdrawn = false;
   String? _error;
   List<JobApplication> applications = const [];
-
-  List<JobApplication> get _activeApplications =>
-      applications.where((app) => app.currentStatus != 'Withdrawn').toList();
-
-  List<JobApplication> get _withdrawnApplications =>
-      applications.where((app) => app.currentStatus == 'Withdrawn').toList();
+  _ApplicationFilter _selectedFilter = _ApplicationFilter.all;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _load({bool silent = false}) async {
@@ -72,8 +74,9 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
         _loading = false;
         _error = null;
       });
+
       final activeCount = list
-          .where((app) => app.currentStatus != 'Withdrawn')
+          .where((app) => app.currentStatus != 'Withdrawn' && app.currentStatus != 'Rejected')
           .length;
       unawaited(
         NotificationStore.maybeAddWeeklyDigest(
@@ -89,18 +92,76 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
     }
   }
 
+  List<JobApplication> get _activeApplications => applications
+      .where((app) =>
+          app.currentStatus != 'Withdrawn' &&
+          app.currentStatus != 'Rejected' &&
+          app.currentStatus != 'Hired')
+      .toList();
+
+  List<JobApplication> get _interviewingApplications => applications
+      .where((app) =>
+          app.currentStatus.toLowerCase() == 'interview' ||
+          app.currentStatus.toLowerCase() == 'interviewing')
+      .toList();
+
+  List<JobApplication> get _archivedApplications => applications
+      .where((app) =>
+          app.currentStatus == 'Withdrawn' ||
+          app.currentStatus == 'Rejected' ||
+          app.currentStatus == 'Hired')
+      .toList();
+
+  List<JobApplication> get _filteredApplications {
+    List<JobApplication> base;
+    switch (_selectedFilter) {
+      case _ApplicationFilter.all:
+        base = applications;
+        break;
+      case _ApplicationFilter.active:
+        base = _activeApplications;
+        break;
+      case _ApplicationFilter.interviewing:
+        base = _interviewingApplications;
+        break;
+      case _ApplicationFilter.archived:
+        base = _archivedApplications;
+        break;
+    }
+
+    if (_searchQuery.trim().isEmpty) return base;
+    final query = _searchQuery.toLowerCase();
+    return base
+        .where((app) =>
+            app.jobTitle.toLowerCase().contains(query) ||
+            app.company.toLowerCase().contains(query) ||
+            app.currentStatus.toLowerCase().contains(query))
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final activeApplications = _activeApplications;
-    final withdrawnApplications = _withdrawnApplications;
-    final visibleApplications = _showWithdrawn
-        ? withdrawnApplications
-        : activeApplications;
+    final tokens = context.appColors;
+    final filtered = _filteredApplications;
 
     return Scaffold(
+      backgroundColor: tokens.scaffoldBackground,
       appBar: const AppTopBar(),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView.builder(
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
+                vertical: 16,
+              ),
+              itemCount: 3,
+              itemBuilder: (context, _) => const CenteredFormWidth(
+                maxWidth: 720,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 14),
+                  child: JobCardSkeleton(),
+                ),
+              ),
+            )
           : _error != null
           ? Center(
               child: Padding(
@@ -120,7 +181,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
             )
           : RefreshIndicator(
               onRefresh: () => _load(silent: true),
-              color: AppColors.primary,
+              color: tokens.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.symmetric(
@@ -128,60 +189,99 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                   vertical: 16,
                 ),
                 child: CenteredFormWidth(
-                  maxWidth: 700,
+                  maxWidth: 720,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header & Segmented Controller
-                      const Text(
+                      // Header
+                      Text(
                         'Applications',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
+                          color: tokens.textPrimary,
                           letterSpacing: -0.4,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Track the status of all your job submissions',
+                      Text(
+                        'Track stages and view timestamped milestones for your job submissions',
                         style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
+                          fontSize: 13.5,
+                          color: tokens.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 16),
 
-                      // Segmented Tab Switcher
+                      // Search Box
                       Container(
-                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceMuted,
+                          color: tokens.cardBackground,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.borderSoft),
+                          border: Border.all(color: tokens.cardBorderSoft),
+                          boxShadow: const [AppColors.subtleShadow],
                         ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (val) => setState(() => _searchQuery = val),
+                          style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Search applications by role or company...',
+                            hintStyle: TextStyle(color: tokens.textSecondary.withValues(alpha: 0.7)),
+                            prefixIcon: Icon(Icons.search_rounded, color: tokens.primary, size: 20),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear_rounded, size: 18),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Quick Filter Chips Bar
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            Expanded(
-                              child: _SegmentTab(
-                                label: 'Active (${activeApplications.length})',
-                                isSelected: !_showWithdrawn,
-                                onTap: () => setState(() => _showWithdrawn = false),
-                              ),
+                            _buildFilterChip(
+                              label: 'All (${applications.length})',
+                              filter: _ApplicationFilter.all,
                             ),
-                            Expanded(
-                              child: _SegmentTab(
-                                label: 'Withdrawn (${withdrawnApplications.length})',
-                                isSelected: _showWithdrawn,
-                                onTap: () => setState(() => _showWithdrawn = true),
-                              ),
+                            const SizedBox(width: 8),
+                            _buildFilterChip(
+                              label: 'Active (${_activeApplications.length})',
+                              filter: _ApplicationFilter.active,
+                              icon: Icons.bolt_rounded,
+                              accentColor: tokens.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFilterChip(
+                              label: 'Interviewing (${_interviewingApplications.length})',
+                              filter: _ApplicationFilter.interviewing,
+                              icon: Icons.video_camera_front_rounded,
+                              accentColor: const Color(0xFF8B5CF6),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFilterChip(
+                              label: 'Archived (${_archivedApplications.length})',
+                              filter: _ApplicationFilter.archived,
+                              icon: Icons.archive_outlined,
+                              accentColor: tokens.textSecondary,
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 16),
 
-                      if (visibleApplications.isEmpty)
+                      // Applications List / Empty State
+                      if (filtered.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 48),
                           child: Center(
@@ -191,38 +291,38 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                                   width: 64,
                                   height: 64,
                                   decoration: BoxDecoration(
-                                    color: AppColors.surfaceMuted,
+                                    color: tokens.surfaceMuted,
                                     borderRadius: BorderRadius.circular(16),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.business_center_outlined,
                                     size: 32,
-                                    color: AppColors.textFaint,
+                                    color: tokens.textSecondary,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  _showWithdrawn
-                                      ? 'No withdrawn applications.'
-                                      : 'No active applications yet.',
-                                  style: const TextStyle(
+                                  _selectedFilter == _ApplicationFilter.all
+                                      ? 'No job applications found.'
+                                      : 'No ${_selectedFilter.name} applications.',
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary,
+                                    color: tokens.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  _showWithdrawn
-                                      ? 'Applications you withdraw will be archived here.'
-                                      : 'Find exciting job matches and submit your application.',
+                                  _selectedFilter == _ApplicationFilter.archived
+                                      ? 'Applications you withdraw or archive will be stored here.'
+                                      : 'Find exciting job matches and submit your application to start tracking.',
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
-                                    color: AppColors.textSecondary,
+                                    color: tokens.textSecondary,
                                   ),
                                 ),
-                                if (!_showWithdrawn) ...[
+                                if (_selectedFilter != _ApplicationFilter.archived) ...[
                                   const SizedBox(height: 18),
                                   FilledButton.icon(
                                     onPressed: () => AppNavigation.switchTab(AppTab.jobs),
@@ -236,7 +336,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                         )
                       else
                         Column(
-                          children: visibleApplications
+                          children: filtered
                               .map(
                                 (app) => Padding(
                                   padding: const EdgeInsets.only(bottom: 14),
@@ -256,51 +356,55 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
             ),
     );
   }
-}
 
-class _SegmentTab extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
+  Widget _buildFilterChip({
+    required String label,
+    required _ApplicationFilter filter,
+    IconData? icon,
+    Color? accentColor,
+  }) {
+    final tokens = context.appColors;
+    final isSelected = _selectedFilter == filter;
+    final effectiveAccent = accentColor ?? tokens.primary;
 
-  const _SegmentTab({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: () {
         HapticFeedback.selectionClick();
-        onTap();
+        setState(() => _selectedFilter = filter);
       },
+      borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          boxShadow: isSelected
-              ? const [
-                  BoxShadow(
-                    color: Color(0x0F000000),
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-            ),
+          color: isSelected ? (accentColor?.withValues(alpha: 0.12) ?? tokens.primarySoftBg) : tokens.cardBackground,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? effectiveAccent : tokens.cardBorderSoft,
+            width: isSelected ? 1.4 : 1.0,
           ),
+          boxShadow: isSelected ? null : const [AppColors.subtleShadow],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 14,
+                color: isSelected ? effectiveAccent : tokens.textSecondary,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected ? effectiveAccent : tokens.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -320,7 +424,7 @@ class _ApplicationCard extends StatelessWidget {
         return AlertDialog(
           title: const Text('Withdraw application?'),
           content: const Text(
-            'Are you sure you want to withdraw this application?',
+            'Are you sure you want to withdraw this application? This action will archive your submission.',
           ),
           actions: [
             TextButton(
@@ -348,18 +452,33 @@ class _ApplicationCard extends StatelessWidget {
       );
       await onChanged();
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
+      showAppToast(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Application withdrawn.')));
+        'Application withdrawn.',
+        type: AppToastType.info,
+      );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
+      showAppToast(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not withdraw: $e')));
+        'Could not withdraw: $e',
+        type: AppToastType.error,
+      );
     }
   }
 
+  void _showTimelineModal(BuildContext context) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _TimelineBottomSheet(application: application),
+    );
+  }
+
   Future<void> _openDetails(BuildContext context) async {
+    HapticFeedback.selectionClick();
     Map<String, dynamic>? full;
     try {
       if (application.jobId.trim().isNotEmpty) {
@@ -424,31 +543,41 @@ class _ApplicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    final initial = application.company.isNotEmpty
+        ? application.company.substring(0, 1).toUpperCase()
+        : 'J';
+
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.borderSoft),
+                  gradient: tokens.primaryGradient,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: tokens.primary.withValues(alpha: 0.22),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Center(
                   child: Text(
-                    application.company.isNotEmpty
-                        ? application.company.substring(0, 1).toUpperCase()
-                        : 'J',
+                    initial,
                     style: const TextStyle(
-                      fontSize: 17,
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -460,10 +589,11 @@ class _ApplicationCard extends StatelessWidget {
                   children: [
                     Text(
                       application.jobTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: tokens.textPrimary,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -471,9 +601,9 @@ class _ApplicationCard extends StatelessWidget {
                       application.company.isNotEmpty
                           ? '${application.company} • Applied ${application.dateApplied}'
                           : 'Applied ${application.dateApplied}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: tokens.textSecondary,
                       ),
                     ),
                   ],
@@ -484,40 +614,59 @@ class _ApplicationCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _ApplicationTimeline(status: application.currentStatus),
+
+          // Multi-Stage Application Status Tracker
+          _MultiStageTracker(status: application.currentStatus),
           const SizedBox(height: 14),
-          const Divider(height: 1, color: AppColors.borderSoft),
+          const Divider(height: 1),
           const SizedBox(height: 10),
+
+          // Action Buttons Bar
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               TextButton.icon(
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
+                  foregroundColor: tokens.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () => _openDetails(context),
-                icon: const Icon(Icons.visibility_outlined, size: 16),
+                icon: const Icon(Icons.visibility_outlined, size: 15),
                 label: const Text(
-                  'View Job Details',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  'Job Details',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
                 ),
               ),
-              if (application.currentStatus != 'Withdrawn')
+              const SizedBox(width: 4),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: tokens.textSecondary,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => _showTimelineModal(context),
+                icon: const Icon(Icons.history_rounded, size: 15),
+                label: const Text(
+                  'Timeline Log',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const Spacer(),
+              if (application.currentStatus != 'Withdrawn' && application.currentStatus != 'Rejected')
                 TextButton.icon(
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.danger,
+                    foregroundColor: tokens.danger,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   onPressed: () => _confirmWithdraw(context),
-                  icon: const Icon(Icons.cancel_outlined, size: 16),
+                  icon: const Icon(Icons.cancel_outlined, size: 15),
                   label: const Text(
                     'Withdraw',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                   ),
                 ),
             ],
@@ -533,57 +682,66 @@ class _StatusBadge extends StatelessWidget {
 
   const _StatusBadge({required this.status});
 
-  Color get _backgroundColor {
-    switch (status) {
-      case 'Applied':
-        return const Color(0xFFEFF6FF);
-      case 'Screening':
-        return const Color(0xFFFEF3C7);
-      case 'Interview':
-        return const Color(0xFFEEF2FF);
-      case 'Offer':
-      case 'Hired':
-        return const Color(0xFFECFDF5);
-      case 'Rejected':
-      case 'Withdrawn':
-        return const Color(0xFFFEF2F2);
-      default:
-        return const Color(0xFFF1F5F9);
-    }
-  }
-
-  Color get _textColor {
-    switch (status) {
-      case 'Applied':
-        return const Color(0xFF2563EB);
-      case 'Screening':
-        return const Color(0xFFD97706);
-      case 'Interview':
-        return const Color(0xFF4F46E5);
-      case 'Offer':
-      case 'Hired':
-        return const Color(0xFF059669);
-      case 'Rejected':
-      case 'Withdrawn':
-        return const Color(0xFFDC2626);
-      default:
-        return const Color(0xFF64748B);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    final isDark = context.isDarkMode;
+
+    Color bg;
+    Color fg;
+    Color border;
+
+    switch (status) {
+      case 'Applied':
+        bg = tokens.primarySoftBg;
+        fg = tokens.primary;
+        border = isDark ? tokens.primary : const Color(0xFFBFDBFE);
+        break;
+      case 'Screening':
+        bg = isDark ? const Color(0xFF2A200B) : const Color(0xFFFEF3C7);
+        fg = const Color(0xFFD97706);
+        border = const Color(0xFFFDE68A);
+        break;
+      case 'Interview':
+      case 'Interviewing':
+        bg = isDark ? const Color(0xFF1E1B4B) : const Color(0xFFEEF2FF);
+        fg = const Color(0xFF4F46E5);
+        border = const Color(0xFFC7D2FE);
+        break;
+      case 'Offer':
+      case 'Hired':
+        bg = AppColors.matchBgColor(100, isDark: isDark);
+        fg = tokens.success;
+        border = AppColors.matchBorderColor(100, isDark: isDark);
+        break;
+      case 'Rejected':
+        bg = AppColors.matchBgColor(0, isDark: isDark);
+        fg = tokens.danger;
+        border = AppColors.matchBorderColor(0, isDark: isDark);
+        break;
+      case 'Withdrawn':
+        bg = tokens.surfaceMuted;
+        fg = tokens.textSecondary;
+        border = tokens.cardBorderSoft;
+        break;
+      default:
+        bg = tokens.surfaceMuted;
+        fg = tokens.textSecondary;
+        border = tokens.cardBorderSoft;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: _backgroundColor,
+        color: bg,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
       ),
       child: Text(
         status,
         style: TextStyle(
-          color: _textColor,
-          fontWeight: FontWeight.w800,
+          color: fg,
+          fontWeight: FontWeight.w700,
           fontSize: 11,
         ),
       ),
@@ -591,103 +749,363 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-class _ApplicationTimeline extends StatelessWidget {
+/// Multi-stage linear status tracker showing 4 stages + terminal state handling.
+class _MultiStageTracker extends StatelessWidget {
   final String status;
 
-  const _ApplicationTimeline({required this.status});
+  const _MultiStageTracker({required this.status});
 
-  static const _steps = ['Applied', 'Screening', 'Interview', 'Offer'];
+  static const _stages = ['Applied', 'Screening', 'Interview', 'Offer'];
 
-  int get _currentStepIndex {
-    switch (status) {
-      case 'Applied':
+  int get _currentStageIndex {
+    switch (status.toLowerCase()) {
+      case 'applied':
         return 0;
-      case 'Screening':
+      case 'screening':
         return 1;
-      case 'Interview':
+      case 'interview':
+      case 'interviewing':
         return 2;
-      case 'Offer':
-      case 'Hired':
+      case 'offer':
+      case 'hired':
         return 3;
-      case 'Rejected':
-      case 'Withdrawn':
-        return -1;
       default:
         return 0;
     }
   }
 
+  bool get _isTerminalSpecial =>
+      status.toLowerCase() == 'rejected' || status.toLowerCase() == 'withdrawn';
+
   @override
   Widget build(BuildContext context) {
-    final stepIndex = _currentStepIndex;
-    final isNegative = status == 'Rejected' || status == 'Withdrawn';
+    final tokens = context.appColors;
+    final stageIndex = _currentStageIndex;
 
-    return Row(
+    if (_isTerminalSpecial) {
+      final isRejected = status.toLowerCase() == 'rejected';
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isRejected
+              ? (context.isDarkMode ? const Color(0xFF2A1515) : const Color(0xFFFFF1F2))
+              : tokens.surfaceMuted,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isRejected ? const Color(0xFFFECDD3) : tokens.cardBorderSoft,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isRejected ? Icons.cancel_rounded : Icons.archive_outlined,
+              size: 16,
+              color: isRejected ? tokens.danger : tokens.textSecondary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isRejected
+                    ? 'Application was not selected to advance.'
+                    : 'Application has been withdrawn and archived.',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isRejected ? tokens.danger : tokens.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (int i = 0; i < _steps.length; i++) ...[
-          Expanded(
-            child: Column(
-              children: [
-                Row(
+        Row(
+          children: [
+            for (int i = 0; i < _stages.length; i++) ...[
+              Expanded(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: i == 0
-                          ? const SizedBox.shrink()
-                          : Container(
-                              height: 2,
-                              color: (!isNegative && i <= stepIndex)
-                                  ? AppColors.primary
-                                  : AppColors.borderSoft,
-                            ),
-                    ),
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isNegative
-                            ? const Color(0xFFEF4444)
-                            : (i <= stepIndex
-                                ? AppColors.primary
-                                : Colors.white),
-                        border: Border.all(
-                          color: isNegative
-                              ? const Color(0xFFEF4444)
-                              : (i <= stepIndex
-                                  ? AppColors.primary
-                                  : AppColors.borderSoft),
-                          width: 2,
+                    Row(
+                      children: [
+                        // Left connecting line
+                        Expanded(
+                          child: i == 0
+                              ? const SizedBox.shrink()
+                              : Container(
+                                  height: 2.5,
+                                  decoration: BoxDecoration(
+                                    color: i <= stageIndex
+                                        ? tokens.primary
+                                        : tokens.cardBorderSoft,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
                         ),
-                      ),
-                    ),
-                    Expanded(
-                      child: i == _steps.length - 1
-                          ? const SizedBox.shrink()
-                          : Container(
-                              height: 2,
-                              color: (!isNegative && i < stepIndex)
-                                  ? AppColors.primary
-                                  : AppColors.borderSoft,
+
+                        // Stage Dot
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: i < stageIndex
+                                ? tokens.success
+                                : (i == stageIndex
+                                    ? tokens.primary
+                                    : tokens.surfaceMuted),
+                            border: Border.all(
+                              color: i <= stageIndex
+                                  ? (i < stageIndex ? tokens.success : tokens.primary)
+                                  : tokens.cardBorderSoft,
+                              width: 2,
                             ),
+                            boxShadow: i == stageIndex
+                                ? [
+                                    BoxShadow(
+                                      color: tokens.primary.withValues(alpha: 0.35),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Center(
+                            child: i < stageIndex
+                                ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                                : (i == stageIndex
+                                    ? Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      )
+                                    : null),
+                          ),
+                        ),
+
+                        // Right connecting line
+                        Expanded(
+                          child: i == _stages.length - 1
+                              ? const SizedBox.shrink()
+                              : Container(
+                                  height: 2.5,
+                                  decoration: BoxDecoration(
+                                    color: i < stageIndex
+                                        ? tokens.primary
+                                        : tokens.cardBorderSoft,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _stages[i],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: (i == stageIndex) ? FontWeight.w800 : FontWeight.w600,
+                        color: (i <= stageIndex)
+                            ? (i == stageIndex ? tokens.primary : tokens.textPrimary)
+                            : tokens.textSecondary.withValues(alpha: 0.6),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  _steps[i],
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Bottom sheet displaying timestamped activity timeline logs.
+class _TimelineBottomSheet extends StatelessWidget {
+  const _TimelineBottomSheet({required this.application});
+
+  final JobApplication application;
+
+  static String _formatTimestamp(DateTime d) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final hour = d.hour == 0 ? 12 : (d.hour > 12 ? d.hour - 12 : d.hour);
+    final minute = d.minute.toString().padLeft(2, '0');
+    final period = d.hour >= 12 ? 'PM' : 'AM';
+    return '${months[d.month - 1]} ${d.day}, ${d.year} • $hour:$minute $period';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+
+    final history = application.statusHistory.isNotEmpty
+        ? application.statusHistory
+        : [
+            ApplicationStatusStep(
+              status: application.currentStatus,
+              date: application.appliedDate,
+              note: 'Initial submission sent to ${application.company.isNotEmpty ? application.company : "employer"}.',
+            ),
+          ];
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        MediaQuery.of(context).padding.bottom + 20,
+      ),
+      decoration: BoxDecoration(
+        color: tokens.cardBackground,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: tokens.cardShadows,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: tokens.cardBorderSoft,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Title
+          Row(
+            children: [
+              Icon(Icons.timeline_rounded, color: tokens.primary, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Application Timeline Log',
                   style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: (i == stepIndex) ? FontWeight.w700 : FontWeight.w500,
-                    color: (i <= stepIndex && !isNegative)
-                        ? AppColors.textPrimary
-                        : AppColors.textFaint,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: tokens.textPrimary,
+                    letterSpacing: -0.3,
                   ),
                 ),
-              ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          Text(
+            '${application.jobTitle} • ${application.company}',
+            style: TextStyle(
+              fontSize: 13,
+              color: tokens.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Timeline Log items
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                children: List.generate(history.length, (index) {
+                  final step = history[index];
+                  final isLast = index == history.length - 1;
+
+                  return IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Timeline track line + dot
+                        Column(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: tokens.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: tokens.primary.withValues(alpha: 0.3),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (!isLast)
+                              Expanded(
+                                child: Container(
+                                  width: 2,
+                                  color: tokens.cardBorderSoft,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(width: 14),
+
+                        // Timeline details card
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    _StatusBadge(status: step.status),
+                                    const Spacer(),
+                                    Text(
+                                      _formatTimestamp(step.date),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: tokens.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (step.note.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    step.note,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: tokens.textPrimary,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ),
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 }
