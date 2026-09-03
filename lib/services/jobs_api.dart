@@ -49,11 +49,11 @@ Future<List<Map<String, dynamic>>> fetchJobsRaw() async {
     res = await authedGet(uri).timeout(const Duration(seconds: 10));
   } on TimeoutException {
     throw JobsApiException(
-      'Request timed out while loading jobs. Make sure the API is running and reachable at $uri.',
+      'Request timed out while loading jobs. Please check your internet connection.',
     );
   } on http.ClientException {
     throw JobsApiException(
-      'Could not reach the API at $uri. Start the backend and confirm the emulator can access your PC on that port.',
+      'Unable to connect to server. Please check your internet connection.',
     );
   }
   if (res.statusCode < 200 || res.statusCode >= 300) {

@@ -9,7 +9,7 @@ import 'session_store.dart';
 
 Uri _meUri() => Uri.parse('$kApiBaseUrl/api/me');
 
-const _kTimeout = Duration(seconds: 10);
+const _kTimeout = Duration(seconds: 90);
 
 Future<T> _withNetworkErrors<T>(Future<T> Function() run) async {
   try {
@@ -17,7 +17,7 @@ Future<T> _withNetworkErrors<T>(Future<T> Function() run) async {
   } on TimeoutException {
     throw AuthedException('Request timed out. Please check your connection and try again.');
   } on http.ClientException {
-    throw AuthedException('Could not reach the server. Start the API and check API_BASE_URL.');
+    throw AuthedException('Unable to connect to server. Please check your internet connection.');
   }
 }
 

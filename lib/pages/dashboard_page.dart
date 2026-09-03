@@ -291,7 +291,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Could not refresh live data: $_error',
+                            _error!,
                             style: const TextStyle(color: AppColors.danger, fontSize: 13),
                           ),
                         ),

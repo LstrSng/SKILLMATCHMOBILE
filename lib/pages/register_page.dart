@@ -144,7 +144,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );
@@ -728,7 +728,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );
@@ -765,7 +765,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );
