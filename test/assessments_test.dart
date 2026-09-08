@@ -103,5 +103,151 @@ void main() {
       expect(engine.recordedAnswers[0].isCorrect, isTrue);
       expect(engine.recordedAnswers[1].isCorrect, isFalse);
     });
+
+    test('AssessmentQuestion defaults to 30 seconds time limit', () {
+      const q = AssessmentQuestion(
+        id: 'q_default',
+        text: 'Default timeout test',
+        options: ['A', 'B'],
+        correctIndex: 0,
+        difficulty: 1,
+      );
+      expect(q.timeLimitSeconds, 30);
+    });
+
+    test('AssessmentResult formats date and time strings accurately', () {
+      final res = AssessmentResult(
+        categoryKey: 'devops',
+        roleTitle: 'DevOps Engineer',
+        level: 'Job-ready',
+        ability: 3.5,
+        correctCount: 9,
+        totalCount: 10,
+        scorePercentage: 90,
+        passed: true,
+        takenAt: DateTime(2026, 9, 8, 14, 30),
+      );
+
+      expect(res.formattedDateOnly, 'Sep 8, 2026');
+      expect(res.formattedDate, contains('Sep 8, 2026'));
+      expect(res.formattedDate, contains('2:30 PM'));
+    });
+
+    test('AssessmentEngine handles timeout (-1) as wrong answer', () {
+      final category = AssessmentCategory(
+        key: 'timeout-role',
+        label: 'Timeout Role',
+        description: 'Test timeout',
+        passingScorePercentage: 70,
+        questions: const [
+          AssessmentQuestion(
+            id: 'tq1',
+            text: 'Question 1',
+            options: ['Option A', 'Option B'],
+            correctIndex: 0,
+            difficulty: 1,
+          ),
+        ],
+      );
+
+      final engine = AssessmentEngine(category, sessionLength: 1);
+      final q = engine.nextQuestion();
+      expect(q, isNotNull);
+
+      // Simulating question timer expiration:
+      final isCorrect = engine.submitAnswer(-1);
+      expect(isCorrect, isFalse);
+      expect(engine.isComplete, isTrue);
+      expect(engine.correctCount, 0);
+
+      final recorded = engine.recordedAnswers.first;
+      expect(recorded.selectedIndex, -1);
+      expect(recorded.isCorrect, isFalse);
+    });
+
+    test('mergeAssessmentResult stores both skillAssessments map and assessmentRecords history', () {
+      final initialProfile = <String, dynamic>{
+        'headline': 'Software Engineer',
+      };
+
+      final result1 = AssessmentResult(
+        categoryKey: 'frontend',
+        roleTitle: 'Frontend Engineer',
+        level: 'Advanced',
+        ability: 3.0,
+        correctCount: 8,
+        totalCount: 10,
+        scorePercentage: 80,
+        passed: true,
+        takenAt: DateTime(2026, 9, 8, 10, 0),
+      );
+
+      final updatedProfile1 = mergeAssessmentResult(initialProfile, result1);
+      expect(updatedProfile1['headline'], 'Software Engineer');
+      expect(updatedProfile1['skillAssessments']['frontend']['scorePercentage'], 80);
+
+      final history1 = readAssessmentHistory(updatedProfile1);
+      expect(history1.length, 1);
+      expect(history1.first.categoryKey, 'frontend');
+      expect(history1.first.scorePercentage, 80);
+
+      // Submit second assessment
+      final result2 = AssessmentResult(
+        categoryKey: 'backend',
+        roleTitle: 'Backend Engineer',
+        level: 'Job-ready',
+        ability: 3.8,
+        correctCount: 10,
+        totalCount: 10,
+        scorePercentage: 100,
+        passed: true,
+        takenAt: DateTime(2026, 9, 8, 12, 0),
+      );
+
+      final updatedProfile2 = mergeAssessmentResult(updatedProfile1, result2);
+      final history2 = readAssessmentHistory(updatedProfile2);
+      expect(history2.length, 2);
+      // Newest should be first (result2 taken at 12:00 vs result1 at 10:00)
+      expect(history2.first.categoryKey, 'backend');
+      expect(history2.first.scorePercentage, 100);
+      expect(history2[1].categoryKey, 'frontend');
+      expect(history2[1].scorePercentage, 80);
+    });
+
+    test('parses string-typed numerical fields without throwing type cast error', () {
+      final rawResultWithStringNumbers = {
+        'level': 'Job-ready',
+        'ability': '3.20',
+        'correctCount': '8',
+        'totalCount': '10',
+        'scorePercentage': '80',
+        'passingScorePercentage': '70',
+        'passed': 'true',
+        'takenAt': '2026-09-08T15:30:00.000Z',
+      };
+
+      final parsed = AssessmentResult.fromJson('qa-tester', rawResultWithStringNumbers);
+      expect(parsed, isNotNull);
+      expect(parsed!.ability, 3.20);
+      expect(parsed.correctCount, 8);
+      expect(parsed.totalCount, 10);
+      expect(parsed.scorePercentage, 80);
+      expect(parsed.passed, isTrue);
+
+      final rawQuestionWithStringNumbers = {
+        'questionId': 'q_str',
+        'prompt': 'Test prompt',
+        'options': ['A', 'B'],
+        'correctIndex': '1',
+        'points': '10',
+        'timeLimitSeconds': '30',
+        'difficulty': 'Mid-Level',
+      };
+
+      final q = AssessmentQuestion.fromJson(rawQuestionWithStringNumbers);
+      expect(q.correctIndex, 1);
+      expect(q.points, 10);
+      expect(q.timeLimitSeconds, 30);
+    });
   });
 }

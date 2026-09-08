@@ -40,12 +40,18 @@ class CloudinaryUploadResult {
       publicId: (json['public_id'] as Object?)?.toString() ?? '',
       resourceType: (json['resource_type'] as Object?)?.toString() ?? 'auto',
       format: (json['format'] as Object?)?.toString() ?? '',
-      bytes: (json['bytes'] as num?)?.toInt() ?? 0,
+      bytes: json['bytes'] is num
+          ? (json['bytes'] as num).toInt()
+          : (int.tryParse(json['bytes']?.toString() ?? '') ?? 0),
       originalFilename: (json['original_filename'] as Object?)?.toString() ?? '',
       createdAt: (json['created_at'] as Object?)?.toString() ??
           DateTime.now().toUtc().toIso8601String(),
-      width: (json['width'] as num?)?.toInt(),
-      height: (json['height'] as num?)?.toInt(),
+      width: json['width'] is num
+          ? (json['width'] as num).toInt()
+          : int.tryParse(json['width']?.toString() ?? ''),
+      height: json['height'] is num
+          ? (json['height'] as num).toInt()
+          : int.tryParse(json['height']?.toString() ?? ''),
     );
   }
 

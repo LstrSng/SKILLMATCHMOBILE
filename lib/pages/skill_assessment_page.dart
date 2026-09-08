@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -29,6 +30,8 @@ class SkillAssessmentPage extends StatefulWidget {
 }
 
 class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
+  static const int kQuestionTimeLimitSeconds = 30;
+
   bool _loading = true;
   String? _error;
   Map<String, dynamic> _profileData = {};
@@ -48,6 +51,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
   bool _saving = false;
   bool _showReview = false;
 
+  Timer? _questionTimer;
+  int _secondsRemaining = kQuestionTimeLimitSeconds;
+
   @override
   void initState() {
     super.initState();
@@ -63,8 +69,78 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
 
   @override
   void dispose() {
+    _stopQuestionTimer();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _startQuestionTimer() {
+    _stopQuestionTimer();
+    _secondsRemaining = kQuestionTimeLimitSeconds;
+    _questionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining > 1) {
+        setState(() => _secondsRemaining -= 1);
+      } else {
+        timer.cancel();
+        setState(() => _secondsRemaining = 0);
+        _handleQuestionTimeout();
+      }
+    });
+  }
+
+  void _stopQuestionTimer() {
+    _questionTimer?.cancel();
+    _questionTimer = null;
+  }
+
+  void _handleQuestionTimeout() {
+    final engine = _engine;
+    if (engine == null || _step != _Step.question) return;
+
+    HapticFeedback.mediumImpact();
+    // If user has selected an option, submit it; otherwise submit -1 (unanswered/incorrect)
+    final selected = _selectedIndex ?? -1;
+    engine.submitAnswer(selected);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).removeCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          backgroundColor: selected >= 0 ? AppColors.primary : AppColors.warning,
+          content: Text(
+            selected >= 0
+                ? "Time's up! Submitted your selected answer."
+                : "Time's up for this question!",
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: selected >= 0 ? Colors.white : Colors.black,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (engine.isComplete) {
+      _stopQuestionTimer();
+      final res = engine.buildResult();
+      setState(() {
+        _sessionResult = res;
+        _step = _Step.result;
+      });
+      _autoSaveResult(res);
+      return;
+    }
+
+    setState(() {
+      _question = engine.nextQuestion();
+      _selectedIndex = null;
+    });
+    _startQuestionTimer();
   }
 
   Map<String, dynamic> _asStringKeyed(Object? raw) {
@@ -176,6 +252,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
       _showReview = false;
       _step = _Step.question;
     });
+    _startQuestionTimer();
   }
 
   void _selectOption(int index) {
@@ -188,6 +265,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
     final selected = _selectedIndex;
     if (engine == null || selected == null) return;
 
+    _stopQuestionTimer();
     HapticFeedback.lightImpact();
     engine.submitAnswer(selected);
 
@@ -206,6 +284,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
       _question = engine.nextQuestion();
       _selectedIndex = null;
     });
+    _startQuestionTimer();
   }
 
   Future<void> _autoSaveResult(AssessmentResult result) async {
@@ -324,6 +403,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
   }
 
   void _exitToCategories() {
+    _stopQuestionTimer();
     setState(() {
       _step = _Step.categories;
       _activeCategory = null;
@@ -581,6 +661,122 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
             ),
             const SizedBox(height: 12),
 
+            // Assessment Records Summary
+            if (_results.isNotEmpty) ...[
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.verified_rounded,
+                              size: 18,
+                              color: AppColors.success,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Assessment Records (${_results.length})',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: tokens.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.successBg,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: const Text(
+                            'Saved to Profile',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    for (final res in _results.values.toList().take(4)) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: res.passed ? AppColors.successBg : AppColors.warningBg,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                res.passed ? Icons.check : Icons.priority_high,
+                                size: 12,
+                                color: res.passed ? AppColors.success : AppColors.warning,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    res.roleTitle?.isNotEmpty == true
+                                        ? res.roleTitle!
+                                        : res.categoryKey,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: tokens.textPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Score: ${res.scorePercentage}% • Recorded on ${res.formattedDateOnly}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: tokens.textFaint,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: res.passed ? AppColors.successBg : AppColors.warningBg,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${res.scorePercentage}%',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: res.passed ? AppColors.success : AppColors.warning,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+
             // Assessments List
             if (filtered.isEmpty)
               Center(
@@ -625,6 +821,19 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
     final currentQNumber = engine.askedCount + 1;
     final progress = (engine.askedCount / totalQ).clamp(0.0, 1.0);
 
+    final timerProgress =
+        (_secondsRemaining / kQuestionTimeLimitSeconds).clamp(0.0, 1.0);
+    final timerColor = _secondsRemaining <= 5
+        ? AppColors.danger
+        : _secondsRemaining <= 10
+            ? AppColors.warning
+            : AppColors.primary;
+    final timerBg = _secondsRemaining <= 5
+        ? AppColors.dangerBg
+        : _secondsRemaining <= 10
+            ? AppColors.warningBg
+            : AppColors.primarySoftBg;
+
     final diffColor = switch (question.source.difficulty) {
       1 => AppColors.success,
       3 => AppColors.danger,
@@ -643,7 +852,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Progress Bar
+            // Overall Assessment Progress Bar
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
@@ -653,7 +862,18 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                 valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 5),
+            // 30-Second Question Timer Bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: timerProgress,
+                minHeight: 3,
+                backgroundColor: tokens.cardBorderSoft.withValues(alpha: 0.4),
+                valueColor: AlwaysStoppedAnimation<Color>(timerColor),
+              ),
+            ),
+            const SizedBox(height: 10),
 
             // Question Meta Row
             Row(
@@ -667,20 +887,58 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                     color: tokens.textPrimary,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: diffBg,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    question.source.difficultyLabel,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: diffColor,
+                Row(
+                  children: [
+                    // 30s Countdown Timer Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: timerBg,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: timerColor.withValues(alpha: 0.35),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _secondsRemaining <= 5
+                                ? Icons.alarm_on_rounded
+                                : Icons.timer_outlined,
+                            size: 13,
+                            color: timerColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${_secondsRemaining}s',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: timerColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: diffBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        question.source.difficultyLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: diffColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -869,6 +1127,32 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                       color: tokens.textSecondary,
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+                // Official Assessment Record Banner
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: tokens.surfaceMuted,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: tokens.cardBorderSoft),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.event_available_rounded, size: 15, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Score Record Date: ${result.formattedDate}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: tokens.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -1200,20 +1484,34 @@ class _DbAssessmentCard extends StatelessWidget {
                 ),
               ),
               if (result != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: result!.passed ? AppColors.successBg : AppColors.warningBg,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '${result!.scorePercentage}% • ${result!.passed ? 'Passed' : 'Needs Practice'}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: result!.passed ? AppColors.success : AppColors.warning,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: result!.passed ? AppColors.successBg : AppColors.warningBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${result!.scorePercentage}% • ${result!.passed ? 'Passed' : 'Needs Practice'}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: result!.passed ? AppColors.success : AppColors.warning,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Recorded ${result!.formattedDateOnly}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: tokens.textFaint,
+                      ),
+                    ),
+                  ],
                 )
               else
                 const Icon(Icons.chevron_right, color: AppColors.textFaint),
@@ -1237,7 +1535,7 @@ class _DbAssessmentCard extends StatelessWidget {
             children: [
               _MetaPill(icon: Icons.help_outline_rounded, label: '$questionsCount questions'),
               const SizedBox(width: 8),
-              _MetaPill(icon: Icons.timer_outlined, label: '${category.timeLimitMinutes} mins'),
+              const _MetaPill(icon: Icons.timer_outlined, label: '30s / question'),
               const SizedBox(width: 8),
               _MetaPill(
                 icon: Icons.check_circle_outline,
@@ -1245,6 +1543,31 @@ class _DbAssessmentCard extends StatelessWidget {
               ),
             ],
           ),
+          if (result != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: tokens.surfaceMuted,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.history_rounded, size: 12, color: tokens.textSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Score: ${result!.scorePercentage}% • Recorded on ${result!.formattedDate}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: tokens.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1299,7 +1622,7 @@ class _AnswerReviewTile extends StatelessWidget {
     final isCorrect = record.isCorrect;
     final userOption = record.selectedIndex >= 0 && record.selectedIndex < q.options.length
         ? q.options[record.selectedIndex]
-        : 'None selected';
+        : (record.selectedIndex == -1 ? 'Timed out (No answer)' : 'None selected');
     final correctOption = q.correctIndex >= 0 && q.correctIndex < q.options.length
         ? q.options[q.correctIndex]
         : '';

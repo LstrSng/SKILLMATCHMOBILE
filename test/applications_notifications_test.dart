@@ -92,5 +92,42 @@ void main() {
       expect(app.statusHistory[2].note, equals('Technical interview scheduled'));
       expect(app.jobSnapshot['matchPercentage'], equals(92));
     });
+
+    test('verifies canWithdraw is false once Hired, Rejected, or Withdrawn', () {
+      JobApplication createAppWithStatus(String status) {
+        return JobApplication.fromJson({
+          'id': 'app-status-test',
+          'jobId': 'job-1',
+          'jobTitle': 'Software Engineer',
+          'company': 'SkillMatch',
+          'status': status,
+        });
+      }
+
+      // Active / In-progress states can be withdrawn
+      for (final activeStatus in ['Applied', 'Screening', 'Interview', 'Interviewing', 'Offer']) {
+        final app = createAppWithStatus(activeStatus);
+        expect(app.canWithdraw, isTrue, reason: '$activeStatus should be withdrawable');
+        expect(app.isClosed, isFalse);
+      }
+
+      // Hired cannot be withdrawn
+      final hiredApp = createAppWithStatus('Hired');
+      expect(hiredApp.isHired, isTrue);
+      expect(hiredApp.isClosed, isTrue);
+      expect(hiredApp.canWithdraw, isFalse, reason: 'Hired applicants cannot withdraw');
+
+      // Rejected cannot be withdrawn
+      final rejectedApp = createAppWithStatus('Rejected');
+      expect(rejectedApp.isRejected, isTrue);
+      expect(rejectedApp.isClosed, isTrue);
+      expect(rejectedApp.canWithdraw, isFalse, reason: 'Rejected applicants cannot withdraw');
+
+      // Withdrawn cannot be withdrawn again
+      final withdrawnApp = createAppWithStatus('Withdrawn');
+      expect(withdrawnApp.isWithdrawn, isTrue);
+      expect(withdrawnApp.isClosed, isTrue);
+      expect(withdrawnApp.canWithdraw, isFalse, reason: 'Already withdrawn applicants cannot withdraw');
+    });
   });
 }

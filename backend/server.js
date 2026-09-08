@@ -734,7 +734,7 @@ app.post("/api/assessments/:id/submit", requireDb, async (req, res) => {
             const categoryKey = doc?.roleId || id;
             currentAssessments[categoryKey] = {
               level,
-              ability: (percentage / 25).toFixed(2),
+              ability: Number((percentage / 25).toFixed(2)),
               correctCount,
               totalCount,
               scorePercentage: percentage,
@@ -743,6 +743,26 @@ app.post("/api/assessments/:id/submit", requireDb, async (req, res) => {
               track: result.track,
               takenAt: result.takenAt,
             };
+
+            const currentRecords = Array.isArray(currentProfile.assessmentRecords)
+              ? [...currentProfile.assessmentRecords]
+              : [];
+            currentRecords.unshift({
+              categoryKey,
+              roleId: categoryKey,
+              roleTitle: result.roleTitle,
+              track: result.track,
+              level,
+              scorePercentage: percentage,
+              correctCount,
+              totalCount,
+              passed,
+              takenAt: result.takenAt,
+            });
+            if (currentRecords.length > 50) {
+              currentRecords.length = 50;
+            }
+            currentProfile.assessmentRecords = currentRecords;
 
             currentProfile.skillAssessments = currentAssessments;
             user.profile = currentProfile;
@@ -1232,6 +1252,7 @@ app.patch("/api/applications/:id", requireDb, requireAuth, async (req, res) => {
       "Screening",
       "Interview",
       "Offer",
+      "Hired",
       "Rejected",
       "Withdrawn",
     ]);
@@ -1239,19 +1260,35 @@ app.patch("/api/applications/:id", requireDb, requireAuth, async (req, res) => {
       return res.status(400).json({ message: "Invalid status." });
     }
 
-    const update = {
-      status: next,
-      $push: { statusHistory: { status: next, at: new Date() } },
-    };
-    if (next === "Withdrawn") update.withdrawnAt = new Date();
+    const existing = await Application.findOne({
+      _id: id,
+      userId: req.user._id,
+    });
+    if (!existing) return res.status(404).json({ message: "Application not found." });
 
-    const appDoc = await Application.findOneAndUpdate(
-      { _id: id, userId: req.user._id },
-      update,
-      { new: true }
-    ).lean();
-    if (!appDoc) return res.status(404).json({ message: "Application not found." });
-    return res.json({ application: appDoc });
+    if (next === "Withdrawn") {
+      if (existing.status === "Hired") {
+        return res.status(400).json({
+          message: "Cannot withdraw an application once hired.",
+        });
+      }
+      if (existing.status === "Rejected") {
+        return res.status(400).json({
+          message: "Cannot withdraw a rejected application.",
+        });
+      }
+      if (existing.status === "Withdrawn") {
+        return res.status(400).json({
+          message: "Application is already withdrawn.",
+        });
+      }
+      existing.withdrawnAt = new Date();
+    }
+
+    existing.status = next;
+    existing.statusHistory.push({ status: next, at: new Date() });
+    const appDoc = await existing.save();
+    return res.json({ application: appDoc.toObject() });
   } catch (err) {
     console.error("Update application error:", err);
     return res.status(500).json({ message: "Could not update application." });

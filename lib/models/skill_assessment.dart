@@ -1,3 +1,23 @@
+int _asInt(dynamic raw, [int fallback = 0]) {
+  if (raw == null) return fallback;
+  if (raw is int) return raw;
+  if (raw is num) return raw.toInt();
+  if (raw is String) {
+    return int.tryParse(raw.trim()) ?? double.tryParse(raw.trim())?.toInt() ?? fallback;
+  }
+  return fallback;
+}
+
+double _asDouble(dynamic raw, [double fallback = 0.0]) {
+  if (raw == null) return fallback;
+  if (raw is double) return raw;
+  if (raw is num) return raw.toDouble();
+  if (raw is String) {
+    return double.tryParse(raw.trim()) ?? fallback;
+  }
+  return fallback;
+}
+
 /// A single multiple-choice question tagged with difficulty, competency,
 /// and explanation from the Philippine Skills Framework (PSF-SDS) database.
 class AssessmentQuestion {
@@ -26,7 +46,7 @@ class AssessmentQuestion {
     this.competency = '',
     this.skillType = 'Functional Competency',
     this.points = 5,
-    this.timeLimitSeconds = 120,
+    this.timeLimitSeconds = 30,
   });
 
   static int _parseDifficultyTier(dynamic raw) {
@@ -56,8 +76,8 @@ class AssessmentQuestion {
         (o) => o.toLowerCase() == correctAnswer.toLowerCase(),
       );
     }
-    if (correctIndex < 0 && raw['correctIndex'] is num) {
-      correctIndex = (raw['correctIndex'] as num).toInt();
+    if (correctIndex < 0 && raw['correctIndex'] != null) {
+      correctIndex = _asInt(raw['correctIndex'], 0);
     }
     if (correctIndex < 0 || correctIndex >= options.length) {
       correctIndex = 0; // safe fallback
@@ -79,8 +99,8 @@ class AssessmentQuestion {
       explanation: (raw['explanation'] ?? '').toString().trim(),
       competency: (raw['competency'] ?? '').toString().trim(),
       skillType: (raw['skillType'] ?? 'Functional Competency').toString().trim(),
-      points: (raw['points'] as num?)?.toInt() ?? 5,
-      timeLimitSeconds: (raw['timeLimitSeconds'] as num?)?.toInt() ?? 120,
+      points: _asInt(raw['points'], 5),
+      timeLimitSeconds: _asInt(raw['timeLimitSeconds'], 30),
     );
   }
 
@@ -132,8 +152,8 @@ class AssessmentCategory {
     final title = (raw['title'] ?? roleTitle).toString();
     final track = (raw['track'] ?? 'General').toString();
     final description = (raw['description'] ?? '').toString();
-    final passingScore = (raw['passingScorePercentage'] as num?)?.toInt() ?? 70;
-    final timeLimit = (raw['timeLimitMinutes'] as num?)?.toInt() ?? 25;
+    final passingScore = _asInt(raw['passingScorePercentage'], 70);
+    final timeLimit = _asInt(raw['timeLimitMinutes'], 25);
 
     final qList = <AssessmentQuestion>[];
     if (raw['questions'] is List) {
@@ -144,7 +164,7 @@ class AssessmentCategory {
       }
     }
 
-    final qCount = (raw['questionsCount'] as num?)?.toInt() ?? qList.length;
+    final qCount = _asInt(raw['questionsCount'], qList.length);
 
     return AssessmentCategory(
       id: id,
@@ -221,22 +241,49 @@ class AssessmentResult {
     'takenAt': takenAt.toIso8601String(),
   };
 
+  /// Formatted date and time, e.g. "Sep 8, 2026 • 11:21 PM"
+  String get formattedDate {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final local = takenAt.toLocal();
+    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final minute = local.minute.toString().padLeft(2, '0');
+    final ampm = local.hour >= 12 ? 'PM' : 'AM';
+    return '${months[local.month - 1]} ${local.day}, ${local.year} • $hour:$minute $ampm';
+  }
+
+  /// Formatted date only, e.g. "Sep 8, 2026"
+  String get formattedDateOnly {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final local = takenAt.toLocal();
+    return '${months[local.month - 1]} ${local.day}, ${local.year}';
+  }
+
   static AssessmentResult? fromJson(String categoryKey, Map raw) {
     final level = (raw['level'] as Object?)?.toString().trim() ?? '';
     if (level.isEmpty) return null;
-    final correct = (raw['correctCount'] as num?)?.toInt() ?? 0;
-    final total = (raw['totalCount'] as num?)?.toInt() ?? 0;
+    final correct = _asInt(raw['correctCount'], 0);
+    final total = _asInt(raw['totalCount'], 0);
     final calculatedPercent = total > 0 ? ((correct / total) * 100).round() : 0;
-    final scorePercent = (raw['scorePercentage'] as num?)?.toInt() ?? calculatedPercent;
-    final passingScore = (raw['passingScorePercentage'] as num?)?.toInt() ?? 70;
-    final isPassed = raw['passed'] is bool ? (raw['passed'] as bool) : (scorePercent >= passingScore);
+    final scorePercent = raw['scorePercentage'] != null
+        ? _asInt(raw['scorePercentage'], calculatedPercent)
+        : calculatedPercent;
+    final passingScore = _asInt(raw['passingScorePercentage'], 70);
+    final isPassed = raw['passed'] is bool
+        ? (raw['passed'] as bool)
+        : (raw['passed']?.toString().toLowerCase() == 'true' || scorePercent >= passingScore);
 
     return AssessmentResult(
       categoryKey: categoryKey,
       roleTitle: (raw['roleTitle'] as Object?)?.toString().trim(),
       track: (raw['track'] as Object?)?.toString().trim(),
       level: level,
-      ability: (raw['ability'] as num?)?.toDouble() ?? 0,
+      ability: _asDouble(raw['ability'], 0.0),
       correctCount: correct,
       totalCount: total,
       scorePercentage: scorePercent,

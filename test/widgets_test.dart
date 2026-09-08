@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import 'package:skillmatch/theme/app_theme.dart';
 import 'package:skillmatch/widgets/widgets.dart';
+import 'package:skillmatch/services/navigation_service.dart';
 
 void main() {
   group('AppCard Tests', () {
@@ -219,6 +220,40 @@ void main() {
       await tester.tap(find.byIcon(Icons.close_rounded));
       await tester.pumpAndSettle();
       expect(deleted, isTrue);
+    });
+  });
+
+  group('Navigation Service & Tab State Tests', () {
+    test('AppNavigation switches tab by enum and index correctly', () {
+      AppNavigation.switchToIndex(0);
+      expect(AppNavigation.currentTab.value, equals(0));
+      expect(AppNavigation.activeTab, equals(AppTab.dashboard));
+
+      AppNavigation.switchTab(AppTab.jobs);
+      expect(AppNavigation.currentTab.value, equals(1));
+      expect(AppNavigation.activeTab, equals(AppTab.jobs));
+
+      AppNavigation.switchTab(AppTab.pathway);
+      expect(AppNavigation.currentTab.value, equals(2));
+      expect(AppNavigation.activeTab, equals(AppTab.pathway));
+
+      AppNavigation.switchTab(AppTab.applied);
+      expect(AppNavigation.currentTab.value, equals(3));
+      expect(AppNavigation.activeTab, equals(AppTab.applied));
+
+      AppNavigation.switchTab(AppTab.profile);
+      expect(AppNavigation.currentTab.value, equals(4));
+      expect(AppNavigation.activeTab, equals(AppTab.profile));
+
+      // Out of bounds index ignored
+      AppNavigation.switchToIndex(-1);
+      expect(AppNavigation.currentTab.value, equals(4));
+      AppNavigation.switchToIndex(99);
+      expect(AppNavigation.currentTab.value, equals(4));
+
+      // Reset
+      AppNavigation.switchTab(AppTab.dashboard);
+      expect(AppNavigation.currentTab.value, equals(0));
     });
   });
 }

@@ -21,6 +21,12 @@ class JobApplication {
     required this.jobSnapshot,
   });
 
+  bool get isHired => currentStatus.trim().toLowerCase() == 'hired';
+  bool get isRejected => currentStatus.trim().toLowerCase() == 'rejected';
+  bool get isWithdrawn => currentStatus.trim().toLowerCase() == 'withdrawn';
+  bool get isClosed => isHired || isRejected || isWithdrawn;
+  bool get canWithdraw => !isClosed;
+
   factory JobApplication.fromJson(
     Map<String, dynamic> json, {
     String? liveCompany,

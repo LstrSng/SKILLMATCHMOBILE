@@ -76,7 +76,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
       });
 
       final activeCount = list
-          .where((app) => app.currentStatus != 'Withdrawn' && app.currentStatus != 'Rejected')
+          .where((app) => app.canWithdraw)
           .length;
       unawaited(
         NotificationStore.maybeAddWeeklyDigest(
@@ -93,10 +93,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
   }
 
   List<JobApplication> get _activeApplications => applications
-      .where((app) =>
-          app.currentStatus != 'Withdrawn' &&
-          app.currentStatus != 'Rejected' &&
-          app.currentStatus != 'Hired')
+      .where((app) => app.canWithdraw)
       .toList();
 
   List<JobApplication> get _interviewingApplications => applications
@@ -106,10 +103,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
       .toList();
 
   List<JobApplication> get _archivedApplications => applications
-      .where((app) =>
-          app.currentStatus == 'Withdrawn' ||
-          app.currentStatus == 'Rejected' ||
-          app.currentStatus == 'Hired')
+      .where((app) => app.isClosed)
       .toList();
 
   List<JobApplication> get _filteredApplications {
@@ -418,6 +412,17 @@ class _ApplicationCard extends StatelessWidget {
   const _ApplicationCard({required this.application, required this.onChanged});
 
   Future<void> _confirmWithdraw(BuildContext context) async {
+    if (!application.canWithdraw) {
+      showAppToast(
+        context,
+        application.isHired
+            ? 'Applications cannot be withdrawn once hired.'
+            : 'This application is already closed.',
+        type: AppToastType.warning,
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -654,7 +659,31 @@ class _ApplicationCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (application.currentStatus != 'Withdrawn' && application.currentStatus != 'Rejected')
+              if (application.isHired)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: tokens.success.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: tokens.success.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 14, color: tokens.success),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Hired',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: tokens.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (application.canWithdraw)
                 TextButton.icon(
                   style: TextButton.styleFrom(
                     foregroundColor: tokens.danger,
@@ -777,6 +806,8 @@ class _MultiStageTracker extends StatelessWidget {
   bool get _isTerminalSpecial =>
       status.toLowerCase() == 'rejected' || status.toLowerCase() == 'withdrawn';
 
+  bool get _isHired => status.toLowerCase() == 'hired';
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
@@ -827,103 +858,141 @@ class _MultiStageTracker extends StatelessWidget {
           children: [
             for (int i = 0; i < _stages.length; i++) ...[
               Expanded(
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        // Left connecting line
-                        Expanded(
-                          child: i == 0
-                              ? const SizedBox.shrink()
-                              : Container(
-                                  height: 2.5,
-                                  decoration: BoxDecoration(
-                                    color: i <= stageIndex
-                                        ? tokens.primary
-                                        : tokens.cardBorderSoft,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                        ),
+                child: Builder(
+                  builder: (context) {
+                    final isCompleted = i < stageIndex || (i == stageIndex && _isHired);
+                    final lineColor = _isHired ? tokens.success : tokens.primary;
 
-                        // Stage Dot
-                        Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: i < stageIndex
-                                ? tokens.success
+                    return Column(
+                      children: [
+                        Row(
+                          children: [
+                            // Left connecting line
+                            Expanded(
+                              child: i == 0
+                                  ? const SizedBox.shrink()
+                                  : Container(
+                                      height: 2.5,
+                                      decoration: BoxDecoration(
+                                        color: i <= stageIndex
+                                            ? lineColor
+                                            : tokens.cardBorderSoft,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                            ),
+
+                            // Stage Dot
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isCompleted
+                                    ? tokens.success
+                                    : (i == stageIndex
+                                        ? tokens.primary
+                                        : tokens.surfaceMuted),
+                                border: Border.all(
+                                  color: isCompleted
+                                      ? tokens.success
+                                      : (i <= stageIndex
+                                          ? tokens.primary
+                                          : tokens.cardBorderSoft),
+                                  width: 2,
+                                ),
+                                boxShadow: (i == stageIndex && !_isHired)
+                                    ? [
+                                        BoxShadow(
+                                          color: tokens.primary.withValues(alpha: 0.35),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Center(
+                                child: isCompleted
+                                    ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                                    : (i == stageIndex
+                                        ? Container(
+                                            width: 6,
+                                            height: 6,
+                                            decoration: const BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          )
+                                        : null),
+                              ),
+                            ),
+
+                            // Right connecting line
+                            Expanded(
+                              child: i == _stages.length - 1
+                                  ? const SizedBox.shrink()
+                                  : Container(
+                                      height: 2.5,
+                                      decoration: BoxDecoration(
+                                        color: (i < stageIndex || (i == stageIndex && _isHired))
+                                            ? lineColor
+                                            : tokens.cardBorderSoft,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _stages[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: (i == stageIndex) ? FontWeight.w800 : FontWeight.w600,
+                            color: isCompleted
+                                ? (_isHired ? tokens.success : tokens.textPrimary)
                                 : (i == stageIndex
                                     ? tokens.primary
-                                    : tokens.surfaceMuted),
-                            border: Border.all(
-                              color: i <= stageIndex
-                                  ? (i < stageIndex ? tokens.success : tokens.primary)
-                                  : tokens.cardBorderSoft,
-                              width: 2,
-                            ),
-                            boxShadow: i == stageIndex
-                                ? [
-                                    BoxShadow(
-                                      color: tokens.primary.withValues(alpha: 0.35),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                : null,
+                                    : tokens.textSecondary.withValues(alpha: 0.6)),
                           ),
-                          child: Center(
-                            child: i < stageIndex
-                                ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
-                                : (i == stageIndex
-                                    ? Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      )
-                                    : null),
-                          ),
-                        ),
-
-                        // Right connecting line
-                        Expanded(
-                          child: i == _stages.length - 1
-                              ? const SizedBox.shrink()
-                              : Container(
-                                  height: 2.5,
-                                  decoration: BoxDecoration(
-                                    color: i < stageIndex
-                                        ? tokens.primary
-                                        : tokens.cardBorderSoft,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _stages[i],
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: (i == stageIndex) ? FontWeight.w800 : FontWeight.w600,
-                        color: (i <= stageIndex)
-                            ? (i == stageIndex ? tokens.primary : tokens.textPrimary)
-                            : tokens.textSecondary.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
           ],
         ),
+        if (_isHired) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: tokens.success.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: tokens.success.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.celebration_rounded, size: 15, color: tokens.success),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    "You've been hired! Congratulations on the offer.",
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: tokens.success,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

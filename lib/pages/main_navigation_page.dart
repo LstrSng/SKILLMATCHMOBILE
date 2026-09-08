@@ -33,8 +33,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   static const _items = [
     _NavItem(
       label: 'Dashboard',
-      outlinedIcon: Icons.dashboard_outlined,
-      filledIcon: Icons.dashboard_rounded,
+      outlinedIcon: Icons.space_dashboard_outlined,
+      filledIcon: Icons.space_dashboard_rounded,
     ),
     _NavItem(
       label: 'Jobs',
@@ -77,6 +77,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
+
     return ValueListenableBuilder<int>(
       valueListenable: AppNavigation.currentTab,
       builder: (context, currentIndex, _) {
@@ -86,16 +88,18 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             children: _pages,
           ),
           bottomNavigationBar: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: tokens.cardBackground,
               border: Border(
-                top: BorderSide(color: AppColors.borderSoft, width: 1),
+                top: BorderSide(color: tokens.cardBorderSoft, width: 1),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0x0A0F172A),
+                  color: tokens.isDark
+                      ? const Color(0x3D000000)
+                      : const Color(0x0A0F172A),
                   blurRadius: 20,
-                  offset: Offset(0, -4),
+                  offset: const Offset(0, -4),
                 ),
               ],
             ),
@@ -108,6 +112,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                     for (var i = 0; i < _items.length; i++)
                       Expanded(
                         child: _NavButton(
+                          key: ValueKey(_items[i].label),
                           item: _items[i],
                           selected: i == currentIndex,
                           onTap: () => _onTabSelected(i),
@@ -126,6 +131,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
 class _NavButton extends StatelessWidget {
   const _NavButton({
+    super.key,
     required this.item,
     required this.selected,
     required this.onTap,
@@ -137,6 +143,10 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    final activeColor = tokens.primary;
+    final inactiveColor = tokens.textFaint;
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -145,7 +155,11 @@ class _NavButton extends StatelessWidget {
         curve: Curves.easeInOut,
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primarySoftBg : Colors.transparent,
+          color: selected
+              ? (tokens.isDark
+                  ? tokens.primary.withValues(alpha: 0.18)
+                  : tokens.primary.withValues(alpha: 0.10))
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -155,20 +169,21 @@ class _NavButton extends StatelessWidget {
             AnimatedScale(
               scale: selected ? 1.08 : 1.0,
               duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutBack,
+              curve: Curves.easeOutCubic,
               child: Icon(
                 selected ? item.filledIcon : item.outlinedIcon,
-                color: selected ? AppColors.primary : AppColors.textFaint,
+                color: selected ? activeColor : inactiveColor,
                 size: 22,
               ),
             ),
             const SizedBox(height: 3),
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? AppColors.primary : AppColors.textSecondary,
+                color: selected ? activeColor : inactiveColor,
                 letterSpacing: selected ? -0.2 : 0,
               ),
               child: Text(

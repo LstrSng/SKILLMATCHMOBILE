@@ -100,8 +100,9 @@ class _JobsPageState extends State<JobsPage> {
           !j.jobType.toLowerCase().contains('full')) {
         return false;
       }
-      if (_selectedQuickFilter == 'Part-time' &&
-          !j.jobType.toLowerCase().contains('part')) {
+      if (_selectedQuickFilter == 'Hybrid' &&
+          !j.location.toLowerCase().contains('hybrid') &&
+          !j.jobType.toLowerCase().contains('hybrid')) {
         return false;
       }
       if (_selectedQuickFilter == 'Remote' &&
@@ -487,9 +488,9 @@ class _JobsPageState extends State<JobsPage> {
                             ),
                             const SizedBox(width: 8),
                             _QuickFilterChip(
-                              label: 'Part-time',
-                              selected: _selectedQuickFilter == 'Part-time',
-                              onTap: () => setState(() => _selectedQuickFilter = 'Part-time'),
+                              label: 'Hybrid',
+                              selected: _selectedQuickFilter == 'Hybrid',
+                              onTap: () => setState(() => _selectedQuickFilter = 'Hybrid'),
                             ),
                           ],
                         ),

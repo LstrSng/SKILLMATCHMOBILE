@@ -119,7 +119,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   salary: target['salary']?.toString() ?? '',
                   jobType: target['jobType']?.toString() ?? '',
                   postedDate: target['postedDate']?.toString() ?? '',
-                  matchPercentage: (target['matchPercentage'] as num?)?.toInt() ?? 0,
+                  matchPercentage: target['matchPercentage'] is num
+                      ? (target['matchPercentage'] as num).toInt()
+                      : (int.tryParse(target['matchPercentage']?.toString() ?? '') ?? 0),
                   description: target['description']?.toString() ?? '',
                   matchedSkills: (target['matchedSkills'] as List?)?.map((e) => e.toString()).toList() ?? [],
                   unmatchedSkills: (target['unmatchedSkills'] as List?)?.map((e) => e.toString()).toList() ?? [],

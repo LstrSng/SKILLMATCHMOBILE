@@ -78,8 +78,15 @@ Future<Map<String, dynamic>> updateApplicationStatus({
       body: jsonEncode({'status': status}),
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
+      String msg = 'Could not update status (${res.statusCode}).';
+      try {
+        final errJson = jsonDecode(res.body);
+        if (errJson is Map && errJson['message'] != null) {
+          msg = errJson['message'].toString();
+        }
+      } catch (_) {}
       throw AuthedException(
-        'Could not update status (${res.statusCode}).',
+        msg,
         statusCode: res.statusCode,
       );
     }

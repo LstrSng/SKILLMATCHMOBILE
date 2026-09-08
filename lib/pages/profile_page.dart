@@ -100,7 +100,10 @@ Map<String, dynamic>? parseProfileFileItem(
   final data = (raw['data'] as Object?)?.toString().trim() ?? '';
   final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
   final publicId = (raw['publicId'] as Object?)?.toString().trim() ?? '';
-  final size = (raw['size'] as num?)?.toInt() ?? 0;
+  final sizeRaw = raw['size'];
+  final size = sizeRaw is num
+      ? sizeRaw.toInt()
+      : (int.tryParse(sizeRaw?.toString() ?? '') ?? 0);
   final updatedAt = (raw['updatedAt'] as Object?)?.toString().trim() ?? '';
   if (name.isEmpty && url.isEmpty && data.isEmpty) return null;
   return {
@@ -927,29 +930,98 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   if (assessmentResults.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    Column(
                       children: assessmentResults.entries.map((entry) {
+                        final res = entry.value;
                         final category = kAssessmentCategories.firstWhere(
                           (c) => c.key == entry.key,
-                          orElse: () => kAssessmentCategories.first,
+                          orElse: () => AssessmentCategory(
+                            key: entry.key,
+                            label: res.roleTitle ?? entry.key,
+                            description: '',
+                            questions: const [],
+                          ),
                         );
+                        final label = res.roleTitle?.isNotEmpty == true
+                            ? res.roleTitle!
+                            : category.label;
+                        final statusBg = res.passed
+                            ? AppColors.success.withValues(alpha: 0.12)
+                            : AppColors.warning.withValues(alpha: 0.12);
+                        final statusColor =
+                            res.passed ? AppColors.success : AppColors.warning;
+
                         return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
+                            horizontal: 12,
+                            vertical: 10,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.surfaceMuted,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            '${category.label}: ${entry.value.level}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppColors.border,
                             ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: statusBg,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  res.passed
+                                      ? Icons.verified_rounded
+                                      : Icons.pending_actions_rounded,
+                                  size: 16,
+                                  color: statusColor,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      label,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${res.level} • Recorded ${res.formattedDateOnly}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: statusBg,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${res.scorePercentage}%',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }).toList(),

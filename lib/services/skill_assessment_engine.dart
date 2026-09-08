@@ -190,6 +190,35 @@ Map<String, AssessmentResult> readAssessmentResults(
   return out;
 }
 
+/// Reads the historical log of assessment attempts from the user's
+/// `profile.assessmentRecords` bucket. Returns results sorted with newest first.
+List<AssessmentResult> readAssessmentHistory(
+  Map<String, dynamic> profileData,
+) {
+  final raw = profileData['assessmentRecords'];
+  final list = <AssessmentResult>[];
+
+  if (raw is List) {
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final categoryKey = (item['categoryKey'] ?? item['roleId'] ?? '').toString();
+      final parsed = AssessmentResult.fromJson(categoryKey, item);
+      if (parsed != null) {
+        list.add(parsed);
+      }
+    }
+  }
+
+  // Fallback: If assessmentRecords is empty, populate from skillAssessments map
+  if (list.isEmpty) {
+    list.addAll(readAssessmentResults(profileData).values);
+  }
+
+  // Sort newest first
+  list.sort((a, b) => b.takenAt.compareTo(a.takenAt));
+  return list;
+}
+
 /// Merges a new result into the existing `profile` map, ready to send
 /// as the `profile` patch to `updateMyProfile`.
 Map<String, dynamic> mergeAssessmentResult(
@@ -203,5 +232,22 @@ Map<String, dynamic> mergeAssessmentResult(
       : <String, dynamic>{};
   assessments[result.categoryKey] = result.toJson();
   profile['skillAssessments'] = assessments;
+
+  // Maintain a chronological assessment history log (up to 50 records)
+  final existingHistory = profile['assessmentRecords'];
+  final history = existingHistory is List
+      ? List<Map<String, dynamic>>.from(
+          existingHistory.whereType<Map>().map((m) => m.map((k, v) => MapEntry(k.toString(), v))),
+        )
+      : <Map<String, dynamic>>[];
+
+  final recordMap = Map<String, dynamic>.from(result.toJson());
+  recordMap['categoryKey'] = result.categoryKey;
+  history.insert(0, recordMap);
+  if (history.length > 50) {
+    history.removeRange(50, history.length);
+  }
+  profile['assessmentRecords'] = history;
+
   return profile;
 }
