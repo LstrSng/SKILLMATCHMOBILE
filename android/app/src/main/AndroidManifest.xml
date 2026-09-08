@@ -1,9 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
-<<<<<<< HEAD
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-=======
->>>>>>> bd86147e91f96635787421eacf57b29cd9120342
 
     <application
         android:label="skillmatch"
