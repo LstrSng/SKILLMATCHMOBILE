@@ -37,7 +37,8 @@ const User = MobileUser;
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "8mb" }));
+app.use(express.json({ limit: "60mb" }));
+app.use(express.urlencoded({ extended: true, limit: "60mb" }));
 
 function requireDb(req, res, next) {
   // 1 = connected (https://mongoosejs.com/docs/api/connection.html#Connection.prototype.readyState)

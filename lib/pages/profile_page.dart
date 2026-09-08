@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io' show File;
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -87,6 +89,54 @@ Widget _profileAvatar({
   );
 }
 
+Map<String, dynamic>? parseProfileFileItem(
+  dynamic raw, {
+  required String fallbackName,
+}) {
+  if (raw is! Map) return null;
+  final id = (raw['id'] as Object?)?.toString().trim() ?? '';
+  final name = (raw['name'] as Object?)?.toString().trim() ?? '';
+  final url = (raw['url'] as Object?)?.toString().trim() ?? '';
+  final data = (raw['data'] as Object?)?.toString().trim() ?? '';
+  final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
+  final publicId = (raw['publicId'] as Object?)?.toString().trim() ?? '';
+  final size = (raw['size'] as num?)?.toInt() ?? 0;
+  final updatedAt = (raw['updatedAt'] as Object?)?.toString().trim() ?? '';
+  if (name.isEmpty && url.isEmpty && data.isEmpty) return null;
+  return {
+    'id': id.isNotEmpty ? id : (publicId.isNotEmpty ? publicId : name),
+    'name': name.isNotEmpty ? name : fallbackName,
+    'url': url,
+    'data': data,
+    'mimeType': mimeType,
+    'publicId': publicId,
+    'size': size,
+    'updatedAt': updatedAt,
+  };
+}
+
+Map<String, dynamic>? readProfileResume(Map<String, dynamic> profileData) {
+  return parseProfileFileItem(profileData['resume'], fallbackName: 'Resume');
+}
+
+List<Map<String, dynamic>> readProfileCertifications(
+  Map<String, dynamic> profileData,
+) {
+  final rawList = profileData['certifications'];
+  final list = <Map<String, dynamic>>[];
+  if (rawList is List) {
+    for (final raw in rawList) {
+      final item = parseProfileFileItem(raw, fallbackName: 'Certification');
+      if (item != null) list.add(item);
+    }
+  } else {
+    final singleRaw = profileData['certification'];
+    final item = parseProfileFileItem(singleRaw, fallbackName: 'Certification');
+    if (item != null) list.add(item);
+  }
+  return list;
+}
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -98,6 +148,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _loading = true;
   bool _uploadingResume = false;
   bool _uploadingCertification = false;
+  String? _certUploadStatus;
   String? _error;
   Map<String, dynamic> _user = SessionStore.user ?? {};
 
@@ -201,49 +252,10 @@ class _ProfilePageState extends State<ProfilePage> {
     _load();
   }
 
-  Map<String, dynamic>? _resumeData() {
-    final raw = _profileData()['resume'];
-    if (raw is! Map) return null;
-    final name = (raw['name'] as Object?)?.toString().trim() ?? '';
-    final url = (raw['url'] as Object?)?.toString().trim() ?? '';
-    final data = (raw['data'] as Object?)?.toString().trim() ?? '';
-    final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
-    final publicId = (raw['publicId'] as Object?)?.toString().trim() ?? '';
-    final size = (raw['size'] as num?)?.toInt() ?? 0;
-    final updatedAt = (raw['updatedAt'] as Object?)?.toString().trim() ?? '';
-    if (name.isEmpty && url.isEmpty && data.isEmpty) return null;
-    return {
-      'name': name.isNotEmpty ? name : 'Resume',
-      'url': url,
-      'data': data,
-      'mimeType': mimeType,
-      'publicId': publicId,
-      'size': size,
-      'updatedAt': updatedAt,
-    };
-  }
+  Map<String, dynamic>? _resumeData() => readProfileResume(_profileData());
 
-  Map<String, dynamic>? _certificationData() {
-    final raw = _profileData()['certification'];
-    if (raw is! Map) return null;
-    final name = (raw['name'] as Object?)?.toString().trim() ?? '';
-    final url = (raw['url'] as Object?)?.toString().trim() ?? '';
-    final data = (raw['data'] as Object?)?.toString().trim() ?? '';
-    final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
-    final publicId = (raw['publicId'] as Object?)?.toString().trim() ?? '';
-    final size = (raw['size'] as num?)?.toInt() ?? 0;
-    final updatedAt = (raw['updatedAt'] as Object?)?.toString().trim() ?? '';
-    if (name.isEmpty && url.isEmpty && data.isEmpty) return null;
-    return {
-      'name': name.isNotEmpty ? name : 'Certification',
-      'url': url,
-      'data': data,
-      'mimeType': mimeType,
-      'publicId': publicId,
-      'size': size,
-      'updatedAt': updatedAt,
-    };
-  }
+  List<Map<String, dynamic>> _certificationsData() =>
+      readProfileCertifications(_profileData());
 
   String _resumeDateLabel(String raw) {
     if (raw.trim().isEmpty) return 'Uploaded recently';
@@ -298,12 +310,22 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<Uint8List?> _resumeBytesFromPick(PlatformFile file) async {
     if (file.bytes != null) return file.bytes;
     final stream = file.readStream;
-    if (stream == null) return null;
-    final builder = BytesBuilder(copy: false);
-    await for (final chunk in stream) {
-      builder.add(chunk);
+    if (stream != null) {
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in stream) {
+        builder.add(chunk);
+      }
+      return builder.takeBytes();
     }
-    return builder.takeBytes();
+    if (!kIsWeb && file.path != null && file.path!.isNotEmpty) {
+      try {
+        final f = File(file.path!);
+        if (await f.exists()) {
+          return await f.readAsBytes();
+        }
+      } catch (_) {}
+    }
+    return null;
   }
 
   Future<void> _viewDocument(String? url, String? name) async {
@@ -362,12 +384,19 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _removeCertification() async {
+  Future<void> _removeCertification(int index) async {
+    final certs = _certificationsData();
+    if (index < 0 || index >= certs.length) return;
+    final cert = certs[index];
+    final certName = (cert['name'] as String? ?? '').isNotEmpty
+        ? cert['name']
+        : 'Certification ${index + 1}';
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: const Text('Remove Certification'),
-        content: const Text('Are you sure you want to remove your certification?'),
+        content: Text('Are you sure you want to remove "$certName"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(false),
@@ -384,12 +413,22 @@ class _ProfilePageState extends State<ProfilePage> {
     if (confirm != true) return;
     try {
       final profile = _profileData();
-      profile.remove('certification');
+      final updatedList = List<Map<String, dynamic>>.from(_certificationsData());
+      if (index < updatedList.length) {
+        updatedList.removeAt(index);
+      }
+      profile['certifications'] = updatedList;
+      if (updatedList.isNotEmpty) {
+        profile['certification'] = updatedList.first;
+      } else {
+        profile.remove('certification');
+      }
+
       final updated = await updateMyProfile({'profile': profile});
       if (!mounted) return;
       setState(() => _user = updated);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Certification removed successfully.')),
+        SnackBar(content: Text('Certification "$certName" removed successfully.')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -405,6 +444,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final picked = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'],
+        allowMultiple: false,
         withData: true,
         withReadStream: true,
       );
@@ -438,6 +478,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
         return;
       }
+
 
       setState(() => _uploadingResume = true);
 
@@ -482,7 +523,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       final message = e.toString();
       final friendly = message.contains('(413)')
-          ? 'Upload is too large for the server. Configure Cloudinary in lib/config/cloudinary_config.dart for unlimited fast cloud storage.'
+          ? 'Upload failed: File is too large.'
           : 'Upload failed: $message';
       ScaffoldMessenger.of(
         context,
@@ -492,77 +533,126 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _uploadCertification() async {
+  Future<void> _uploadCertifications() async {
     if (_uploadingCertification) return;
     try {
       final picked = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'],
+        allowMultiple: true,
         withData: true,
         withReadStream: true,
       );
       if (picked == null || picked.files.isEmpty) return;
-      final file = picked.files.first;
-      final ext = (file.extension ?? '').toLowerCase();
+
       const allowed = {'pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'};
-      if (!allowed.contains(ext)) {
-        if (!mounted) return;
+      const maxBytes = 10 * 1024 * 1024; // 10MB per file
+
+      final validFiles = <PlatformFile>[];
+      final invalidExtFiles = <String>[];
+      final oversizedFiles = <String>[];
+
+      for (final file in picked.files) {
+        final ext = (file.extension ?? '').toLowerCase();
+        if (!allowed.contains(ext)) {
+          invalidExtFiles.add(file.name);
+          continue;
+        }
+        if (file.size > maxBytes) {
+          oversizedFiles.add(file.name);
+          continue;
+        }
+        validFiles.add(file);
+      }
+
+      if (invalidExtFiles.isNotEmpty && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please choose a PDF, DOC, DOCX, or Image file.'),
+          SnackBar(
+            content: Text(
+              'Skipped unsupported files: ${invalidExtFiles.join(", ")}. Please use PDF, DOC, DOCX, PNG, or JPG.',
+            ),
           ),
         );
-        return;
-      }
-      final bytes = await _resumeBytesFromPick(file);
-      if (bytes == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read selected file.')),
-        );
-        return;
       }
 
-      const maxBytes = 10 * 1024 * 1024; // 10MB
-      if (bytes.length > maxBytes) {
-        if (!mounted) return;
+      if (oversizedFiles.isNotEmpty && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Certification must be 10MB or smaller.'),
+          SnackBar(
+            content: Text(
+              'Skipped files larger than 10MB: ${oversizedFiles.join(", ")}.',
+            ),
           ),
         );
-        return;
       }
 
-      setState(() => _uploadingCertification = true);
+      if (validFiles.isEmpty) return;
 
+      setState(() {
+        _uploadingCertification = true;
+        _certUploadStatus = 'Uploading ${validFiles.length} file${validFiles.length == 1 ? "" : "s"}...';
+      });
+
+      final uploadedItems = <Map<String, dynamic>>[];
       final now = DateTime.now().toUtc().toIso8601String();
-      final profile = _profileData();
 
-      if (CloudinaryConfig.isConfigured) {
-        final result = await CloudinaryService.uploadCertification(
-          bytes: bytes,
-          fileName: file.name,
-        );
-        profile['certification'] = {
-          'name': file.name,
-          'url': result.secureUrl,
-          'publicId': result.publicId,
-          'resourceType': result.resourceType,
-          'format': result.format,
-          'mimeType': _resumeMimeType(file.name),
-          'size': bytes.length,
-          'updatedAt': now,
-        };
-      } else {
-        // Fallback to base64 encoding if Cloudinary is not configured yet
-        profile['certification'] = {
-          'name': file.name,
-          'mimeType': _resumeMimeType(file.name),
-          'data': base64Encode(bytes),
-          'size': bytes.length,
-          'updatedAt': now,
-        };
+      for (var i = 0; i < validFiles.length; i++) {
+        final file = validFiles[i];
+        if (validFiles.length > 1 && mounted) {
+          setState(() {
+            _certUploadStatus = 'Uploading ${i + 1} of ${validFiles.length}...';
+          });
+        }
+
+        final bytes = await _resumeBytesFromPick(file);
+        if (bytes == null) continue;
+        if (bytes.length > maxBytes) continue;
+
+        final uniqueId = '${DateTime.now().millisecondsSinceEpoch}_$i';
+
+        if (CloudinaryConfig.isConfigured) {
+          final result = await CloudinaryService.uploadCertification(
+            bytes: bytes,
+            fileName: file.name,
+          );
+          uploadedItems.add({
+            'id': uniqueId,
+            'name': file.name,
+            'url': result.secureUrl,
+            'publicId': result.publicId,
+            'resourceType': result.resourceType,
+            'format': result.format,
+            'mimeType': _resumeMimeType(file.name),
+            'size': bytes.length,
+            'updatedAt': now,
+          });
+        } else {
+          // Fallback to base64 encoding if Cloudinary is not configured yet
+          uploadedItems.add({
+            'id': uniqueId,
+            'name': file.name,
+            'mimeType': _resumeMimeType(file.name),
+            'data': base64Encode(bytes),
+            'size': bytes.length,
+            'updatedAt': now,
+          });
+        }
+      }
+
+      if (uploadedItems.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No files were successfully uploaded.')),
+          );
+        }
+        return;
+      }
+
+      final profile = _profileData();
+      final currentList = _certificationsData();
+      final updatedList = [...currentList, ...uploadedItems];
+      profile['certifications'] = updatedList;
+      if (updatedList.isNotEmpty) {
+        profile['certification'] = updatedList.first;
       }
 
       final updated = await updateMyProfile({'profile': profile});
@@ -571,19 +661,30 @@ class _ProfilePageState extends State<ProfilePage> {
         _user = updated;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Certification uploaded successfully.')),
+        SnackBar(
+          content: Text(
+            uploadedItems.length == 1
+                ? 'Certification uploaded successfully.'
+                : '${uploadedItems.length} certifications uploaded successfully.',
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       final message = e.toString();
       final friendly = message.contains('(413)')
-          ? 'Upload is too large for the server. Configure Cloudinary in lib/config/cloudinary_config.dart for unlimited fast cloud storage.'
+          ? 'Upload failed: File is too large.'
           : 'Upload failed: $message';
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(friendly)));
     } finally {
-      if (mounted) setState(() => _uploadingCertification = false);
+      if (mounted) {
+        setState(() {
+          _uploadingCertification = false;
+          _certUploadStatus = null;
+        });
+      }
     }
   }
 
@@ -644,7 +745,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final phone = _s('phone');
     final portfolio = _s('portfolioUrl');
     final resume = _resumeData();
-    final certification = _certificationData();
+    final certifications = _certificationsData();
     final skills = _skills();
     final education = _education();
     final experience = _experience();
@@ -1107,7 +1208,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 20),
 
-            // Certification Section
+            // Certifications Section (Supports multiple files)
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1115,15 +1216,37 @@ class _ProfilePageState extends State<ProfilePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Certification',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      Row(
+                        children: [
+                          const Text(
+                            'Certifications',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          if (certifications.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE2ECFE),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${certifications.length}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF2563EB),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      if (certification != null)
+                      if (certifications.isNotEmpty)
                         TextButton.icon(
-                          onPressed: _uploadingCertification ? null : _removeCertification,
-                          icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
-                          label: const Text('Remove', style: TextStyle(fontSize: 12, color: AppColors.danger)),
+                          onPressed: _uploadingCertification ? null : _uploadCertifications,
+                          icon: const Icon(Icons.add, size: 16, color: Color(0xFF2563EB)),
+                          label: const Text('Add Files', style: TextStyle(fontSize: 12, color: Color(0xFF2563EB))),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             minimumSize: Size.zero,
@@ -1133,94 +1256,189 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE2ECFE),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.workspace_premium,
-                            color: Color(0xFF2563EB),
-                            size: 24,
+                  if (_uploadingCertification) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                        ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _certUploadStatus ?? 'Uploading certifications...',
+                            style: const TextStyle(fontSize: 13, color: Color(0xFF2563EB), fontWeight: FontWeight.w500),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              certification == null
-                                  ? 'No certification uploaded yet'
-                                  : (certification['name'] ?? 'Certification'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _fileSubtitle(
-                                certification,
-                                fallback: 'PDF, DOC, DOCX, PNG, or JPG (max 10MB)',
-                              ),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF6B7280),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (certification != null && (certification['url'] as String? ?? '').isNotEmpty)
-                        IconButton(
-                          tooltip: 'View certification',
-                          icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFF2563EB)),
-                          onPressed: () => _viewDocument(certification['url'], certification['name']),
-                        ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF2563EB),
-                          side: const BorderSide(color: Color(0xFFE5E7EB)),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
+                    ),
+                  ],
+                  if (certifications.isEmpty)
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE2ECFE),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
+                          child: const Center(
+                            child: Icon(
+                              Icons.workspace_premium,
+                              color: Color(0xFF2563EB),
+                              size: 24,
+                            ),
                           ),
                         ),
-                        onPressed: _uploadingCertification
-                            ? null
-                            : _uploadCertification,
-                        child: _uploadingCertification
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                certification == null ? 'Upload' : 'Replace',
-                                style: const TextStyle(
-                                  fontSize: 13,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                'No certifications uploaded yet',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              SizedBox(height: 2),
+                              Text(
+                                'PDF, DOC, DOCX, PNG, or JPG (max 10MB each)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF2563EB),
+                            side: const BorderSide(color: Color(0xFFE5E7EB)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          onPressed: _uploadingCertification
+                              ? null
+                              : _uploadCertifications,
+                          child: _uploadingCertification
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Upload',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: certifications.length,
+                      separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF3F4F6)),
+                      itemBuilder: (context, index) {
+                        final cert = certifications[index];
+                        final certUrl = (cert['url'] as String? ?? '').trim();
+                        final certName = cert['name'] ?? 'Certification ${index + 1}';
+                        return Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE2ECFE),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.workspace_premium,
+                                  color: Color(0xFF2563EB),
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    certName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _fileSubtitle(
+                                      cert,
+                                      fallback: 'PDF, DOC, DOCX, PNG, or JPG',
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (certUrl.isNotEmpty)
+                              IconButton(
+                                tooltip: 'View certification',
+                                icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFF2563EB)),
+                                onPressed: () => _viewDocument(certUrl, certName),
+                              ),
+                            IconButton(
+                              tooltip: 'Remove certification',
+                              icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
+                              onPressed: _uploadingCertification ? null : () => _removeCertification(index),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _uploadingCertification ? null : _uploadCertifications,
+                        icon: const Icon(Icons.upload_file, size: 16),
+                        label: const Text('Add More Certifications'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2563EB),
+                          side: const BorderSide(color: Color(0xFFD1D5DB)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ],
               ),
             ),

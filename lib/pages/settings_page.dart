@@ -116,7 +116,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );
@@ -390,7 +390,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );
@@ -423,7 +423,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );

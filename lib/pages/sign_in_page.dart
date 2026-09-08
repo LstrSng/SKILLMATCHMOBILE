@@ -94,7 +94,7 @@ class _SignInPageState extends State<SignInPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );
@@ -411,7 +411,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );
@@ -605,7 +605,7 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );
@@ -853,7 +853,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );
@@ -886,7 +886,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not reach the server. Start the API and check API_BASE_URL (see api_config.dart).',
+            'Unable to connect to server. Please check your internet connection.',
           ),
         ),
       );

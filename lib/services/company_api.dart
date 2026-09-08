@@ -33,7 +33,7 @@ Future<Map<String, dynamic>> fetchCompanyDetails(String jobId) async {
     );
   } on http.ClientException {
     throw AuthedException(
-      'Could not reach the server. Start the API and check API_BASE_URL.',
+      'Unable to connect to server. Please check your internet connection.',
     );
   }
 }
