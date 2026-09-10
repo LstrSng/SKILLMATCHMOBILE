@@ -37,20 +37,22 @@ Widget _profileAvatar({
   required String avatarUrl,
   double size = 80,
   double radius = 12,
+  Color? fallbackBg,
+  Color? fallbackIconColor,
 }) {
   final trimmed = avatarUrl.trim();
   final fallback = Container(
     width: size,
     height: size,
     decoration: BoxDecoration(
-      color: const Color(0xFFE5E7EB),
+      color: fallbackBg ?? const Color(0xFFE5E7EB),
       borderRadius: BorderRadius.circular(radius),
     ),
     child: Center(
       child: Icon(
         Icons.person,
         size: size * 0.5,
-        color: const Color(0xFFD1D5DB),
+        color: fallbackIconColor ?? const Color(0xFFD1D5DB),
       ),
     ),
   );
@@ -697,7 +699,7 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.white,
+      backgroundColor: context.appColors.cardBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -712,9 +714,9 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF9FAFB),
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: context.appColors.scaffoldBackground,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (_error != null) {
@@ -737,6 +739,8 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
 
+    final tokens = context.appColors;
+    final isDark = context.isDarkMode;
     final firstName = _s('firstName');
     final lastName = _s('lastName');
     final fullName = ('$firstName $lastName').trim().isEmpty
@@ -776,9 +780,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       Container(
                         height: 72,
-                        decoration: const BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.vertical(
+                        decoration: BoxDecoration(
+                          gradient: tokens.primaryGradient,
+                          borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16),
                           ),
                         ),
@@ -790,8 +794,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           onPressed: _openEdit,
                           icon: const Icon(Icons.edit_outlined, size: 18),
                           style: IconButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: AppColors.primary,
+                            backgroundColor: tokens.cardBackground,
+                            foregroundColor: tokens.primary,
+                            side: BorderSide(color: tokens.cardBorderSoft),
                           ),
                           tooltip: 'Edit profile',
                         ),
@@ -800,13 +805,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         padding: const EdgeInsets.only(top: 32),
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
+                          decoration: BoxDecoration(
+                            color: tokens.cardBackground,
                             shape: BoxShape.circle,
                           ),
                           child: _profileAvatar(
                             avatarUrl: _s('avatarUrl'),
                             radius: 40,
+                            fallbackBg: tokens.surfaceMuted,
+                            fallbackIconColor: tokens.textSecondary,
                           ),
                         ),
                       ),
@@ -819,18 +826,19 @@ class _ProfilePageState extends State<ProfilePage> {
                         Text(
                           fullName,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
+                            color: tokens.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           headline.isEmpty ? 'Add a headline' : headline,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: AppColors.textSecondary,
+                            color: tokens.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -875,9 +883,13 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Skills',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: tokens.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   if (skills.isEmpty)
@@ -901,19 +913,20 @@ class _ProfilePageState extends State<ProfilePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Skill assessment',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       if (assessmentResults.isNotEmpty)
                         Text(
                           '${assessmentResults.length}/${kAssessmentCategories.length} taken',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: AppColors.textFaint,
+                            color: tokens.textFaint,
                           ),
                         ),
                     ],
@@ -923,9 +936,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     assessmentResults.isEmpty
                         ? 'Find your proficiency level with a short adaptive quiz.'
                         : 'Your assessed proficiency across topics.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.textSecondary,
+                      color: tokens.textSecondary,
                     ),
                   ),
                   if (assessmentResults.isNotEmpty) ...[
@@ -946,10 +959,19 @@ class _ProfilePageState extends State<ProfilePage> {
                             ? res.roleTitle!
                             : category.label;
                         final statusBg = res.passed
-                            ? AppColors.success.withValues(alpha: 0.12)
-                            : AppColors.warning.withValues(alpha: 0.12);
-                        final statusColor =
-                            res.passed ? AppColors.success : AppColors.warning;
+                            ? (isDark
+                                ? AppColors.successDarkBg
+                                : AppColors.successBg)
+                            : (isDark
+                                ? AppColors.warningDarkBg
+                                : AppColors.warningBg);
+                        final statusColor = res.passed
+                            ? (isDark
+                                ? AppColors.successLight
+                                : AppColors.success)
+                            : (isDark
+                                ? AppColors.warningLight
+                                : AppColors.warning);
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -958,10 +980,10 @@ class _ProfilePageState extends State<ProfilePage> {
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceMuted,
+                            color: tokens.surfaceMuted,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: AppColors.border,
+                              color: tokens.cardBorderSoft,
                             ),
                           ),
                           child: Row(
@@ -987,17 +1009,18 @@ class _ProfilePageState extends State<ProfilePage> {
                                   children: [
                                     Text(
                                       label,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
+                                        color: tokens.textPrimary,
                                       ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '${res.level} • Recorded ${res.formattedDateOnly}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 11,
-                                        color: AppColors.textSecondary,
+                                        color: tokens.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -1032,6 +1055,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     width: double.infinity,
                     child: OutlinedButton(
                       onPressed: _openAssessment,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: tokens.primary,
+                        side: BorderSide(color: tokens.cardBorder),
+                      ),
                       child: Text(
                         assessmentResults.isEmpty
                             ? 'Take skill assessment'
@@ -1049,9 +1076,13 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Experience',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: tokens.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   if (experience.isEmpty)
@@ -1092,9 +1123,13 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Education',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: tokens.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   if (education.isEmpty)
@@ -1110,10 +1145,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               width: 12,
                               height: 12,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF2563EB),
+                                color: tokens.primary,
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: const Color(0xFF2563EB),
+                                  color: tokens.primary,
                                   width: 3,
                                 ),
                               ),
@@ -1127,9 +1162,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                     (e['degree'] ?? '').isEmpty
                                         ? '—'
                                         : (e['degree'] ?? ''),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
+                                      color: tokens.textPrimary,
                                     ),
                                   ),
                                   if ((e['school'] ?? '')
@@ -1138,9 +1174,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                     const SizedBox(height: 2),
                                     Text(
                                       e['school'] ?? '',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 14,
-                                        color: Color(0xFF6B7280),
+                                        color: tokens.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -1148,9 +1184,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                     const SizedBox(height: 4),
                                     Text(
                                       e['years'] ?? '',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13,
-                                        color: Color(0xFF9CA3AF),
+                                        color: tokens.textFaint,
                                       ),
                                     ),
                                   ],
@@ -1174,17 +1210,38 @@ class _ProfilePageState extends State<ProfilePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Resume',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: tokens.textPrimary,
+                        ),
                       ),
                       if (resume != null)
                         TextButton.icon(
                           onPressed: _uploadingResume ? null : _removeResume,
-                          icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
-                          label: const Text('Remove', style: TextStyle(fontSize: 12, color: AppColors.danger)),
+                          icon: Icon(
+                            Icons.delete_outline,
+                            size: 16,
+                            color: isDark
+                                ? AppColors.dangerLight
+                                : AppColors.danger,
+                          ),
+                          label: Text(
+                            'Remove',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppColors.dangerLight
+                                  : AppColors.danger,
+                            ),
+                          ),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
@@ -1198,13 +1255,17 @@ class _ProfilePageState extends State<ProfilePage> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEFE2EF),
+                          color: isDark
+                              ? const Color(0xFF3B1212)
+                              : const Color(0xFFFEE2E2),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Icon(
                             Icons.description,
-                            color: Color(0xFFDC2626),
+                            color: isDark
+                                ? AppColors.dangerLight
+                                : AppColors.danger,
                             size: 24,
                           ),
                         ),
@@ -1220,34 +1281,43 @@ class _ProfilePageState extends State<ProfilePage> {
                                   : (resume['name'] ?? 'Resume'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
+                                color: tokens.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               _fileSubtitle(resume),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Color(0xFF6B7280),
+                                color: tokens.textSecondary,
                               ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
-                      if (resume != null && (resume['url'] as String? ?? '').isNotEmpty)
+                      if (resume != null &&
+                          (resume['url'] as String? ?? '').isNotEmpty)
                         IconButton(
                           tooltip: 'View resume',
-                          icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFF2563EB)),
-                          onPressed: () => _viewDocument(resume['url'], resume['name']),
+                          icon: Icon(
+                            Icons.open_in_new,
+                            size: 20,
+                            color: tokens.primary,
+                          ),
+                          onPressed: () => _viewDocument(
+                            resume['url'],
+                            resume['name'],
+                          ),
                         ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF2563EB),
-                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          backgroundColor: tokens.cardBackground,
+                          foregroundColor: tokens.primary,
+                          side: BorderSide(color: tokens.cardBorder),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
                             vertical: 8,
@@ -1290,24 +1360,31 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       Row(
                         children: [
-                          const Text(
+                          Text(
                             'Certifications',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: tokens.textPrimary,
+                            ),
                           ),
                           if (certifications.isNotEmpty) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE2ECFE),
+                                color: tokens.primarySoftBg,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 '${certifications.length}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF2563EB),
+                                  color: tokens.primary,
                                 ),
                               ),
                             ),
@@ -1316,11 +1393,26 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       if (certifications.isNotEmpty)
                         TextButton.icon(
-                          onPressed: _uploadingCertification ? null : _uploadCertifications,
-                          icon: const Icon(Icons.add, size: 16, color: Color(0xFF2563EB)),
-                          label: const Text('Add Files', style: TextStyle(fontSize: 12, color: Color(0xFF2563EB))),
+                          onPressed: _uploadingCertification
+                              ? null
+                              : _uploadCertifications,
+                          icon: Icon(
+                            Icons.add,
+                            size: 16,
+                            color: tokens.primary,
+                          ),
+                          label: Text(
+                            'Add Files',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: tokens.primary,
+                            ),
+                          ),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
@@ -1341,7 +1433,11 @@ class _ProfilePageState extends State<ProfilePage> {
                           const SizedBox(width: 10),
                           Text(
                             _certUploadStatus ?? 'Uploading certifications...',
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF2563EB), fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: tokens.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
@@ -1354,13 +1450,13 @@ class _ProfilePageState extends State<ProfilePage> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE2ECFE),
+                            color: tokens.primarySoftBg,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Icon(
                               Icons.workspace_premium,
-                              color: Color(0xFF2563EB),
+                              color: tokens.primary,
                               size: 24,
                             ),
                           ),
@@ -1369,7 +1465,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text(
                                 'No certifications uploaded yet',
                                 maxLines: 1,
@@ -1377,14 +1473,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
+                                  color: tokens.textPrimary,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
                                 'PDF, DOC, DOCX, PNG, or JPG (max 10MB each)',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Color(0xFF6B7280),
+                                  color: tokens.textSecondary,
                                 ),
                               ),
                             ],
@@ -1393,9 +1490,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(width: 8),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF2563EB),
-                            side: const BorderSide(color: Color(0xFFE5E7EB)),
+                            backgroundColor: tokens.cardBackground,
+                            foregroundColor: tokens.primary,
+                            side: BorderSide(color: tokens.cardBorder),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 8,
@@ -1430,24 +1527,28 @@ class _ProfilePageState extends State<ProfilePage> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: certifications.length,
-                      separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF3F4F6)),
+                      separatorBuilder: (context, index) => Divider(
+                        height: 20,
+                        color: tokens.cardBorderSoft,
+                      ),
                       itemBuilder: (context, index) {
                         final cert = certifications[index];
                         final certUrl = (cert['url'] as String? ?? '').trim();
-                        final certName = cert['name'] ?? 'Certification ${index + 1}';
+                        final certName =
+                            cert['name'] ?? 'Certification ${index + 1}';
                         return Row(
                           children: [
                             Container(
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE2ECFE),
+                                color: tokens.primarySoftBg,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Center(
+                              child: Center(
                                 child: Icon(
                                   Icons.workspace_premium,
-                                  color: Color(0xFF2563EB),
+                                  color: tokens.primary,
                                   size: 22,
                                 ),
                               ),
@@ -1461,9 +1562,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                     certName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
+                                      color: tokens.textPrimary,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -1472,9 +1574,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                       cert,
                                       fallback: 'PDF, DOC, DOCX, PNG, or JPG',
                                     ),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: Color(0xFF6B7280),
+                                      color: tokens.textSecondary,
                                     ),
                                   ),
                                 ],
@@ -1483,13 +1585,26 @@ class _ProfilePageState extends State<ProfilePage> {
                             if (certUrl.isNotEmpty)
                               IconButton(
                                 tooltip: 'View certification',
-                                icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFF2563EB)),
-                                onPressed: () => _viewDocument(certUrl, certName),
+                                icon: Icon(
+                                  Icons.open_in_new,
+                                  size: 20,
+                                  color: tokens.primary,
+                                ),
+                                onPressed: () =>
+                                    _viewDocument(certUrl, certName),
                               ),
                             IconButton(
                               tooltip: 'Remove certification',
-                              icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
-                              onPressed: _uploadingCertification ? null : () => _removeCertification(index),
+                              icon: Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: isDark
+                                    ? AppColors.dangerLight
+                                    : AppColors.danger,
+                              ),
+                              onPressed: _uploadingCertification
+                                  ? null
+                                  : () => _removeCertification(index),
                             ),
                           ],
                         );
@@ -1499,13 +1614,17 @@ class _ProfilePageState extends State<ProfilePage> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: _uploadingCertification ? null : _uploadCertifications,
+                        onPressed: _uploadingCertification
+                            ? null
+                            : _uploadCertifications,
                         icon: const Icon(Icons.upload_file, size: 16),
                         label: const Text('Add More Certifications'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF2563EB),
-                          side: const BorderSide(color: Color(0xFFD1D5DB)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          foregroundColor: tokens.primary,
+                          side: BorderSide(color: tokens.cardBorder),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                         ),
                       ),
@@ -1535,13 +1654,14 @@ class _ProfileInfoPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = highlight ? AppColors.primary : AppColors.textSecondary;
+    final tokens = context.appColors;
+    final color = highlight ? tokens.primary : tokens.textSecondary;
     return Container(
       constraints: const BoxConstraints(maxWidth: 220),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: tokens.surfaceMuted,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: tokens.cardBorderSoft),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
@@ -1574,6 +1694,7 @@ class _AddInfoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(8),
@@ -1581,21 +1702,21 @@ class _AddInfoButton extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         decoration: BoxDecoration(
-          color: AppColors.surfaceMuted,
+          color: tokens.surfaceMuted,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: tokens.cardBorderSoft),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.add, size: 16, color: AppColors.primary),
+            Icon(Icons.add, size: 16, color: tokens.primary),
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+                color: tokens.primary,
               ),
             ),
           ],
@@ -1961,26 +2082,31 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     }
   }
 
-  InputDecoration _dec(String hint) => InputDecoration(
-    hintText: hint,
-    filled: true,
-    fillColor: const Color(0xFFF9FAFB),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
-    ),
-  );
+  InputDecoration _dec(String hint) {
+    final tokens = context.appColors;
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: tokens.textFaint, fontSize: 14),
+      filled: true,
+      fillColor: tokens.surfaceMuted,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: tokens.cardBorderSoft),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: tokens.cardBorderSoft),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: tokens.primary, width: 2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return PopScope(
       canPop: false,
@@ -2006,18 +2132,19 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                         onPressed: _saving
                             ? null
                             : () => Navigator.maybePop(context),
-                        icon: const Icon(Icons.close),
+                        icon: Icon(Icons.close, color: tokens.textSecondary),
                         tooltip: 'Cancel',
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Edit profile',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
+                          color: tokens.textPrimary,
                         ),
                       ),
                     ],
@@ -2025,12 +2152,12 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                   TextButton(
                     onPressed: _saving ? null : _save,
                     child: _saving
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 18,
                             width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: tokens.primary),
                           )
-                        : const Text('Save'),
+                        : Text('Save', style: TextStyle(color: tokens.primary, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -2113,12 +2240,12 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                 decoration: _dec('Portfolio URL'),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Skills',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF374151),
+                  color: tokens.textPrimary,
                 ),
               ),
               const SizedBox(height: 6),
@@ -2206,6 +2333,7 @@ class _SkillsSelectorState extends State<_SkillsSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     final trimmedQuery = _query.trim();
     final query = trimmedQuery.toLowerCase();
     final available = widget.options
@@ -2228,12 +2356,12 @@ class _SkillsSelectorState extends State<_SkillsSelector> {
             children: _selected
                 .map(
                   (s) => InputChip(
-                    label: Text(s, style: const TextStyle(fontSize: 13)),
+                    label: Text(s, style: TextStyle(fontSize: 13, color: tokens.primary)),
                     onDeleted: () => _toggle(s),
-                    backgroundColor: const Color(0xFFDEEEFF),
-                    side: const BorderSide(color: Color(0xFFBFDBFE)),
-                    labelStyle: const TextStyle(color: Color(0xFF2563EB)),
-                    deleteIconColor: const Color(0xFF2563EB),
+                    backgroundColor: tokens.primarySoftBg,
+                    side: BorderSide(color: tokens.cardBorderSoft),
+                    labelStyle: TextStyle(color: tokens.primary),
+                    deleteIconColor: tokens.primary,
                   ),
                 )
                 .toList(),
@@ -2242,22 +2370,24 @@ class _SkillsSelectorState extends State<_SkillsSelector> {
         ],
         TextField(
           controller: _searchController,
+          style: TextStyle(color: tokens.textPrimary),
           decoration: InputDecoration(
             hintText: 'Search or type your own skill',
-            prefixIcon: const Icon(Icons.search, size: 20),
+            hintStyle: TextStyle(color: tokens.textFaint, fontSize: 14),
+            prefixIcon: Icon(Icons.search, size: 20, color: tokens.textSecondary),
             filled: true,
-            fillColor: const Color(0xFFF9FAFB),
+            fillColor: tokens.surfaceMuted,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: tokens.cardBorderSoft),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: tokens.cardBorderSoft),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+              borderSide: BorderSide(color: tokens.primary, width: 2),
             ),
           ),
           onChanged: (v) => setState(() => _query = v),
@@ -2266,27 +2396,27 @@ class _SkillsSelectorState extends State<_SkillsSelector> {
         if (trimmedQuery.isNotEmpty && !hasExactMatch) ...[
           const SizedBox(height: 8),
           ActionChip(
-            avatar: const Icon(Icons.add, size: 16, color: Color(0xFF2563EB)),
+            avatar: Icon(Icons.add, size: 16, color: tokens.primary),
             label: Text(
               'Add "$trimmedQuery" as a skill',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF2563EB),
+                color: tokens.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
             onPressed: () => _addCustom(trimmedQuery),
-            backgroundColor: Colors.white,
-            side: const BorderSide(color: Color(0xFF2563EB)),
+            backgroundColor: tokens.cardBackground,
+            side: BorderSide(color: tokens.primary),
           ),
         ],
         const SizedBox(height: 8),
         if (widget.options.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               'Loading skill list…',
-              style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              style: TextStyle(fontSize: 13, color: tokens.textSecondary),
             ),
           )
         else
@@ -2302,23 +2432,23 @@ class _SkillsSelectorState extends State<_SkillsSelector> {
                           trimmedQuery.isEmpty
                               ? 'No matching skills'
                               : 'No matching skills — press enter to add "$trimmedQuery" as a new one',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            color: Color(0xFF6B7280),
+                            color: tokens.textSecondary,
                           ),
                         ),
                       ]
                     : available
                           .map(
                             (s) => ActionChip(
-                              avatar: const Icon(Icons.add, size: 16),
+                              avatar: Icon(Icons.add, size: 16, color: tokens.textSecondary),
                               label: Text(
                                 s,
-                                style: const TextStyle(fontSize: 13),
+                                style: TextStyle(fontSize: 13, color: tokens.textPrimary),
                               ),
                               onPressed: () => _toggle(s),
-                              backgroundColor: Colors.white,
-                              side: const BorderSide(color: Color(0xFFE5E7EB)),
+                              backgroundColor: tokens.cardBackground,
+                              side: BorderSide(color: tokens.cardBorderSoft),
                             ),
                           )
                           .toList(),
@@ -2347,6 +2477,7 @@ class _ExperienceItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2356,14 +2487,10 @@ class _ExperienceItem extends StatelessWidget {
               width: 16,
               height: 16,
               decoration: BoxDecoration(
-                color: isActive
-                    ? const Color(0xFF2563EB)
-                    : const Color(0xFFD1D5DB),
+                color: isActive ? tokens.primary : tokens.cardBorder,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isActive
-                      ? const Color(0xFF2563EB)
-                      : const Color(0xFFD1D5DB),
+                  color: isActive ? tokens.primary : tokens.cardBorder,
                   width: 3,
                 ),
               ),
@@ -2371,7 +2498,7 @@ class _ExperienceItem extends StatelessWidget {
             Container(
               width: 2,
               height: 100,
-              color: const Color(0xFFE5E7EB),
+              color: tokens.cardBorderSoft,
               margin: const EdgeInsets.symmetric(vertical: 4),
             ),
           ],
@@ -2383,31 +2510,32 @@ class _ExperienceItem extends StatelessWidget {
             children: [
               Text(
                 year,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280),
+                  color: tokens.textSecondary,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
+                  color: tokens.textPrimary,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 company,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                style: TextStyle(fontSize: 14, color: tokens.textSecondary),
               ),
               const SizedBox(height: 6),
               Text(
                 description,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF6B7280),
+                  color: tokens.textSecondary,
                   height: 1.4,
                 ),
               ),

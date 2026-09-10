@@ -18,7 +18,7 @@ class AppPasswordField extends StatefulWidget {
     this.hintText = '••••••••',
     this.onSubmitted,
     this.borderRadius = 8,
-    this.fillColor = AppColors.surfaceMuted,
+    this.fillColor,
     this.contentPadding = const EdgeInsets.symmetric(
       horizontal: 12,
       vertical: 12,
@@ -30,7 +30,7 @@ class AppPasswordField extends StatefulWidget {
   final String hintText;
   final ValueChanged<String>? onSubmitted;
   final double borderRadius;
-  final Color fillColor;
+  final Color? fillColor;
   final EdgeInsetsGeometry contentPadding;
   final double iconSize;
 
@@ -43,19 +43,21 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(widget.borderRadius),
-      borderSide: const BorderSide(color: AppColors.border),
+      borderSide: BorderSide(color: tokens.cardBorderSoft),
     );
     return TextField(
       controller: widget.controller,
       obscureText: _obscure,
       onSubmitted: widget.onSubmitted,
+      style: TextStyle(color: tokens.textPrimary, fontSize: 14),
       decoration: InputDecoration(
         hintText: widget.hintText,
-        hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
+        hintStyle: TextStyle(color: tokens.textFaint),
         filled: true,
-        fillColor: widget.fillColor,
+        fillColor: widget.fillColor ?? tokens.surfaceMuted,
         border: border,
         enabledBorder: border,
         focusedBorder: OutlineInputBorder(
@@ -66,7 +68,7 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
         suffixIcon: IconButton(
           icon: Icon(
             _obscure ? Icons.visibility_off : Icons.visibility,
-            color: AppColors.textSecondary,
+            color: tokens.textSecondary,
             size: widget.iconSize,
           ),
           onPressed: () => setState(() => _obscure = !_obscure),

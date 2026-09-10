@@ -154,41 +154,42 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Scaffold(
-      backgroundColor: AppColors.pageBackground,
+      backgroundColor: tokens.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: tokens.cardBackground,
         elevation: 0,
-        surfaceTintColor: Colors.white,
+        surfaceTintColor: tokens.cardBackground,
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Material(
-            color: AppColors.surfaceMuted,
+            color: tokens.surfaceMuted,
             borderRadius: BorderRadius.circular(10),
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
               onTap: () => Navigator.pop(context),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back_rounded,
-                color: AppColors.textPrimary,
+                color: tokens.textPrimary,
                 size: 20,
               ),
             ),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Company Profile',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: tokens.textPrimary,
           ),
         ),
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary),
+            icon: Icon(Icons.refresh_rounded, color: tokens.textSecondary),
             onPressed: _load,
           ),
         ],
@@ -275,21 +276,21 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Company Details Unavailable',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: context.appColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               _error ?? 'Could not fetch company details.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondary,
+                color: context.appColors.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -299,7 +300,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Try Again'),
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: context.appColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -311,6 +312,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
   }
 
   Widget _buildContent(BuildContext context) {
+    final tokens = context.appColors;
     final rawName = _s('name');
     final name = rawName.isEmpty ? 'Company' : rawName;
     final bio = _s('bio');
@@ -372,22 +374,22 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: tokens.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.subject_rounded,
-                        color: AppColors.primary,
+                        color: tokens.primary,
                         size: 18,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'About Company',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: tokens.textPrimary,
                       ),
                     ),
                   ],
@@ -399,7 +401,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                       : bio,
                   style: TextStyle(
                     fontSize: 14.5,
-                    color: bio.isEmpty ? AppColors.textFaint : const Color(0xFF475569),
+                    color: bio.isEmpty ? tokens.textFaint : tokens.textSecondary,
                     height: 1.65,
                     letterSpacing: 0.15,
                   ),
@@ -447,9 +449,10 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
     required String location,
     required String memberSince,
   }) {
+    final tokens = context.appColors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: tokens.cardBackground,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
@@ -458,7 +461,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
             offset: Offset(0, 6),
           ),
         ],
-        border: Border.all(color: AppColors.borderSoft),
+        border: Border.all(color: tokens.cardBorderSoft),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -471,7 +474,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                 Container(
                   height: 140,
                   width: double.infinity,
-                  color: AppColors.primarySoftBg,
+                  color: tokens.primarySoftBg,
                   child: bannerSource.isValid
                       ? _UniversalImage(
                           imageSource: bannerSource,
@@ -516,7 +519,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                     child: Container(
                       padding: const EdgeInsets.all(3.5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: tokens.cardBackground,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: const [
                           BoxShadow(
@@ -556,10 +559,10 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                               child: Text(
                                 name,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 21,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
+                                  color: context.appColors.textPrimary,
                                   letterSpacing: -0.3,
                                 ),
                               ),
@@ -692,25 +695,26 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
   }
 
   Widget _buildHeroMetaChip({required IconData icon, required String label}) {
+    final tokens = context.appColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: tokens.surfaceMuted,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.borderSoft),
+        border: Border.all(color: tokens.cardBorderSoft),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.textSecondary),
+          Icon(icon, size: 14, color: tokens.textSecondary),
           const SizedBox(width: 5),
           Flexible(
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary,
+                color: tokens.textSecondary,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -780,8 +784,9 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final tokens = context.appColors;
     return Material(
-      color: Colors.white,
+      color: tokens.cardBackground,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -790,7 +795,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.borderSoft),
+            border: Border.all(color: tokens.cardBorderSoft),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -820,8 +825,9 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
     required String tooltip,
     required VoidCallback onTap,
   }) {
+    final tokens = context.appColors;
     return Material(
-      color: Colors.white,
+      color: tokens.cardBackground,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -832,15 +838,16 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.borderSoft),
+            border: Border.all(color: tokens.cardBorderSoft),
           ),
-          child: Icon(icon, size: 18, color: AppColors.textSecondary),
+          child: Icon(icon, size: 18, color: tokens.textSecondary),
         ),
       ),
     );
   }
 
   Widget _buildGalleryCard(List<String> photos, String companyName) {
+    final tokens = context.appColors;
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -862,12 +869,12 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'Workplace & Gallery',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: tokens.textPrimary,
                 ),
               ),
             ],
@@ -889,7 +896,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
                       width: 140,
-                      color: AppColors.surfaceMuted,
+                      color: tokens.surfaceMuted,
                       child: _UniversalImage(
                         imageSource: photoSource,
                         fit: BoxFit.cover,
@@ -1010,12 +1017,12 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'Company Information',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: context.appColors.textPrimary,
                 ),
               ),
             ],
@@ -1023,9 +1030,9 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
           const SizedBox(height: 16),
           for (int i = 0; i < items.length; i++) ...[
             if (i > 0)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
-                child: Divider(height: 1, color: AppColors.borderSoft),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Divider(height: 1, color: context.appColors.cardBorderSoft),
               ),
             _buildDetailRow(items[i]),
           ],
@@ -1035,6 +1042,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
   }
 
   Widget _buildDetailRow(_DetailRowData data) {
+    final tokens = context.appColors;
     final content = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -1054,9 +1062,9 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
             children: [
               Text(
                 data.label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: tokens.textSecondary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -1066,7 +1074,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: data.isActionable ? AppColors.primary : AppColors.textPrimary,
+                  color: data.isActionable ? tokens.primary : tokens.textPrimary,
                 ),
               ),
             ],
@@ -1076,7 +1084,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
           Icon(
             data.actionIcon ?? Icons.copy_rounded,
             size: 16,
-            color: AppColors.textFaint,
+            color: tokens.textFaint,
           ),
       ],
     );
@@ -1098,12 +1106,13 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
   }
 
   Widget _buildAssociatedJobCard(String jobTitle) {
+    final tokens = context.appColors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.05),
+        color: tokens.primarySoftBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+        border: Border.all(color: tokens.cardBorderSoft),
       ),
       child: Row(
         children: [
@@ -1111,12 +1120,12 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
+              color: tokens.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.work_outline_rounded,
-              color: AppColors.primary,
+              color: tokens.primary,
               size: 20,
             ),
           ),
@@ -1125,22 +1134,22 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Associated Job Posting',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                    color: tokens.primary,
                     letterSpacing: 0.3,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   jobTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: tokens.textPrimary,
                   ),
                 ),
               ],
@@ -1260,14 +1269,14 @@ class _UniversalImage extends StatelessWidget {
           if (loadingProgress == null) return child;
           return Container(
             height: height,
-            color: AppColors.surfaceMuted,
+            color: context.appColors.surfaceMuted,
             alignment: Alignment.center,
             child: SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppColors.primary.withValues(alpha: 0.6),
+                color: context.appColors.primary.withValues(alpha: 0.6),
                 value: loadingProgress.expectedTotalBytes != null
                     ? loadingProgress.cumulativeBytesLoaded /
                         loadingProgress.expectedTotalBytes!

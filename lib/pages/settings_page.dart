@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../services/auth_api.dart';
 import '../services/notification_store.dart';
 import '../services/session_store.dart';
+import '../services/theme_store.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import 'sign_in_page.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_password_field.dart';
@@ -128,6 +130,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final accountEmail = SessionStore.user?['email']?.toString().trim() ?? '';
+    final tokens = context.appColors;
 
     return Scaffold(
       appBar: const AppTopBar(showSettings: false),
@@ -144,9 +147,60 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Manage your notification preferences',
-              style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
+            Text(
+              'Manage your appearance and notification preferences',
+              style: TextStyle(fontSize: 16, color: tokens.textSecondary),
+            ),
+            const SizedBox(height: 24),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Appearance',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Choose whether to match device system settings or pick a theme',
+                    style: TextStyle(fontSize: 14, color: tokens.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeNotifier,
+                    builder: (context, currentMode, _) {
+                      return SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<ThemeMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: ThemeMode.system,
+                              icon: Icon(Icons.brightness_auto, size: 18),
+                              label: Text('System'),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.light,
+                              icon: Icon(Icons.light_mode_outlined, size: 18),
+                              label: Text('Light'),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.dark,
+                              icon: Icon(Icons.dark_mode_outlined, size: 18),
+                              label: Text('Dark'),
+                            ),
+                          ],
+                          selected: {currentMode},
+                          onSelectionChanged: (newSelection) {
+                            final selectedMode = newSelection.first;
+                            themeNotifier.value = selectedMode;
+                            ThemeStore.save(selectedMode);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
             AppCard(
@@ -158,9 +212,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Manage alerts for jobs and application activity',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                    style: TextStyle(fontSize: 14, color: tokens.textSecondary),
                   ),
                   const SizedBox(height: 20),
                   _NotificationToggle(
@@ -178,7 +232,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           },
                   ),
                   const SizedBox(height: 20),
-                  const Divider(color: Color(0xFFE5E7EB)),
+                  Divider(color: tokens.cardBorderSoft),
                   const SizedBox(height: 20),
                   _NotificationToggle(
                     title: 'Application Updates',
@@ -195,7 +249,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           },
                   ),
                   const SizedBox(height: 20),
-                  const Divider(color: Color(0xFFE5E7EB)),
+                  Divider(color: tokens.cardBorderSoft),
                   const SizedBox(height: 20),
                   _NotificationToggle(
                     title: 'Weekly Digest',
@@ -228,9 +282,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     accountEmail.isEmpty
                         ? 'Verify your identity with a one-time password before changing your password.'
                         : 'We will send a 6-digit OTP to $accountEmail before you can set a new password.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF6B7280),
+                      color: tokens.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -432,15 +486,17 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: tokens.cardBackground,
+        surfaceTintColor: tokens.cardBackground,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text(
+        iconTheme: IconThemeData(color: tokens.textPrimary),
+        title: Text(
           'Change Password',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          style: TextStyle(color: tokens.textPrimary, fontWeight: FontWeight.w600),
         ),
       ),
       body: SafeArea(
@@ -455,12 +511,12 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDBEAFE),
+                      color: tokens.primarySoftBg,
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.shield_outlined,
-                      color: Color(0xFF2563EB),
+                      color: tokens.primary,
                       size: 34,
                     ),
                   ),
@@ -470,7 +526,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                   'Confirm it\'s really you',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: tokens.textPrimary,
                     fontSize: 26,
                   ),
                 ),
@@ -478,7 +534,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                 Text(
                   'We sent a 6-digit OTP to ${_draft.email}. Enter the code and your new password below.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF6B7280),
+                    color: tokens.textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -487,9 +543,9 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: tokens.surfaceMuted,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: tokens.cardBorderSoft),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -498,7 +554,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                         'Verification code',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -508,7 +564,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                         _infoMessage ??
                             'The code expires in 10 minutes. If it does not arrive, resend it.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF64748B),
+                          color: tokens.textSecondary,
                           height: 1.5,
                         ),
                       ),
@@ -517,7 +573,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                         'New password',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -525,7 +581,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                         controller: _newPasswordController,
                         hintText: 'Enter new password',
                         borderRadius: 14,
-                        fillColor: Colors.white,
+                        fillColor: tokens.cardBackground,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 18,
@@ -536,7 +592,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                       Text(
                         'Use 8+ characters with uppercase, lowercase, number, and symbol.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF64748B),
+                          color: tokens.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 18),
@@ -544,7 +600,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                         'Confirm new password',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -554,7 +610,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                         onSubmitted: (_) =>
                             _verifying ? null : _submitPasswordChange(),
                         borderRadius: 14,
-                        fillColor: Colors.white,
+                        fillColor: tokens.cardBackground,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 18,
@@ -569,7 +625,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(

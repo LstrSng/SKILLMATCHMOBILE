@@ -1306,6 +1306,7 @@ class _StatColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Column(
       children: [
         Text(
@@ -1315,7 +1316,7 @@ class _StatColumn extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12, color: tokens.textSecondary),
         ),
       ],
     );

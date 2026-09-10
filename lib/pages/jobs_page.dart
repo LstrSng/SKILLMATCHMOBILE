@@ -156,10 +156,12 @@ class _JobsPageState extends State<JobsPage> {
     var selectedType = _jobTypeFilter;
     var selectedMinMatch = _minMatch;
 
+    final tokens = context.appColors;
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.cardBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -180,27 +182,27 @@ class _JobsPageState extends State<JobsPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Filter Jobs',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, size: 20),
+                        icon: Icon(Icons.close, size: 20, color: tokens.textSecondary),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Job Type',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: tokens.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -211,7 +213,7 @@ class _JobsPageState extends State<JobsPage> {
                       ChoiceChip(
                         label: const Text('All'),
                         selected: selectedType == null,
-                        selectedColor: AppColors.primarySoftBg,
+                        selectedColor: tokens.primarySoftBg,
                         onSelected: (_) =>
                             setSheetState(() => selectedType = null),
                       ),
@@ -219,7 +221,7 @@ class _JobsPageState extends State<JobsPage> {
                         (t) => ChoiceChip(
                           label: Text(t),
                           selected: selectedType == t,
-                          selectedColor: AppColors.primarySoftBg,
+                          selectedColor: tokens.primarySoftBg,
                           onSelected: (_) =>
                               setSheetState(() => selectedType = t),
                         ),
@@ -230,20 +232,20 @@ class _JobsPageState extends State<JobsPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Minimum Match Score',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       Text(
                         '${selectedMinMatch.round()}%',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
+                          color: tokens.primary,
                         ),
                       ),
                     ],
@@ -254,7 +256,7 @@ class _JobsPageState extends State<JobsPage> {
                     max: 100,
                     divisions: 20,
                     label: '${selectedMinMatch.round()}%',
-                    activeColor: AppColors.primary,
+                    activeColor: tokens.primary,
                     onChanged: (v) => setSheetState(() => selectedMinMatch = v),
                   ),
                   const SizedBox(height: 16),
@@ -275,7 +277,7 @@ class _JobsPageState extends State<JobsPage> {
                       Expanded(
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: tokens.primary,
                           ),
                           onPressed: () {
                             setState(() {
@@ -284,7 +286,7 @@ class _JobsPageState extends State<JobsPage> {
                             });
                             Navigator.pop(context);
                           },
-                          child: const Text('Apply Filters'),
+                          child: const Text('Apply'),
                         ),
                       ),
                     ],
@@ -307,6 +309,7 @@ class _JobsPageState extends State<JobsPage> {
   @override
   Widget build(BuildContext context) {
     final visibleJobs = _visibleJobs;
+    final tokens = context.appColors;
 
     return Scaffold(
       appBar: const AppTopBar(),
@@ -346,7 +349,7 @@ class _JobsPageState extends State<JobsPage> {
             )
           : RefreshIndicator(
               onRefresh: () => _loadJobs(silent: true),
-              color: AppColors.primary,
+              color: tokens.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.symmetric(
@@ -364,28 +367,29 @@ class _JobsPageState extends State<JobsPage> {
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: tokens.cardBackground,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.borderSoft),
-                                boxShadow: const [AppColors.subtleShadow],
+                                border: Border.all(color: tokens.cardBorderSoft),
+                                boxShadow: tokens.cardShadows,
                               ),
                               child: TextField(
                                 controller: _searchController,
+                                style: TextStyle(color: tokens.textPrimary, fontSize: 14),
                                 onChanged: (_) => setState(() {}),
                                 decoration: InputDecoration(
                                   hintText: 'Search roles, skills, companies...',
-                                  hintStyle: const TextStyle(
-                                    color: AppColors.textFaint,
+                                  hintStyle: TextStyle(
+                                    color: tokens.textFaint,
                                     fontSize: 14,
                                   ),
-                                  prefixIcon: const Icon(
+                                  prefixIcon: Icon(
                                     Icons.search_rounded,
-                                    color: AppColors.textSecondary,
+                                    color: tokens.textSecondary,
                                     size: 20,
                                   ),
                                   suffixIcon: _searchController.text.isNotEmpty
                                       ? IconButton(
-                                          icon: const Icon(Icons.clear, size: 18),
+                                          icon: Icon(Icons.clear, size: 18, color: tokens.textSecondary),
                                           onPressed: () {
                                             _searchController.clear();
                                             setState(() {});
@@ -403,7 +407,7 @@ class _JobsPageState extends State<JobsPage> {
                           ),
                           const SizedBox(width: 10),
                           Material(
-                            color: Colors.white,
+                            color: tokens.cardBackground,
                             borderRadius: BorderRadius.circular(12),
                             child: InkWell(
                               onTap: _openFilterSheet,
@@ -415,10 +419,10 @@ class _JobsPageState extends State<JobsPage> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: (_jobTypeFilter != null || _minMatch > 0)
-                                        ? AppColors.primary
-                                        : AppColors.borderSoft,
+                                        ? tokens.primary
+                                        : tokens.cardBorderSoft,
                                   ),
-                                  boxShadow: const [AppColors.subtleShadow],
+                                  boxShadow: tokens.cardShadows,
                                 ),
                                 child: Stack(
                                   alignment: Alignment.center,
@@ -426,8 +430,8 @@ class _JobsPageState extends State<JobsPage> {
                                     Icon(
                                       Icons.tune_rounded,
                                       color: (_jobTypeFilter != null || _minMatch > 0)
-                                          ? AppColors.primary
-                                          : AppColors.textSecondary,
+                                          ? tokens.primary
+                                          : tokens.textSecondary,
                                       size: 22,
                                     ),
                                     if (_jobTypeFilter != null || _minMatch > 0)
@@ -437,8 +441,8 @@ class _JobsPageState extends State<JobsPage> {
                                         child: Container(
                                           width: 8,
                                           height: 8,
-                                          decoration: const BoxDecoration(
-                                            color: AppColors.primary,
+                                          decoration: BoxDecoration(
+                                            color: tokens.primary,
                                             shape: BoxShape.circle,
                                           ),
                                         ),
@@ -503,10 +507,10 @@ class _JobsPageState extends State<JobsPage> {
                         children: [
                           Text(
                             '${visibleJobs.length} ${visibleJobs.length == 1 ? "Job" : "Jobs"} Available',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textSecondary,
+                              color: tokens.textSecondary,
                             ),
                           ),
                           if (_hasActiveFilters)
@@ -517,9 +521,9 @@ class _JobsPageState extends State<JobsPage> {
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Clear filters',
-                                style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700),
+                                style: TextStyle(fontSize: 12, color: tokens.primary, fontWeight: FontWeight.w700),
                               ),
                             ),
                         ],
@@ -537,10 +541,10 @@ class _JobsPageState extends State<JobsPage> {
                                   width: 64,
                                   height: 64,
                                   decoration: BoxDecoration(
-                                    color: AppColors.surfaceMuted,
+                                    color: tokens.surfaceMuted,
                                     borderRadius: BorderRadius.circular(16),
                                   ),
-                                  child: const Icon(Icons.search_off_rounded, size: 32, color: AppColors.textFaint),
+                                  child: Icon(Icons.search_off_rounded, size: 32, color: tokens.textFaint),
                                 ),
                                 const SizedBox(height: 14),
                                 Text(
@@ -550,17 +554,17 @@ class _JobsPageState extends State<JobsPage> {
                                       ? 'No job postings yet. Check back soon!'
                                       : 'No jobs match your search/filter.',
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
+                                  style: TextStyle(
+                                    color: tokens.textPrimary,
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                const Text(
+                                Text(
                                   'Try searching for different keywords or resetting filters.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                  style: TextStyle(color: tokens.textSecondary, fontSize: 13),
                                 ),
                                 if (_hasActiveFilters) ...[
                                   const SizedBox(height: 16),
@@ -607,6 +611,7 @@ class _QuickFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -616,10 +621,10 @@ class _QuickFilterChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary : Colors.white,
+          color: selected ? tokens.primary : tokens.cardBackground,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? AppColors.primary : AppColors.borderSoft,
+            color: selected ? tokens.primary : tokens.cardBorderSoft,
           ),
           boxShadow: selected
               ? const [
@@ -629,14 +634,14 @@ class _QuickFilterChip extends StatelessWidget {
                     offset: Offset(0, 2),
                   ),
                 ]
-              : const [AppColors.subtleShadow],
+              : tokens.cardShadows,
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-            color: selected ? Colors.white : AppColors.textSecondary,
+            color: selected ? Colors.white : tokens.textSecondary,
           ),
         ),
       ),
@@ -654,6 +659,7 @@ class _JobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     final applicantId =
         (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString();
     final matchColor = AppColors.matchColor(job.matchPercentage);
@@ -731,10 +737,10 @@ class _JobCard extends StatelessWidget {
                           color: Colors.transparent,
                           child: Text(
                             job.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 15,
-                              color: AppColors.textPrimary,
+                              color: tokens.textPrimary,
                             ),
                           ),
                         ),
@@ -742,8 +748,8 @@ class _JobCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         job.company,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: TextStyle(
+                          color: tokens.textSecondary,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -794,10 +800,10 @@ class _JobCard extends StatelessWidget {
                 children: [
                   Text(
                     'Matched Skills (${job.matchedSkills.length}/$_totalSkills)',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
+                      color: tokens.textSecondary,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -817,7 +823,7 @@ class _JobCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: job.matchedSkills.length / _totalSkills,
                   minHeight: 4,
-                  backgroundColor: AppColors.borderSoft,
+                  backgroundColor: tokens.cardBorderSoft,
                   valueColor: AlwaysStoppedAnimation<Color>(matchColor),
                 ),
               ),
@@ -840,15 +846,15 @@ class _JobCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceMuted,
+                      color: tokens.surfaceMuted,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.borderSoft),
+                      border: Border.all(color: tokens.cardBorderSoft),
                     ),
                     child: Text(
                       '+${job.matchedSkills.length - 3} more',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.textSecondary,
+                        color: tokens.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -870,24 +876,25 @@ class _MetaPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: tokens.surfaceMuted,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.borderSoft),
+        border: Border.all(color: tokens.cardBorderSoft),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: AppColors.textSecondary),
+          Icon(icon, size: 13, color: tokens.textSecondary),
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: tokens.textSecondary,
             ),
           ),
         ],

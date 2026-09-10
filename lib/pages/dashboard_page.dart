@@ -168,6 +168,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     final name = _greetingName();
     final applied = _applications.length;
     final matches = _jobs.length;
@@ -179,7 +180,7 @@ class _DashboardPageState extends State<DashboardPage> {
       appBar: const AppTopBar(),
       body: RefreshIndicator(
         onRefresh: _load,
-        color: AppColors.primary,
+        color: tokens.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(
@@ -356,10 +357,10 @@ class _DashboardPageState extends State<DashboardPage> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: tokens.cardBackground,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: const [AppColors.subtleShadow],
+                      border: Border.all(color: tokens.cardBorderSoft),
+                      boxShadow: tokens.cardShadows,
                     ),
                     child: Row(
                       children: [
@@ -382,21 +383,21 @@ class _DashboardPageState extends State<DashboardPage> {
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text(
                                 'Boost Your Job Matches',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
+                                  color: tokens.textPrimary,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
                                 'Take a 3-min adaptive assessment to prove verified skills.',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppColors.textSecondary,
+                                  color: tokens.textSecondary,
                                 ),
                               ),
                             ],
@@ -428,15 +429,15 @@ class _DashboardPageState extends State<DashboardPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
-                            children: const [
-                              Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 22),
-                              SizedBox(width: 8),
+                            children: [
+                              const Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 22),
+                              const SizedBox(width: 8),
                               Text(
                                 'Top Matches for You',
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
+                                  color: tokens.textPrimary,
                                 ),
                               ),
                             ],
@@ -449,17 +450,17 @@ class _DashboardPageState extends State<DashboardPage> {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: Row(
-                              children: const [
+                              children: [
                                 Text(
                                   'View all',
                                   style: TextStyle(
-                                    color: AppColors.primary,
+                                    color: tokens.primary,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13,
                                   ),
                                 ),
-                                SizedBox(width: 2),
-                                Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
+                                const SizedBox(width: 2),
+                                Icon(Icons.arrow_forward_rounded, size: 14, color: tokens.primary),
                               ],
                             ),
                           ),
@@ -474,9 +475,9 @@ class _DashboardPageState extends State<DashboardPage> {
                               children: [
                                 Icon(Icons.work_off_outlined, size: 36, color: Colors.grey.shade400),
                                 const SizedBox(height: 8),
-                                const Text(
+                                Text(
                                   'No open job matches yet.',
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                  style: TextStyle(color: tokens.textSecondary, fontSize: 13),
                                 ),
                               ],
                             ),
@@ -501,28 +502,28 @@ class _DashboardPageState extends State<DashboardPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Weekly Activity',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
+                              color: tokens.textPrimary,
                             ),
                           ),
                           Text(
                             '$applied total applied',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textSecondary,
+                              color: tokens.textSecondary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         'Applications submitted over the last 7 days',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: tokens.textSecondary),
                       ),
                       const SizedBox(height: 20),
                       SizedBox(
@@ -532,6 +533,10 @@ class _DashboardPageState extends State<DashboardPage> {
                           painter: BarChartPainter(
                             days: _weeklyLabels(),
                             values: _weeklyActivity(),
+                            emptyBarColor: tokens.cardBorderSoft,
+                            gridColor: tokens.cardBorderSoft,
+                            labelColor: tokens.textSecondary,
+                            todayColor: tokens.primary,
                           ),
                         ),
                       ),
@@ -618,8 +623,9 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Material(
-      color: Colors.white,
+      color: tokens.cardBackground,
       borderRadius: BorderRadius.circular(16),
       elevation: 0,
       child: InkWell(
@@ -631,8 +637,8 @@ class _StatCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderSoft),
-            boxShadow: const [AppColors.subtleShadow],
+            border: Border.all(color: tokens.cardBorderSoft),
+            boxShadow: tokens.cardShadows,
           ),
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -651,29 +657,29 @@ class _StatCard extends StatelessWidget {
                     ),
                     child: Icon(icon, color: iconColor, size: 18),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.arrow_forward_ios_rounded,
                     size: 12,
-                    color: AppColors.textFaint,
+                    color: tokens.textFaint,
                   ),
                 ],
               ),
               const SizedBox(height: 6),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 24,
                   letterSpacing: -0.5,
-                  color: AppColors.textPrimary,
+                  color: tokens.textPrimary,
                 ),
               ),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
+                  color: tokens.textSecondary,
                 ),
               ),
               if (hasProgress) ...[
@@ -683,7 +689,7 @@ class _StatCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 4,
-                    backgroundColor: const Color(0xFFEEF2FF),
+                    backgroundColor: tokens.surfaceMuted,
                     valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4F46E5)),
                   ),
                 ),
@@ -692,9 +698,9 @@ class _StatCard extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.textFaint,
+                    color: tokens.textFaint,
                   ),
                 ),
               ],
@@ -713,8 +719,9 @@ class _JobMatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Material(
-      color: AppColors.surfaceMuted,
+      color: tokens.surfaceMuted,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: () {
@@ -745,7 +752,7 @@ class _JobMatchCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderSoft),
+            border: Border.all(color: tokens.cardBorderSoft),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
@@ -754,17 +761,17 @@ class _JobMatchCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: tokens.cardBackground,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.borderSoft),
+                  border: Border.all(color: tokens.cardBorderSoft),
                 ),
                 child: Center(
                   child: Text(
                     job.company.isNotEmpty ? job.company.substring(0, 1).toUpperCase() : 'J',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
+                      color: tokens.primary,
                     ),
                   ),
                 ),
@@ -778,10 +785,10 @@ class _JobMatchCard extends StatelessWidget {
                       job.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
-                        color: AppColors.textPrimary,
+                        color: tokens.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -789,9 +796,9 @@ class _JobMatchCard extends StatelessWidget {
                       '${job.company}${job.location.isNotEmpty ? " • ${job.location}" : ""}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: tokens.textSecondary,
                       ),
                     ),
                   ],
@@ -814,8 +821,19 @@ class _JobMatchCard extends StatelessWidget {
 class BarChartPainter extends CustomPainter {
   final List<String> days;
   final List<int> values;
+  final Color emptyBarColor;
+  final Color gridColor;
+  final Color labelColor;
+  final Color todayColor;
 
-  BarChartPainter({required this.days, required this.values});
+  BarChartPainter({
+    required this.days,
+    required this.values,
+    this.emptyBarColor = const Color(0xFFF1F5F9),
+    this.gridColor = const Color(0xFFF1F5F9),
+    this.labelColor = AppColors.textSecondary,
+    this.todayColor = AppColors.primary,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -826,9 +844,9 @@ class BarChartPainter extends CustomPainter {
         colors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    final Paint emptyBarPaint = Paint()..color = const Color(0xFFF1F5F9);
+    final Paint emptyBarPaint = Paint()..color = emptyBarColor;
     final Paint gridPaint = Paint()
-      ..color = const Color(0xFFF1F5F9)
+      ..color = gridColor
       ..strokeWidth = 1;
 
     final TextPainter textPaint = TextPainter(textDirection: TextDirection.ltr);
@@ -882,7 +900,7 @@ class BarChartPainter extends CustomPainter {
       final textSpan = TextSpan(
         text: days[i],
         style: TextStyle(
-          color: isToday ? AppColors.primary : AppColors.textSecondary,
+          color: isToday ? todayColor : labelColor,
           fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
           fontSize: 11,
         ),
@@ -899,5 +917,9 @@ class BarChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(BarChartPainter oldDelegate) =>
       oldDelegate.values.toString() != values.toString() ||
-      oldDelegate.days.toString() != days.toString();
+      oldDelegate.days.toString() != days.toString() ||
+      oldDelegate.emptyBarColor != emptyBarColor ||
+      oldDelegate.gridColor != gridColor ||
+      oldDelegate.labelColor != labelColor ||
+      oldDelegate.todayColor != todayColor;
 }

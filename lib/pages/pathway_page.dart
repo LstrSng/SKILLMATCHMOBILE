@@ -112,10 +112,11 @@ class _PathwayPageState extends State<PathwayPage> {
 
     final horizontalPadding =
         MediaQuery.of(context).size.width > 600 ? 32.0 : 16.0;
+    final tokens = context.appColors;
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: AppColors.primary,
+      color: tokens.primary,
       child: Column(
         children: [
           Padding(
@@ -128,21 +129,21 @@ class _PathwayPageState extends State<PathwayPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Certifications & Pathways',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                    color: tokens.textPrimary,
                     letterSpacing: -0.4,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Browse industry certifications to boost your job matches',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: tokens.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -150,28 +151,29 @@ class _PathwayPageState extends State<PathwayPage> {
                 // Search field
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: tokens.cardBackground,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.borderSoft),
-                    boxShadow: const [AppColors.subtleShadow],
+                    border: Border.all(color: tokens.cardBorderSoft),
+                    boxShadow: tokens.cardShadows,
                   ),
                   child: TextField(
                     controller: _searchController,
+                    style: TextStyle(color: tokens.textPrimary, fontSize: 14),
                     onChanged: (v) => setState(() {}),
                     decoration: InputDecoration(
                       hintText: 'Search pathways (e.g. AWS, Cyber, Python)...',
-                      hintStyle: const TextStyle(
-                        color: AppColors.textFaint,
+                      hintStyle: TextStyle(
+                        color: tokens.textFaint,
                         fontSize: 14,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: AppColors.textSecondary,
+                        color: tokens.textSecondary,
                         size: 20,
                       ),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
+                              icon: Icon(Icons.clear, size: 18, color: tokens.textSecondary),
                               onPressed: () {
                                 _searchController.clear();
                                 setState(() {});
@@ -205,10 +207,10 @@ class _PathwayPageState extends State<PathwayPage> {
                             duration: const Duration(milliseconds: 150),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                             decoration: BoxDecoration(
-                              color: selected ? AppColors.primary : Colors.white,
+                              color: selected ? tokens.primary : tokens.cardBackground,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: selected ? AppColors.primary : AppColors.borderSoft,
+                                color: selected ? tokens.primary : tokens.cardBorderSoft,
                               ),
                               boxShadow: selected
                                   ? const [
@@ -218,14 +220,14 @@ class _PathwayPageState extends State<PathwayPage> {
                                         offset: Offset(0, 2),
                                       ),
                                     ]
-                                  : const [AppColors.subtleShadow],
+                                  : tokens.cardShadows,
                             ),
                             child: Text(
                               cat,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                                color: selected ? Colors.white : AppColors.textSecondary,
+                                color: selected ? Colors.white : tokens.textSecondary,
                               ),
                             ),
                           ),
@@ -244,12 +246,12 @@ class _PathwayPageState extends State<PathwayPage> {
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.search_off_rounded, size: 36, color: AppColors.textFaint),
-                          SizedBox(height: 12),
+                        children: [
+                          Icon(Icons.search_off_rounded, size: 36, color: tokens.textFaint),
+                          const SizedBox(height: 12),
                           Text(
                             'No matching certification pathways found.',
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                            style: TextStyle(color: tokens.textSecondary, fontSize: 14),
                           ),
                         ],
                       ),
@@ -291,6 +293,7 @@ class _PathwayTileState extends State<_PathwayTile> {
   Widget build(BuildContext context) {
     final pathway = widget.pathway;
     final count = pathway.links.length;
+    final tokens = context.appColors;
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
@@ -333,10 +336,10 @@ class _PathwayTileState extends State<_PathwayTile> {
                   children: [
                     Text(
                       pathway.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: tokens.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -344,9 +347,9 @@ class _PathwayTileState extends State<_PathwayTile> {
                       count == 0
                           ? 'No verified resources yet'
                           : '$count verified certification${count == 1 ? '' : 's'}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: tokens.textSecondary,
                       ),
                     ),
                   ],
@@ -355,9 +358,9 @@ class _PathwayTileState extends State<_PathwayTile> {
               AnimatedRotation(
                 turns: _expanded ? 0.5 : 0.0,
                 duration: const Duration(milliseconds: 200),
-                child: const Icon(
+                child: Icon(
                   Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.textSecondary,
+                  color: tokens.textSecondary,
                   size: 22,
                 ),
               ),
@@ -365,7 +368,7 @@ class _PathwayTileState extends State<_PathwayTile> {
           ),
           if (_expanded) ...[
             const SizedBox(height: 16),
-            const Divider(height: 1, color: AppColors.borderSoft),
+            Divider(height: 1, color: tokens.cardBorderSoft),
             const SizedBox(height: 12),
             TrainingPathwayCard(pathway: pathway),
           ],

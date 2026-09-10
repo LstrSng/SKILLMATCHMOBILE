@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Global theme notifier — toggle anywhere in the app (see the dark mode
 /// switch on the Settings page).
-final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
 
 /// Persists the user's light/dark mode choice across app restarts.
 class ThemeStore {
@@ -15,11 +15,11 @@ class ThemeStore {
     switch (raw) {
       case 'dark':
         return ThemeMode.dark;
-      case 'system':
-        return ThemeMode.system;
       case 'light':
-      default:
         return ThemeMode.light;
+      case 'system':
+      default:
+        return ThemeMode.system;
     }
   }
 
