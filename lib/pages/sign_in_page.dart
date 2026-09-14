@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:skillmatch/theme/app_colors.dart';
 import '../services/auth_api.dart';
 import '../services/session_store.dart';
 import '../widgets/app_password_field.dart';
@@ -8,6 +9,28 @@ import '../widgets/otp_code_field.dart';
 import '../widgets/resend_code_button.dart';
 import 'main_navigation_page.dart';
 import 'register_page.dart';
+
+InputDecoration _inputDec(AppThemeExtension tokens, String hint) {
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: TextStyle(color: tokens.textFaint),
+    filled: true,
+    fillColor: tokens.surfaceMuted,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: tokens.cardBorderSoft),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: tokens.cardBorderSoft),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: tokens.primary, width: 2),
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  );
+}
 
 class _LoginDraft {
   const _LoginDraft({
@@ -105,8 +128,9 @@ class _SignInPageState extends State<SignInPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.scaffoldBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -120,7 +144,7 @@ class _SignInPageState extends State<SignInPage> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB),
+                    color: tokens.primary,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.bolt, color: Colors.white, size: 32),
@@ -132,7 +156,7 @@ class _SignInPageState extends State<SignInPage> {
                   'Welcome back',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: tokens.textPrimary,
                     fontSize: 24,
                   ),
                 ),
@@ -142,7 +166,7 @@ class _SignInPageState extends State<SignInPage> {
                 Text(
                   'Enter your email to access your career dashboard',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF6B7280),
+                    color: tokens.textSecondary,
                     fontSize: 15,
                   ),
                   textAlign: TextAlign.center,
@@ -157,41 +181,14 @@ class _SignInPageState extends State<SignInPage> {
                       'Email',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: Colors.black,
+                        color: tokens.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _emailController,
-                      decoration: InputDecoration(
-                        hintText: 'm@example.com',
-                        hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
-                        filled: true,
-                        fillColor: const Color(0xFFF9FAFB),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2563EB),
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                      ),
+                      style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                      decoration: _inputDec(tokens, 'm@example.com'),
                       keyboardType: TextInputType.emailAddress,
                     ),
                   ],
@@ -210,7 +207,7 @@ class _SignInPageState extends State<SignInPage> {
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.w500,
-                                color: Colors.black,
+                                color: tokens.textPrimary,
                               ),
                         ),
                         TextButton(
@@ -228,10 +225,10 @@ class _SignInPageState extends State<SignInPage> {
                             minimumSize: const Size(0, 0),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: const Text(
+                          child: Text(
                             'Forgot password?',
                             style: TextStyle(
-                              color: Color(0xFF2563EB),
+                              color: tokens.primary,
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
@@ -250,6 +247,8 @@ class _SignInPageState extends State<SignInPage> {
                   children: [
                     Checkbox(
                       value: _rememberMe,
+                      activeColor: tokens.primary,
+                      checkColor: Colors.white,
                       onChanged: (value) {
                         setState(() {
                           _rememberMe = value ?? false;
@@ -258,12 +257,12 @@ class _SignInPageState extends State<SignInPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      side: const BorderSide(color: Color(0xFFD1D5DB)),
+                      side: BorderSide(color: tokens.cardBorder),
                     ),
                     Text(
                       'Remember me for 30 days',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF6B7280),
+                        color: tokens.textSecondary,
                       ),
                     ),
                   ],
@@ -275,7 +274,7 @@ class _SignInPageState extends State<SignInPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -310,7 +309,7 @@ class _SignInPageState extends State<SignInPage> {
                     Text(
                       'Don\'t have an account? ',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF6B7280),
+                        color: tokens.textSecondary,
                       ),
                     ),
                     GestureDetector(
@@ -325,7 +324,7 @@ class _SignInPageState extends State<SignInPage> {
                       child: Text(
                         'Sign up',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF2563EB),
+                          color: tokens.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -422,12 +421,13 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: tokens.scaffoldBackground,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: IconThemeData(color: tokens.textPrimary),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -441,12 +441,12 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDBEAFE),
+                      color: tokens.primarySoftBg,
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.lock_person_outlined,
-                      color: Color(0xFF2563EB),
+                      color: tokens.primary,
                       size: 34,
                     ),
                   ),
@@ -456,7 +456,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                   'Verify sign in',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: tokens.textPrimary,
                     fontSize: 26,
                   ),
                 ),
@@ -464,7 +464,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                 Text(
                   'We sent a 6-digit OTP to ${_draft.email}. Enter it below to finish signing in.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF6B7280),
+                    color: tokens.textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -473,9 +473,9 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: tokens.cardBackground,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: tokens.cardBorder),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -484,7 +484,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                         'Verification code',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -498,7 +498,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                         _infoMessage ??
                             'The code expires in 10 minutes. Check your inbox before trying again.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF64748B),
+                          color: tokens.textSecondary,
                           height: 1.5,
                         ),
                       ),
@@ -510,7 +510,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -616,15 +616,16 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: tokens.scaffoldBackground,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text(
+        iconTheme: IconThemeData(color: tokens.textPrimary),
+        title: Text(
           'Reset password',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          style: TextStyle(color: tokens.textPrimary, fontWeight: FontWeight.w600),
         ),
       ),
       body: SafeArea(
@@ -639,12 +640,12 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDBEAFE),
+                      color: tokens.primarySoftBg,
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.lock_reset_outlined,
-                      color: Color(0xFF2563EB),
+                      color: tokens.primary,
                       size: 34,
                     ),
                   ),
@@ -654,7 +655,7 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
                   'Forgot your password?',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: tokens.textPrimary,
                     fontSize: 26,
                   ),
                 ),
@@ -662,7 +663,7 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
                 Text(
                   'Enter the email on your account and we will send you a 6-digit code to reset your password.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF6B7280),
+                    color: tokens.textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -671,47 +672,24 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
                   'Email',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
-                    color: Colors.black,
+                    color: tokens.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _emailController,
+                  style: TextStyle(color: tokens.textPrimary, fontSize: 14),
                   keyboardType: TextInputType.emailAddress,
                   autofocus: true,
                   onSubmitted: (_) => _sending ? null : _sendCode(),
-                  decoration: InputDecoration(
-                    hintText: 'm@example.com',
-                    hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
-                    filled: true,
-                    fillColor: const Color(0xFFF9FAFB),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF2563EB),
-                        width: 2,
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                  ),
+                  decoration: _inputDec(tokens, 'm@example.com'),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -895,15 +873,16 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: tokens.scaffoldBackground,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text(
+        iconTheme: IconThemeData(color: tokens.textPrimary),
+        title: Text(
           'Reset password',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          style: TextStyle(color: tokens.textPrimary, fontWeight: FontWeight.w600),
         ),
       ),
       body: SafeArea(
@@ -918,12 +897,12 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDBEAFE),
+                      color: tokens.primarySoftBg,
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.shield_outlined,
-                      color: Color(0xFF2563EB),
+                      color: tokens.primary,
                       size: 34,
                     ),
                   ),
@@ -933,7 +912,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                   'Enter code and new password',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: tokens.textPrimary,
                     fontSize: 24,
                   ),
                 ),
@@ -941,7 +920,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                 Text(
                   'We sent a 6-digit OTP to ${_draft.email}. Enter the code and your new password below.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF6B7280),
+                    color: tokens.textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -950,9 +929,9 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: tokens.cardBackground,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: tokens.cardBorder),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -961,7 +940,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                         'Verification code',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -971,7 +950,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                         _infoMessage ??
                             'The code expires in 10 minutes. If it does not arrive, resend it.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF64748B),
+                          color: tokens.textSecondary,
                           height: 1.5,
                         ),
                       ),
@@ -980,7 +959,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                         'New password',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -988,7 +967,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                         controller: _newPasswordController,
                         hintText: 'Enter new password',
                         borderRadius: 14,
-                        fillColor: Colors.white,
+                        fillColor: tokens.surfaceMuted,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 18,
@@ -999,7 +978,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                       Text(
                         'Use 8+ characters with uppercase, lowercase, number, and symbol.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF64748B),
+                          color: tokens.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 18),
@@ -1007,7 +986,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                         'Confirm new password',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -1016,7 +995,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                         hintText: 'Re-enter new password',
                         onSubmitted: (_) => _verifying ? null : _submit(),
                         borderRadius: 14,
-                        fillColor: Colors.white,
+                        fillColor: tokens.surfaceMuted,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 18,
@@ -1031,7 +1010,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(

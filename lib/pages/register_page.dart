@@ -7,6 +7,7 @@ import '../widgets/app_password_field.dart';
 import '../widgets/centered_form_width.dart';
 import '../widgets/otp_code_field.dart';
 import '../widgets/resend_code_button.dart';
+import 'package:skillmatch/theme/app_colors.dart';
 import 'main_navigation_page.dart';
 import 'sign_in_page.dart';
 
@@ -213,10 +214,37 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  InputDecoration _inputDec(AppThemeExtension tokens, String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: tokens.textFaint),
+      filled: true,
+      fillColor: tokens.surfaceMuted,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: tokens.cardBorderSoft),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: tokens.cardBorderSoft),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: tokens.primary, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 12,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.scaffoldBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -230,7 +258,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB),
+                    color: tokens.primary,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.bolt, color: Colors.white, size: 32),
@@ -242,7 +270,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   'Create an account',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: tokens.textPrimary,
                     fontSize: 24,
                   ),
                 ),
@@ -252,7 +280,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 Text(
                   'Join SkillMatch+ to optimize your career path',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF6B7280),
+                    color: tokens.textSecondary,
                     fontSize: 15,
                   ),
                   textAlign: TextAlign.center,
@@ -271,43 +299,14 @@ class _RegisterPageState extends State<RegisterPage> {
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.black,
+                                  color: tokens.textPrimary,
                                 ),
                           ),
                           const SizedBox(height: 8),
                           TextField(
                             controller: _firstNameController,
-                            decoration: InputDecoration(
-                              hintText: 'John',
-                              hintStyle: const TextStyle(
-                                color: Color(0xFFD1D5DB),
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFFF9FAFB),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF2563EB),
-                                  width: 2,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
-                            ),
+                            style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                            decoration: _inputDec(tokens, 'John'),
                           ),
                         ],
                       ),
@@ -322,50 +321,20 @@ class _RegisterPageState extends State<RegisterPage> {
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.black,
+                                  color: tokens.textPrimary,
                                 ),
                           ),
                           const SizedBox(height: 8),
                           TextField(
                             controller: _lastNameController,
-                            decoration: InputDecoration(
-                              hintText: 'Doe',
-                              hintStyle: const TextStyle(
-                                color: Color(0xFFD1D5DB),
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFFF9FAFB),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF2563EB),
-                                  width: 2,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
-                            ),
+                            style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                            decoration: _inputDec(tokens, 'Doe'),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
                 const SizedBox(height: 16),
 
                 // Email Field
@@ -376,41 +345,14 @@ class _RegisterPageState extends State<RegisterPage> {
                       'Email',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: Colors.black,
+                        color: tokens.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _emailController,
-                      decoration: InputDecoration(
-                        hintText: 'm@example.com',
-                        hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
-                        filled: true,
-                        fillColor: const Color(0xFFF9FAFB),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2563EB),
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                      ),
+                      style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                      decoration: _inputDec(tokens, 'm@example.com'),
                       keyboardType: TextInputType.emailAddress,
                     ),
                   ],
@@ -425,46 +367,19 @@ class _RegisterPageState extends State<RegisterPage> {
                       'Contact number',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: Colors.black,
+                        color: tokens.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _phoneController,
+                      style: TextStyle(color: tokens.textPrimary, fontSize: 14),
                       keyboardType: TextInputType.number,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(11),
                       ],
-                      decoration: InputDecoration(
-                        hintText: '11-digit contact number',
-                        hintStyle: const TextStyle(color: Color(0xFFD1D5DB)),
-                        filled: true,
-                        fillColor: const Color(0xFFF9FAFB),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2563EB),
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                      ),
+                      decoration: _inputDec(tokens, '11-digit contact number'),
                     ),
                   ],
                 ),
@@ -478,7 +393,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       'Password',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: Colors.black,
+                        color: tokens.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -487,7 +402,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     Text(
                       'Use 8+ characters with uppercase, lowercase, number, and symbol.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF6B7280),
+                        color: tokens.textSecondary,
                       ),
                     ),
                   ],
@@ -502,7 +417,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       'Confirm password',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: Colors.black,
+                        color: tokens.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -523,6 +438,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   children: [
                     Checkbox(
                       value: _agreeToTerms,
+                      activeColor: tokens.primary,
+                      checkColor: Colors.white,
                       onChanged: (value) {
                         final nextValue = value ?? false;
                         setState(() {
@@ -532,7 +449,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      side: const BorderSide(color: Color(0xFFD1D5DB)),
+                      side: BorderSide(color: tokens.cardBorder),
                     ),
                     Expanded(
                       child: Padding(
@@ -542,7 +459,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             Text(
                               'I agree to the ',
                               style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: const Color(0xFF6B7280)),
+                                  ?.copyWith(color: tokens.textSecondary),
                             ),
                             InkWell(
                               onTap: _showTermsOfService,
@@ -550,17 +467,17 @@ class _RegisterPageState extends State<RegisterPage> {
                                 'Terms of Service',
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
-                                      color: const Color(0xFF2563EB),
+                                      color: tokens.primary,
                                       fontWeight: FontWeight.w600,
                                       decoration: TextDecoration.underline,
-                                      decorationColor: const Color(0xFF2563EB),
+                                      decorationColor: tokens.primary,
                                     ),
                               ),
                             ),
                             Text(
                               ' and ',
                               style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: const Color(0xFF6B7280)),
+                                  ?.copyWith(color: tokens.textSecondary),
                             ),
                             InkWell(
                               onTap: _showPrivacyPolicy,
@@ -568,17 +485,17 @@ class _RegisterPageState extends State<RegisterPage> {
                                 'Privacy Policy',
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
-                                      color: const Color(0xFF2563EB),
+                                      color: tokens.primary,
                                       fontWeight: FontWeight.w600,
                                       decoration: TextDecoration.underline,
-                                      decorationColor: const Color(0xFF2563EB),
+                                      decorationColor: tokens.primary,
                                     ),
                               ),
                             ),
                             Text(
                               '.',
                               style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: const Color(0xFF6B7280)),
+                                  ?.copyWith(color: tokens.textSecondary),
                             ),
                           ],
                         ),
@@ -593,7 +510,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -631,7 +548,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     Text(
                       'Already have an account? ',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF6B7280),
+                        color: tokens.textSecondary,
                       ),
                     ),
                     GestureDetector(
@@ -646,7 +563,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: Text(
                         'Sign in',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF2563EB),
+                          color: tokens.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -774,12 +691,13 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: tokens.scaffoldBackground,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: IconThemeData(color: tokens.textPrimary),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -793,12 +711,12 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDBEAFE),
+                      color: tokens.primarySoftBg,
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.mark_email_read_rounded,
-                      color: Color(0xFF2563EB),
+                      color: tokens.primary,
                       size: 34,
                     ),
                   ),
@@ -811,7 +729,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      color: tokens.textPrimary,
                       fontSize: 26,
                     ),
                   ),
@@ -820,7 +738,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                 Text(
                   'We sent a 6-digit verification code to ${_draft.email}. Enter it below to finish creating your account.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF6B7280),
+                    color: tokens.textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -829,9 +747,9 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: tokens.cardBackground,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: tokens.cardBorder),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -840,7 +758,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                         'Verification code',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -854,7 +772,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                         _infoMessage ??
                             'The code expires in 10 minutes. If it does not arrive, resend it.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF64748B),
+                          color: tokens.textSecondary,
                           height: 1.5,
                         ),
                       ),
@@ -866,7 +784,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(

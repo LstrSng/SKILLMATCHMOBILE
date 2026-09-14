@@ -55,10 +55,14 @@ class _LandingPageState extends State<LandingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tokens.scaffoldBackground,
       appBar: AppBar(
         elevation: 0,
+        backgroundColor: tokens.scaffoldBackground,
+        surfaceTintColor: Colors.transparent,
         title: Row(
           children: [
             Container(
@@ -71,9 +75,13 @@ class _LandingPageState extends State<LandingPage> {
               child: const Icon(Icons.bolt, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               'SkillMatch+',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: tokens.textPrimary,
+              ),
             ),
           ],
         ),
@@ -85,15 +93,18 @@ class _LandingPageState extends State<LandingPage> {
                 MaterialPageRoute(builder: (context) => const SignInPage()),
               );
             },
-            child: const Text(
+            child: Text(
               'Sign In',
-              style: TextStyle(color: Colors.black87),
+              style: TextStyle(
+                color: tokens.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const SizedBox(width: 12),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: tokens.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
@@ -124,9 +135,11 @@ class _LandingPageState extends State<LandingPage> {
                   children: [
                     Text(
                       'Optimize Your Career Through',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineLarge?.copyWith(fontSize: 34),
+                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w800,
+                        color: tokens.textPrimary,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     ShaderMask(
@@ -143,7 +156,7 @@ class _LandingPageState extends State<LandingPage> {
                     Text(
                       'Stop applying blindly. SkillMatch+ uses advanced analytics to match your unique skill profile with roles where you\'ll thrive.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: const Color(0xFF6B7280),
+                        color: tokens.textSecondary,
                         fontSize: 16,
                         height: 1.5,
                       ),
@@ -154,7 +167,7 @@ class _LandingPageState extends State<LandingPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB),
+                          backgroundColor: tokens.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -190,8 +203,8 @@ class _LandingPageState extends State<LandingPage> {
                       width: double.infinity,
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.black87,
-                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          foregroundColor: tokens.textPrimary,
+                          side: BorderSide(color: tokens.cardBorder),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -229,7 +242,7 @@ class _LandingPageState extends State<LandingPage> {
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: Colors.black,
+                            color: tokens.textPrimary,
                             fontSize: 24,
                           ),
                       textAlign: TextAlign.center,
@@ -238,7 +251,7 @@ class _LandingPageState extends State<LandingPage> {
                     Text(
                       'Data-driven tools that reveal exactly where you fit and what to learn next.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: const Color(0xFF6B7280),
+                        color: tokens.textSecondary,
                         fontSize: 15,
                       ),
                       textAlign: TextAlign.center,
@@ -389,7 +402,7 @@ class _LandingPageState extends State<LandingPage> {
                     Text(
                       '© 2026 SkillMatch+',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF9CA3AF),
+                        color: tokens.textFaint,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -407,13 +420,13 @@ class _LandingPageState extends State<LandingPage> {
                           child: Text(
                             'Terms',
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: const Color(0xFF6B7280)),
+                                ?.copyWith(color: tokens.textSecondary),
                           ),
                         ),
                         Text(
                           '|',
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: const Color(0xFFD1D5DB)),
+                              ?.copyWith(color: tokens.cardBorder),
                         ),
                         TextButton(
                           onPressed: () => _showLegalDialog(
@@ -427,7 +440,7 @@ class _LandingPageState extends State<LandingPage> {
                           child: Text(
                             'Privacy',
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: const Color(0xFF6B7280)),
+                                ?.copyWith(color: tokens.textSecondary),
                           ),
                         ),
                       ],
@@ -456,12 +469,14 @@ class _FeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: tokens.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSoft),
-        boxShadow: const [AppColors.cardShadow],
+        border: Border.all(color: tokens.cardBorderSoft),
+        boxShadow: tokens.cardShadows,
       ),
       padding: const EdgeInsets.all(20),
       child: Row(
@@ -481,13 +496,20 @@ class _FeatureCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: tokens.textPrimary,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(height: 1.4),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: tokens.textSecondary,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),

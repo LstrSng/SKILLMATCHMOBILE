@@ -69,6 +69,7 @@ class _OtpCodeFieldState extends State<OtpCodeField> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.appColors;
     final text = widget.controller.text;
     final isFocused = _focusNode.hasFocus;
 
@@ -88,19 +89,19 @@ class _OtpCodeFieldState extends State<OtpCodeField> {
               height: 52,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: tokens.surfaceMuted,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isCurrent ? AppColors.primary : Colors.transparent,
+                  color: isCurrent ? tokens.primary : tokens.cardBorder,
                   width: 2,
                 ),
               ),
               child: Text(
                 digit,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black,
+                  color: tokens.textPrimary,
                 ),
               ),
             );
