@@ -60,7 +60,7 @@ class _PathwayPageState extends State<PathwayPage> {
       _error = null;
     });
     try {
-      final pathways = await allTrainingPathways(forceReload: true);
+      final pathways = await allTrainingPathways();
       if (!mounted) return;
       setState(() {
         _pathways = pathways;
@@ -115,7 +115,7 @@ class _PathwayPageState extends State<PathwayPage> {
         final bool matchesCategory;
         if (cat == 'free certs') {
           matchesCategory = p.links.any(
-            (l) => (l.isFree == true) || l.label.toLowerCase().contains('free'),
+            (l) => l.isFree || l.label.toLowerCase().contains('free'),
           );
         } else if (cat == 'mobile') {
           matchesCategory = fieldLower == 'mobile' ||
@@ -405,7 +405,7 @@ class _PathwayTileState extends State<_PathwayTile> {
   Widget build(BuildContext context) {
     final pathway = widget.pathway;
     final count = pathway.links.length;
-    final hasFree = pathway.links.any((l) => (l.isFree == true) || l.label.toLowerCase().contains('free'));
+    final hasFree = pathway.links.any((l) => l.isFree || l.label.toLowerCase().contains('free'));
     final tokens = context.appColors;
 
     return AppCard(
