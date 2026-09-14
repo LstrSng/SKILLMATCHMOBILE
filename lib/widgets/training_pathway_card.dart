@@ -33,45 +33,113 @@ class TrainingLinksList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ...pathway.links.map(
-          (link) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => _launchTrainingLink(context, link.url),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: tokens.primarySoftBg,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: tokens.cardBorderSoft),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 11,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.open_in_new_rounded,
-                      size: 16,
-                      color: tokens.primary,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        link.label,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: tokens.primary,
-                          height: 1.3,
+          (link) {
+            final isFree = (link.isFree == true) || link.label.toLowerCase().contains('free');
+            final provider = link.provider;
+            final type = link.type;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => _launchTrainingLink(context, link.url),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: tokens.primarySoftBg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: tokens.cardBorderSoft),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 11,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.open_in_new_rounded,
+                        size: 16,
+                        color: tokens.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              link.label,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: tokens.primary,
+                                height: 1.3,
+                              ),
+                            ),
+                            if (provider != null || type != null) ...[
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  if (provider != null)
+                                    Text(
+                                      provider,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: tokens.textSecondary,
+                                      ),
+                                    ),
+                                  if (provider != null && type != null)
+                                    Text(
+                                      ' • ',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: tokens.textSecondary,
+                                      ),
+                                    ),
+                                  if (type != null)
+                                    Text(
+                                      type,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: tokens.textSecondary,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                      if (isFree) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: tokens.successBg,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: tokens.success.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Text(
+                            'FREE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: tokens.success,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
         if (pathway.note.isNotEmpty) ...[
           const SizedBox(height: 4),

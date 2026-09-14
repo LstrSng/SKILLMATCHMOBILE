@@ -25,16 +25,26 @@ Future<void> _load() async {
     final name = map['name'] as String;
     final links = (map['links'] as List)
         .map(
-          (l) => TrainingResource(
-            label: (l as Map)['label'] as String,
-            url: l['url'] as String,
-          ),
+          (l) {
+            final linkMap = l as Map;
+            final label = linkMap['label'] as String;
+            final isFree = (linkMap['isFree'] as bool?) ??
+                label.toLowerCase().contains('free');
+            return TrainingResource(
+              label: label,
+              url: linkMap['url'] as String,
+              isFree: isFree,
+              provider: linkMap['provider'] as String?,
+              type: linkMap['type'] as String?,
+            );
+          },
         )
         .toList();
     pathwaysByName[name] = TrainingPathway(
       name: name,
       links: links,
       note: (map['note'] as String?) ?? '',
+      field: map['field'] as String?,
     );
   }
 
@@ -123,10 +133,20 @@ String? _bestKeywordMatch(String roleTitle) {
   return bestPathway;
 }
 
+/// Resets the in-memory cached pathways so they can be reloaded.
+void resetPathwayLinksCache() {
+  _pathwaysByName = null;
+  _roleToPathway = null;
+  _loading = null;
+}
+
 /// All bundled training/certification pathways, sorted by name. Used by
 /// the Pathway tab to let users browse certifications directly by skill
 /// area instead of picking a job role.
-Future<List<TrainingPathway>> allTrainingPathways() async {
+Future<List<TrainingPathway>> allTrainingPathways({bool forceReload = false}) async {
+  if (forceReload) {
+    resetPathwayLinksCache();
+  }
   await _ensureLoaded();
   final list = _pathwaysByName!.values.toList();
   list.sort((a, b) => a.name.compareTo(b.name));

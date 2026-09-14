@@ -31,11 +31,18 @@ class _PathwayPageState extends State<PathwayPage> {
 
   static const _categories = [
     'All',
+    'Free Certs',
+    'Mobile',
+    'Web',
+    'Data & AI',
     'Cloud',
     'Cybersecurity',
-    'Data',
     'DevOps',
-    'Developer',
+    'Design',
+    'Game Dev',
+    'IT & Support',
+    'Management',
+    'Other',
   ];
 
   @override
@@ -53,7 +60,7 @@ class _PathwayPageState extends State<PathwayPage> {
       _error = null;
     });
     try {
-      final pathways = await allTrainingPathways();
+      final pathways = await allTrainingPathways(forceReload: true);
       if (!mounted) return;
       setState(() {
         _pathways = pathways;
@@ -101,9 +108,114 @@ class _PathwayPageState extends State<PathwayPage> {
   Widget _buildContent(BuildContext context) {
     final q = _searchController.text.trim().toLowerCase();
     final filtered = _pathways.where((p) {
-      if (_selectedCategory != 'All' &&
-          !p.name.toLowerCase().contains(_selectedCategory.toLowerCase())) {
-        return false;
+      if (_selectedCategory != 'All') {
+        final cat = _selectedCategory.toLowerCase();
+        final nameLower = p.name.toLowerCase();
+        final fieldLower = (p.field ?? '').toLowerCase();
+        final bool matchesCategory;
+        if (cat == 'free certs') {
+          matchesCategory = p.links.any(
+            (l) => (l.isFree == true) || l.label.toLowerCase().contains('free'),
+          );
+        } else if (cat == 'mobile') {
+          matchesCategory = fieldLower == 'mobile' ||
+              nameLower.contains('mobile') ||
+              nameLower.contains('android') ||
+              nameLower.contains('ios') ||
+              p.links.any((l) {
+                final lbl = l.label.toLowerCase();
+                return lbl.contains('android') ||
+                    lbl.contains('ios') ||
+                    lbl.contains('swift') ||
+                    lbl.contains('flutter') ||
+                    lbl.contains('mobile');
+              });
+        } else if (cat == 'web') {
+          matchesCategory = fieldLower == 'web' ||
+              nameLower.contains('web') ||
+              nameLower.contains('front-end') ||
+              nameLower.contains('back-end') ||
+              nameLower.contains('full-stack') ||
+              nameLower.contains('javascript') ||
+              nameLower.contains('php') ||
+              nameLower.contains('wordpress') ||
+              nameLower.contains('rails') ||
+              p.links.any((l) {
+                final lbl = l.label.toLowerCase();
+                return lbl.contains('web') ||
+                    lbl.contains('html') ||
+                    lbl.contains('css') ||
+                    lbl.contains('javascript') ||
+                    lbl.contains('full stack') ||
+                    lbl.contains('front-end') ||
+                    lbl.contains('back-end');
+              });
+        } else if (cat == 'data & ai') {
+          matchesCategory = fieldLower == 'data & ai' ||
+              nameLower.contains('data') ||
+              nameLower.contains('machine learning') ||
+              nameLower.contains('database') ||
+              nameLower.contains('bi') ||
+              nameLower.contains('sql');
+        } else if (cat == 'cloud') {
+          matchesCategory = fieldLower == 'cloud' ||
+              nameLower.contains('cloud') ||
+              nameLower.contains('aws') ||
+              nameLower.contains('azure') ||
+              nameLower.contains('gcp');
+        } else if (cat == 'cybersecurity') {
+          matchesCategory = fieldLower == 'cybersecurity' ||
+              nameLower.contains('cyber') ||
+              nameLower.contains('security') ||
+              nameLower.contains('penetration');
+        } else if (cat == 'devops') {
+          matchesCategory = fieldLower == 'devops' ||
+              nameLower.contains('devops') ||
+              nameLower.contains('kubernetes') ||
+              nameLower.contains('ci/cd') ||
+              nameLower.contains('pipeline') ||
+              nameLower.contains('qa') ||
+              nameLower.contains('git') ||
+              nameLower.contains('automation');
+        } else if (cat == 'design') {
+          matchesCategory = fieldLower == 'design' ||
+              nameLower.contains('design') ||
+              nameLower.contains('ux') ||
+              nameLower.contains('ui') ||
+              nameLower.contains('animation') ||
+              nameLower.contains('accessibility');
+        } else if (cat == 'game dev') {
+          matchesCategory = fieldLower == 'game dev' ||
+              nameLower.contains('game') ||
+              nameLower.contains('unity') ||
+              nameLower.contains('unreal');
+        } else if (cat == 'it & support') {
+          matchesCategory = fieldLower == 'it & support' ||
+              nameLower.contains('it support') ||
+              nameLower.contains('help desk') ||
+              nameLower.contains('networking') ||
+              nameLower.contains('linux') ||
+              nameLower.contains('service management');
+        } else if (cat == 'management') {
+          matchesCategory = fieldLower == 'management' ||
+              nameLower.contains('management') ||
+              nameLower.contains('analysis') ||
+              nameLower.contains('leadership') ||
+              nameLower.contains('agile');
+        } else if (cat == 'other') {
+          matchesCategory = fieldLower == 'other' ||
+              nameLower.contains('salesforce') ||
+              nameLower.contains('sap') ||
+              nameLower.contains('dynamics') ||
+              nameLower.contains('mulesoft') ||
+              nameLower.contains('blockchain') ||
+              nameLower.contains('embedded') ||
+              nameLower.contains('gis') ||
+              nameLower.contains('sales');
+        } else {
+          matchesCategory = fieldLower.contains(cat) || nameLower.contains(cat);
+        }
+        if (!matchesCategory) return false;
       }
       if (q.isEmpty) return true;
       return p.name.toLowerCase().contains(q) ||
@@ -293,6 +405,7 @@ class _PathwayTileState extends State<_PathwayTile> {
   Widget build(BuildContext context) {
     final pathway = widget.pathway;
     final count = pathway.links.length;
+    final hasFree = pathway.links.any((l) => (l.isFree == true) || l.label.toLowerCase().contains('free'));
     final tokens = context.appColors;
 
     return AppCard(
@@ -343,14 +456,64 @@ class _PathwayTileState extends State<_PathwayTile> {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      count == 0
-                          ? 'No verified resources yet'
-                          : '$count verified certification${count == 1 ? '' : 's'}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: tokens.textSecondary,
-                      ),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (pathway.field != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tokens.cardBorderSoft.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              pathway.field!.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: tokens.textSecondary,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        Text(
+                          count == 0
+                              ? 'No verified resources yet'
+                              : '$count verified resource${count == 1 ? '' : 's'}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: tokens.textSecondary,
+                          ),
+                        ),
+                        if (hasFree)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tokens.successBg,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: tokens.success.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Text(
+                              'FREE OPTIONS',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: tokens.success,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
