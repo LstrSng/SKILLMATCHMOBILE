@@ -18,6 +18,7 @@ import '../services/skill_assessment_bank.dart';
 import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/widgets.dart';
+import 'sign_in_page.dart';
 import 'skill_assessment_page.dart';
 
 /// Strips a raw phone value down to the 10-digit PH mobile number
@@ -150,7 +151,8 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  bool _loading = true;
+  late bool _loading =
+      (SessionStore.user == null || SessionStore.user!.isEmpty);
   bool _uploadingResume = false;
   bool _uploadingCertification = false;
   String? _certUploadStatus;
@@ -160,14 +162,16 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(silent: _user.isNotEmpty);
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final u = await fetchMyProfile();
       if (!mounted) return;
@@ -180,7 +184,9 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        if (_user.isEmpty) {
+          _error = e.toString();
+        }
       });
     }
   }
@@ -352,6 +358,84 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _viewResumeFile(Map<String, dynamic> doc) async {
+    final url = (doc['url'] as String? ?? '').trim();
+    final name = (doc['name'] as String? ?? 'Document').trim();
+    if (url.isNotEmpty) {
+      await _viewDocument(url, name);
+      return;
+    }
+
+    final data = (doc['data'] as String? ?? '').trim();
+    if (data.isNotEmpty) {
+      final mimeType = (doc['mimeType'] as String? ?? '').toLowerCase();
+      if (mimeType.startsWith('image/')) {
+        try {
+          final bytes = base64Decode(data);
+          if (!mounted) return;
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(name),
+              content: InteractiveViewer(
+                child: Image.memory(bytes),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          );
+          return;
+        } catch (_) {}
+      }
+
+      final size = doc['size'] != null
+          ? '${((doc['size'] as num) / 1024).toStringAsFixed(1)} KB'
+          : 'Uploaded document';
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.description, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(child: Text(name, overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('File type: ${mimeType.isNotEmpty ? mimeType : "PDF Document"}'),
+              const SizedBox(height: 6),
+              Text('File size: $size'),
+              const SizedBox(height: 12),
+              const Text(
+                'This document is stored securely in your SkillMatch profile and shared directly with employers when you apply.',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No document data available to view.')),
+    );
+  }
+
   Future<void> _removeResume() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -374,8 +458,11 @@ class _ProfilePageState extends State<ProfilePage> {
     if (confirm != true) return;
     try {
       final profile = _profileData();
-      profile.remove('resume');
-      final updated = await updateMyProfile({'profile': profile});
+      profile['resume'] = null;
+      final updated = await updateMyProfile({
+        'profile': profile,
+        'removeResume': true,
+      });
       if (!mounted) return;
       setState(() => _user = updated);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -426,7 +513,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (updatedList.isNotEmpty) {
         profile['certification'] = updatedList.first;
       } else {
-        profile.remove('certification');
+        profile['certification'] = null;
       }
 
       final updated = await updateMyProfile({'profile': profile});
@@ -711,6 +798,320 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  Future<void> _quickPickAvatar() async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: context.appColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(
+                'Change Profile Photo',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: ctx.appColors.textPrimary,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_camera, color: ctx.appColors.primary),
+              title: Text('Take Photo', style: TextStyle(color: ctx.appColors.textPrimary)),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library, color: ctx.appColors.primary),
+              title: Text('Choose from Gallery', style: TextStyle(color: ctx.appColors.textPrimary)),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    try {
+      final file = await picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1200,
+      );
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+      String newAvatarUrl;
+
+      if (CloudinaryConfig.isConfigured) {
+        final result = await CloudinaryService.uploadProfilePicture(
+          bytes: bytes,
+          fileName: file.name.isNotEmpty ? file.name : 'avatar.jpg',
+        );
+        newAvatarUrl = result.secureUrl;
+      } else {
+        final ext = (file.name.split('.').lastOrNull ?? 'jpg').toLowerCase();
+        final mimeType = ext == 'png' ? 'image/png' : 'image/jpeg';
+        newAvatarUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+      }
+
+      final updated = await updateMyProfile({'avatarUrl': newAvatarUrl});
+      if (!mounted) return;
+      setState(() => _user = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile photo updated successfully!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update photo: $e')),
+      );
+    }
+  }
+
+  Future<void> _launchUrlString(String rawUrl) async {
+    var url = rawUrl.trim();
+    if (url.isEmpty) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://$url';
+    }
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      try {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open link: $url')),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open link: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchEmail(String email) async {
+    final clean = email.trim();
+    if (clean.isEmpty) return;
+    final uri = Uri(scheme: 'mailto', path: clean);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch email app for $clean')),
+        );
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _launchPhone(String phone) async {
+    final digits = _phoneDigitsOnly(phone);
+    if (digits.isEmpty) return;
+    final uri = Uri(scheme: 'tel', path: '+63$digits');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch phone app for +63 $digits')),
+        );
+      }
+    } catch (_) {}
+  }
+
+  int _calculateProfileCompletion({
+    required String firstName,
+    required String lastName,
+    required String headline,
+    required String location,
+    required String phone,
+    required String email,
+    required String portfolio,
+    required List<String> skills,
+    required Map<String, dynamic>? resume,
+    required List<Map<String, dynamic>> certifications,
+    required List<Map<String, String>> experience,
+    required List<Map<String, String>> education,
+    required Map<String, AssessmentResult> assessments,
+    required String avatarUrl,
+  }) {
+    var score = 0;
+    // 1. Basic Info (25%)
+    if (firstName.isNotEmpty && lastName.isNotEmpty) score += 10;
+    if (headline.isNotEmpty) score += 5;
+    if (location.isNotEmpty) score += 5;
+    if (phone.isNotEmpty || email.isNotEmpty) score += 5;
+
+    // 2. Avatar (5%)
+    if (avatarUrl.isNotEmpty) score += 5;
+
+    // 3. Skills (20%)
+    if (skills.length >= 3) {
+      score += 20;
+    } else if (skills.isNotEmpty) {
+      score += 10;
+    }
+
+    // 4. Resume (20%)
+    if (resume != null) score += 20;
+
+    // 5. Experience (10%)
+    if (experience.isNotEmpty) score += 10;
+
+    // 6. Education (10%)
+    if (education.isNotEmpty) score += 10;
+
+    // 7. Certifications or Assessments (10%)
+    if (certifications.isNotEmpty || assessments.isNotEmpty) {
+      score += 10;
+    }
+
+    return score.clamp(0, 100);
+  }
+
+  Map<String, String> _getCompletionTip({
+    required Map<String, dynamic>? resume,
+    required List<String> skills,
+    required String headline,
+    required List<Map<String, String>> experience,
+    required List<Map<String, String>> education,
+    required Map<String, AssessmentResult> assessments,
+    required List<Map<String, dynamic>> certifications,
+    required String avatarUrl,
+  }) {
+    if (resume == null) {
+      return {
+        'action': 'Upload Resume',
+        'tip': 'Upload your resume (+20%) to unlock 1-click job applications.',
+        'target': 'resume',
+      };
+    }
+    if (skills.length < 3) {
+      return {
+        'action': 'Add Skills',
+        'tip': 'Add 3 or more skills (+10-20%) to optimize AI job recommendations.',
+        'target': 'skills',
+      };
+    }
+    if (headline.isEmpty) {
+      return {
+        'action': 'Add Headline',
+        'tip': 'Add a professional headline (+5%) so employers recognize your specialty.',
+        'target': 'headline',
+      };
+    }
+    if (experience.isEmpty) {
+      return {
+        'action': 'Add Experience',
+        'tip': 'Add your work experience (+10%) to highlight career accomplishments.',
+        'target': 'experience',
+      };
+    }
+    if (education.isEmpty) {
+      return {
+        'action': 'Add Education',
+        'tip': 'Add your academic background (+10%) to complete your credentials.',
+        'target': 'education',
+      };
+    }
+    if (assessments.isEmpty && certifications.isEmpty) {
+      return {
+        'action': 'Take Assessment',
+        'tip': 'Take a quick skill assessment (+10%) to earn verified skill badges.',
+        'target': 'assessment',
+      };
+    }
+    if (avatarUrl.isEmpty) {
+      return {
+        'action': 'Add Photo',
+        'tip': 'Upload a profile photo (+5%) to make your profile stand out.',
+        'target': 'avatar',
+      };
+    }
+    return {
+      'action': 'All Complete!',
+      'tip': 'Your profile is outstanding! You qualify for top-tier job matches.',
+      'target': 'complete',
+    };
+  }
+
+  void _handleTipAction(String target) {
+    switch (target) {
+      case 'resume':
+        if (!_uploadingResume) _uploadResume();
+        break;
+      case 'skills':
+      case 'headline':
+      case 'experience':
+      case 'education':
+        _openEdit();
+        break;
+      case 'assessment':
+        _openAssessment();
+        break;
+      case 'avatar':
+        _quickPickAvatar();
+        break;
+      default:
+        _openEdit();
+    }
+  }
+
+  Widget _buildFileIcon(
+    Map<String, dynamic>? fileData, {
+    required bool isDark,
+    required AppThemeExtension tokens,
+  }) {
+    final name = (fileData?['name'] as String? ?? '').toLowerCase();
+    Color iconColor;
+    Color bgColor;
+    IconData icon;
+
+    if (name.endsWith('.pdf')) {
+      icon = Icons.picture_as_pdf_rounded;
+      iconColor = isDark ? AppColors.dangerLight : AppColors.danger;
+      bgColor = isDark ? const Color(0xFF3B1212) : const Color(0xFFFEE2E2);
+    } else if (name.endsWith('.doc') || name.endsWith('.docx')) {
+      icon = Icons.description_rounded;
+      iconColor = isDark ? AppColors.infoLight : AppColors.info;
+      bgColor = isDark ? AppColors.infoDarkBg : AppColors.infoBg;
+    } else if (name.endsWith('.png') ||
+        name.endsWith('.jpg') ||
+        name.endsWith('.jpeg')) {
+      icon = Icons.image_rounded;
+      iconColor = isDark ? AppColors.successLight : AppColors.success;
+      bgColor = isDark ? AppColors.successDarkBg : AppColors.successBg;
+    } else {
+      icon = Icons.insert_drive_file_rounded;
+      iconColor = tokens.primary;
+      bgColor = tokens.primarySoftBg;
+    }
+
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Center(
+        child: Icon(icon, color: iconColor, size: 22),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -721,7 +1122,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
     if (_error != null) {
       return Scaffold(
-        // backgroundColor: uses theme
         appBar: AppBar(elevation: 0, title: const Text('Profile')),
         body: Center(
           child: Padding(
@@ -731,7 +1131,20 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text(_error!, textAlign: TextAlign.center),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: _load, child: const Text('Retry')),
+                if (SessionStore.token == null || SessionStore.token!.isEmpty)
+                  FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SignInPage()),
+                        (_) => false,
+                      );
+                    },
+                    icon: const Icon(Icons.login),
+                    label: const Text('Sign In Again'),
+                  )
+                else
+                  FilledButton(onPressed: _load, child: const Text('Retry')),
               ],
             ),
           ),
@@ -751,6 +1164,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final email = _s('email');
     final phone = _s('phone');
     final portfolio = _s('portfolioUrl');
+    final avatarUrl = _s('avatarUrl');
     final resume = _resumeData();
     final certifications = _certificationsData();
     final skills = _skills();
@@ -758,8 +1172,35 @@ class _ProfilePageState extends State<ProfilePage> {
     final experience = _experience();
     final assessmentResults = _assessmentResults();
 
+    final completionScore = _calculateProfileCompletion(
+      firstName: firstName,
+      lastName: lastName,
+      headline: headline,
+      location: location,
+      phone: phone,
+      email: email,
+      portfolio: portfolio,
+      skills: skills,
+      resume: resume,
+      certifications: certifications,
+      experience: experience,
+      education: education,
+      assessments: assessmentResults,
+      avatarUrl: avatarUrl,
+    );
+
+    final completionTip = _getCompletionTip(
+      resume: resume,
+      skills: skills,
+      headline: headline,
+      experience: experience,
+      education: education,
+      assessments: assessmentResults,
+      certifications: certifications,
+      avatarUrl: avatarUrl,
+    );
+
     return Scaffold(
-      // backgroundColor: uses theme
       appBar: const AppTopBar(),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
@@ -769,7 +1210,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile Header
+            // Hero Profile Header Card
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
@@ -779,7 +1220,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     alignment: Alignment.topCenter,
                     children: [
                       Container(
-                        height: 72,
+                        height: 96,
                         decoration: BoxDecoration(
                           gradient: tokens.primaryGradient,
                           borderRadius: const BorderRadius.vertical(
@@ -788,33 +1229,88 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       Positioned(
-                        top: 8,
-                        right: 8,
-                        child: IconButton.filledTonal(
+                        top: 12,
+                        right: 12,
+                        child: FilledButton.tonalIcon(
                           onPressed: _openEdit,
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          style: IconButton.styleFrom(
-                            backgroundColor: tokens.cardBackground,
-                            foregroundColor: tokens.primary,
-                            side: BorderSide(color: tokens.cardBorderSoft),
+                          icon: const Icon(Icons.edit_outlined, size: 14),
+                          label: const Text(
+                            'Edit Profile',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          tooltip: 'Edit profile',
+                          style: FilledButton.styleFrom(
+                            backgroundColor: isDark
+                                ? tokens.cardBackground.withValues(alpha: 0.85)
+                                : Colors.white.withValues(alpha: 0.9),
+                            foregroundColor: tokens.primary,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            elevation: 0,
+                          ),
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(top: 32),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: tokens.cardBackground,
-                            shape: BoxShape.circle,
-                          ),
-                          child: _profileAvatar(
-                            avatarUrl: _s('avatarUrl'),
-                            radius: 40,
-                            fallbackBg: tokens.surfaceMuted,
-                            fallbackIconColor: tokens.textSecondary,
-                          ),
+                        padding: const EdgeInsets.only(top: 48),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: tokens.cardBackground,
+                                shape: BoxShape.circle,
+                                boxShadow: tokens.cardShadows,
+                              ),
+                              child: _profileAvatar(
+                                avatarUrl: avatarUrl,
+                                size: 88,
+                                radius: 44,
+                                fallbackBg: tokens.surfaceMuted,
+                                fallbackIconColor: tokens.textSecondary,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 2,
+                              right: 2,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: _quickPickAvatar,
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: tokens.primary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: tokens.cardBackground,
+                                        width: 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.2),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -827,20 +1323,43 @@ class _ProfilePageState extends State<ProfilePage> {
                           fullName,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 22,
                             fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
                             color: tokens.textPrimary,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          headline.isEmpty ? 'Add a headline' : headline,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: tokens.textSecondary,
+                        const SizedBox(height: 4),
+                        if (headline.isNotEmpty)
+                          Text(
+                            headline,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: tokens.textSecondary,
+                            ),
+                          )
+                        else
+                          InkWell(
+                            onTap: _openEdit,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              child: Text(
+                                '+ Add professional headline',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: tokens.primary,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
                         const SizedBox(height: 16),
                         Wrap(
                           alignment: WrapAlignment.center,
@@ -849,17 +1368,27 @@ class _ProfilePageState extends State<ProfilePage> {
                           children: [
                             _ProfileInfoPill(
                               icon: Icons.location_on_outlined,
-                              label: location.isEmpty
-                                  ? 'Add location'
-                                  : location,
+                              label: location.isEmpty ? 'Add location' : location,
+                              isPrompt: location.isEmpty,
+                              onTap: _openEdit,
                             ),
                             _ProfileInfoPill(
                               icon: Icons.email_outlined,
-                              label: email.isEmpty ? '—' : email,
+                              label: email.isEmpty ? 'Add email' : email,
+                              isPrompt: email.isEmpty,
+                              onTap: email.isEmpty
+                                  ? _openEdit
+                                  : () => _launchEmail(email),
                             ),
                             _ProfileInfoPill(
                               icon: Icons.phone_outlined,
-                              label: phone.isEmpty ? 'Add phone' : phone,
+                              label: phone.isEmpty
+                                  ? 'Add phone'
+                                  : '+63 ${_phoneDigitsOnly(phone)}',
+                              isPrompt: phone.isEmpty,
+                              onTap: phone.isEmpty
+                                  ? _openEdit
+                                  : () => _launchPhone(phone),
                             ),
                             _ProfileInfoPill(
                               icon: Icons.link,
@@ -867,6 +1396,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ? 'Add portfolio link'
                                   : portfolio,
                               highlight: portfolio.isNotEmpty,
+                              isPrompt: portfolio.isEmpty,
+                              onTap: portfolio.isEmpty
+                                  ? _openEdit
+                                  : () => _launchUrlString(portfolio),
                             ),
                           ],
                         ),
@@ -876,73 +1409,149 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+
+            // Profile Strength Meter Card
+            _ProfileStrengthCard(
+              percentage: completionScore,
+              tip: completionTip,
+              onAction: () => _handleTipAction(completionTip['target'] ?? 'edit'),
+            ),
+            const SizedBox(height: 16),
 
             // Skills Section
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Skills',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: tokens.textPrimary,
-                    ),
+                  _ProfileSectionHeader(
+                    icon: Icons.psychology_outlined,
+                    title: 'Skills',
+                    badgeText: skills.isNotEmpty ? '${skills.length}' : null,
+                    actionLabel: 'Edit',
+                    actionIcon: Icons.edit_outlined,
+                    onAction: _openEdit,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   if (skills.isEmpty)
-                    _AddInfoButton(label: 'Add skills', onPressed: _openEdit)
+                    _ProfileEmptyState(
+                      icon: Icons.psychology_outlined,
+                      title: 'No skills added yet',
+                      subtitle:
+                          'Add your core skills to unlock accurate AI job recommendations and compatibility scoring.',
+                      buttonLabel: 'Add Skills',
+                      onAction: _openEdit,
+                    )
                   else
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: skills.map((s) => _SkillTag(skill: s)).toList(),
+                      children: [
+                        ...skills.map((s) {
+                          final isVerified = assessmentResults.values.any(
+                            (res) =>
+                                res.passed &&
+                                ((res.roleTitle
+                                            ?.toLowerCase()
+                                            .contains(s.toLowerCase()) ??
+                                        false) ||
+                                    (s
+                                        .toLowerCase()
+                                        .contains(res.roleTitle?.toLowerCase() ?? '___'))),
+                          );
+                          return _SkillTag(
+                            skill: s,
+                            isVerified: isVerified,
+                          );
+                        }),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _openEdit,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: tokens.surfaceMuted,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: tokens.primary.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.add,
+                                    size: 14,
+                                    color: tokens.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Add more',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: tokens.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Skill Assessment Section
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Skill assessment',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: tokens.textPrimary,
-                        ),
-                      ),
-                      if (assessmentResults.isNotEmpty)
-                        Text(
-                          '${assessmentResults.length}/${kAssessmentCategories.length} taken',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: tokens.textFaint,
-                          ),
-                        ),
-                    ],
+                  _ProfileSectionHeader(
+                    icon: Icons.verified_outlined,
+                    iconColor: tokens.verified,
+                    iconBg: isDark
+                        ? AppColors.verifiedDarkSoft
+                        : AppColors.verifiedSoft,
+                    title: 'Skill Assessment',
+                    badgeText: assessmentResults.isNotEmpty
+                        ? '${assessmentResults.length}/${kAssessmentCategories.length} Verified'
+                        : null,
+                    badgeColor: tokens.verified,
+                    actionLabel:
+                        assessmentResults.isEmpty ? 'Take Quiz' : 'Retake',
+                    actionIcon: Icons.play_arrow_rounded,
+                    onAction: _openAssessment,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 10),
                   Text(
                     assessmentResults.isEmpty
-                        ? 'Find your proficiency level with a short adaptive quiz.'
-                        : 'Your assessed proficiency across topics.',
+                        ? 'Benchmark your technical abilities with adaptive quizzes and earn verified badges on your profile.'
+                        : 'Your validated skill proficiencies and verified benchmark scores.',
                     style: TextStyle(
                       fontSize: 13,
                       color: tokens.textSecondary,
                     ),
                   ),
-                  if (assessmentResults.isNotEmpty) ...[
-                    const SizedBox(height: 12),
+                  const SizedBox(height: 14),
+                  if (assessmentResults.isEmpty)
+                    _ProfileEmptyState(
+                      icon: Icons.workspace_premium_outlined,
+                      title: 'No assessments completed',
+                      subtitle:
+                          'Take a 5-minute quiz to prove your skills and earn a verified badge for employers.',
+                      buttonLabel: 'Start Assessment',
+                      onAction: _openAssessment,
+                    )
+                  else ...[
                     Column(
                       children: assessmentResults.entries.map((entry) {
                         final res = entry.value;
@@ -974,73 +1583,90 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : AppColors.warning);
 
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: tokens.surfaceMuted,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: tokens.cardBorderSoft,
                             ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: statusBg,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  res.passed
-                                      ? Icons.verified_rounded
-                                      : Icons.pending_actions_rounded,
-                                  size: 16,
-                                  color: statusColor,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      label,
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: statusBg,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      res.passed
+                                          ? Icons.verified_rounded
+                                          : Icons.pending_actions_rounded,
+                                      size: 18,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          label,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: tokens.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${res.level} • Recorded ${res.formattedDateOnly}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: tokens.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: statusBg,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${res.scorePercentage}%',
                                       style: TextStyle(
                                         fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: tokens.textPrimary,
+                                        fontWeight: FontWeight.w800,
+                                        color: statusColor,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${res.level} • Recorded ${res.formattedDateOnly}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: tokens.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusBg,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${res.scorePercentage}%',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: statusColor,
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: res.scorePercentage / 100.0,
+                                  minHeight: 4,
+                                  backgroundColor: isDark
+                                      ? AppColors.darkSurfaceMuted
+                                      : const Color(0xFFE2E8F0),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    statusColor,
                                   ),
                                 ),
                               ),
@@ -1049,55 +1675,61 @@ class _ProfilePageState extends State<ProfilePage> {
                         );
                       }).toList(),
                     ),
-                  ],
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _openAssessment,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: tokens.primary,
-                        side: BorderSide(color: tokens.cardBorder),
-                      ),
-                      child: Text(
-                        assessmentResults.isEmpty
-                            ? 'Take skill assessment'
-                            : 'Retake or try another topic',
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _openAssessment,
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text('Retake or Try Another Topic'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: tokens.primary,
+                          side: BorderSide(color: tokens.cardBorder),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Experience Section
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Experience',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: tokens.textPrimary,
-                    ),
+                  _ProfileSectionHeader(
+                    icon: Icons.work_outline_rounded,
+                    title: 'Experience',
+                    badgeText: experience.isNotEmpty
+                        ? '${experience.length} ${experience.length == 1 ? "Role" : "Roles"}'
+                        : null,
+                    actionLabel: 'Add',
+                    actionIcon: Icons.add,
+                    onAction: _openEdit,
                   ),
                   const SizedBox(height: 16),
                   if (experience.isEmpty)
-                    _AddInfoButton(
-                      label: 'Add experience',
-                      onPressed: _openEdit,
+                    _ProfileEmptyState(
+                      icon: Icons.work_outline_rounded,
+                      title: 'No work experience added',
+                      subtitle:
+                          'Highlight your past roles, internships, or freelance projects.',
+                      buttonLabel: 'Add Experience',
+                      onAction: _openEdit,
                     )
                   else
                     ...experience.asMap().entries.map((entry) {
                       final idx = entry.key;
                       final e = entry.value;
+                      final isLast = idx == experience.length - 1;
                       return Padding(
-                        padding: EdgeInsets.only(
-                          bottom: idx == experience.length - 1 ? 0 : 16,
-                        ),
+                        padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
                         child: _ExperienceItem(
                           year: (e['year'] ?? '').isEmpty
                               ? '—'
@@ -1110,47 +1742,67 @@ class _ProfilePageState extends State<ProfilePage> {
                               : (e['company'] ?? ''),
                           description: e['description'] ?? '',
                           isActive: idx == 0,
+                          isLast: isLast,
                         ),
                       );
                     }),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Education Section
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Education',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: tokens.textPrimary,
-                    ),
+                  _ProfileSectionHeader(
+                    icon: Icons.school_outlined,
+                    title: 'Education',
+                    badgeText:
+                        education.isNotEmpty ? '${education.length}' : null,
+                    actionLabel: 'Add',
+                    actionIcon: Icons.add,
+                    onAction: _openEdit,
                   ),
                   const SizedBox(height: 16),
                   if (education.isEmpty)
-                    _AddInfoButton(label: 'Add education', onPressed: _openEdit)
+                    _ProfileEmptyState(
+                      icon: Icons.school_outlined,
+                      title: 'No education added',
+                      subtitle:
+                          'Add your degree, vocational diploma, or high school education.',
+                      buttonLabel: 'Add Education',
+                      onAction: _openEdit,
+                    )
                   else
-                    ...education.map(
-                      (e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
+                    ...education.map((e) {
+                      final degree = (e['degree'] ?? '').isEmpty
+                          ? 'Degree / Program'
+                          : (e['degree'] ?? '');
+                      final school = e['school'] ?? '';
+                      final years = e['years'] ?? '';
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: tokens.surfaceMuted,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: tokens.cardBorderSoft),
+                        ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              width: 12,
-                              height: 12,
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
+                                color: tokens.primarySoftBg,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.school,
+                                size: 18,
                                 color: tokens.primary,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: tokens.primary,
-                                  width: 3,
-                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -1159,34 +1811,45 @@ class _ProfilePageState extends State<ProfilePage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    (e['degree'] ?? '').isEmpty
-                                        ? '—'
-                                        : (e['degree'] ?? ''),
+                                    degree,
                                     style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
                                       color: tokens.textPrimary,
                                     ),
                                   ),
-                                  if ((e['school'] ?? '')
-                                      .trim()
-                                      .isNotEmpty) ...[
+                                  if (school.trim().isNotEmpty) ...[
                                     const SizedBox(height: 2),
                                     Text(
-                                      e['school'] ?? '',
+                                      school,
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 13,
                                         color: tokens.textSecondary,
                                       ),
                                     ),
                                   ],
-                                  if ((e['years'] ?? '').trim().isNotEmpty) ...[
+                                  if (years.trim().isNotEmpty) ...[
                                     const SizedBox(height: 4),
-                                    Text(
-                                      e['years'] ?? '',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: tokens.textFaint,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: tokens.cardBackground,
+                                        borderRadius:
+                                            BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: tokens.cardBorderSoft,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        years,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: tokens.textFaint,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -1195,229 +1858,143 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ],
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Resume Section
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Resume',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: tokens.textPrimary,
-                        ),
+                  _ProfileSectionHeader(
+                    icon: Icons.description_outlined,
+                    iconColor:
+                        isDark ? AppColors.dangerLight : AppColors.danger,
+                    iconBg: isDark
+                        ? const Color(0xFF3B1212)
+                        : const Color(0xFFFEE2E2),
+                    title: 'Resume',
+                    badgeText: resume != null ? 'Active' : 'Missing',
+                    badgeColor: resume != null
+                        ? (isDark
+                            ? AppColors.successDarkBg
+                            : AppColors.success)
+                        : (isDark
+                            ? AppColors.warningDarkBg
+                            : AppColors.warning),
+                    actionLabel: resume != null ? 'Replace' : 'Upload',
+                    actionIcon: Icons.upload_file,
+                    onAction: _uploadingResume ? null : _uploadResume,
+                  ),
+                  const SizedBox(height: 16),
+                  if (resume == null)
+                    _ProfileEmptyState(
+                      icon: Icons.upload_file_rounded,
+                      title: 'No resume uploaded yet',
+                      subtitle:
+                          'PDF, DOC, DOCX, PNG, or JPG (max 10MB). Shared with employers when applying.',
+                      buttonLabel: 'Upload Resume',
+                      onAction: _uploadingResume ? () {} : _uploadResume,
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: tokens.surfaceMuted,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: tokens.cardBorderSoft),
                       ),
-                      if (resume != null)
-                        TextButton.icon(
-                          onPressed: _uploadingResume ? null : _removeResume,
-                          icon: Icon(
-                            Icons.delete_outline,
-                            size: 16,
-                            color: isDark
-                                ? AppColors.dangerLight
-                                : AppColors.danger,
+                      child: Row(
+                        children: [
+                          _buildFileIcon(
+                            resume,
+                            isDark: isDark,
+                            tokens: tokens,
                           ),
-                          label: Text(
-                            'Remove',
-                            style: TextStyle(
-                              fontSize: 12,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  resume['name'] ?? 'Resume',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: tokens.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _fileSubtitle(resume),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: tokens.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if ((resume['url'] as String? ?? '').isNotEmpty ||
+                              (resume['data'] as String? ?? '').isNotEmpty)
+                            IconButton(
+                              tooltip: 'View resume',
+                              icon: Icon(
+                                Icons.open_in_new,
+                                size: 20,
+                                color: tokens.primary,
+                              ),
+                              onPressed: () => _viewResumeFile(resume),
+                            ),
+                          IconButton(
+                            tooltip: 'Remove resume',
+                            icon: Icon(
+                              Icons.delete_outline,
+                              size: 20,
                               color: isDark
                                   ? AppColors.dangerLight
                                   : AppColors.danger,
                             ),
+                            onPressed:
+                                _uploadingResume ? null : _removeResume,
                           ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF3B1212)
-                              : const Color(0xFFFEE2E2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.description,
-                            color: isDark
-                                ? AppColors.dangerLight
-                                : AppColors.danger,
-                            size: 24,
-                          ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              resume == null
-                                  ? 'No resume uploaded yet'
-                                  : (resume['name'] ?? 'Resume'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: tokens.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _fileSubtitle(resume),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: tokens.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (resume != null &&
-                          (resume['url'] as String? ?? '').isNotEmpty)
-                        IconButton(
-                          tooltip: 'View resume',
-                          icon: Icon(
-                            Icons.open_in_new,
-                            size: 20,
-                            color: tokens.primary,
-                          ),
-                          onPressed: () => _viewDocument(
-                            resume['url'],
-                            resume['name'],
-                          ),
-                        ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: tokens.cardBackground,
-                          foregroundColor: tokens.primary,
-                          side: BorderSide(color: tokens.cardBorder),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        onPressed: _uploadingResume ? null : _uploadResume,
-                        child: _uploadingResume
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                resume == null ? 'Upload' : 'Replace',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                      ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Certifications Section (Supports multiple files)
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Certifications',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: tokens.textPrimary,
-                            ),
-                          ),
-                          if (certifications.isNotEmpty) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: tokens.primarySoftBg,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${certifications.length}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: tokens.primary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      if (certifications.isNotEmpty)
-                        TextButton.icon(
-                          onPressed: _uploadingCertification
-                              ? null
-                              : _uploadCertifications,
-                          icon: Icon(
-                            Icons.add,
-                            size: 16,
-                            color: tokens.primary,
-                          ),
-                          label: Text(
-                            'Add Files',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: tokens.primary,
-                            ),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                        ),
-                    ],
+                  _ProfileSectionHeader(
+                    icon: Icons.workspace_premium_outlined,
+                    iconColor:
+                        isDark ? AppColors.warningLight : AppColors.warning,
+                    iconBg: isDark
+                        ? AppColors.warningDarkBg
+                        : AppColors.warningBg,
+                    title: 'Certifications',
+                    badgeText: certifications.isNotEmpty
+                        ? '${certifications.length}'
+                        : null,
+                    actionLabel:
+                        certifications.isNotEmpty ? 'Add Files' : 'Upload',
+                    actionIcon: Icons.add,
+                    onAction: _uploadingCertification
+                        ? null
+                        : _uploadCertifications,
                   ),
                   const SizedBox(height: 16),
                   if (_uploadingCertification) ...[
@@ -1444,169 +2021,98 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ],
                   if (certifications.isEmpty)
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: tokens.primarySoftBg,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.workspace_premium,
-                              color: tokens.primary,
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'No certifications uploaded yet',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: tokens.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'PDF, DOC, DOCX, PNG, or JPG (max 10MB each)',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: tokens.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: tokens.cardBackground,
-                            foregroundColor: tokens.primary,
-                            side: BorderSide(color: tokens.cardBorder),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          onPressed: _uploadingCertification
-                              ? null
-                              : _uploadCertifications,
-                          child: _uploadingCertification
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text(
-                                  'Upload',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
-                      ],
+                    _ProfileEmptyState(
+                      icon: Icons.workspace_premium_outlined,
+                      title: 'No certifications uploaded',
+                      subtitle:
+                          'Upload TESDA, TVET, or global certificates to verify your expertise and boost match score.',
+                      buttonLabel: 'Upload Certification',
+                      onAction: _uploadingCertification
+                          ? () {}
+                          : _uploadCertifications,
                     )
                   else ...[
                     ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: certifications.length,
-                      separatorBuilder: (context, index) => Divider(
-                        height: 20,
-                        color: tokens.cardBorderSoft,
-                      ),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final cert = certifications[index];
                         final certUrl = (cert['url'] as String? ?? '').trim();
                         final certName =
                             cert['name'] ?? 'Certification ${index + 1}';
-                        return Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: tokens.primarySoftBg,
-                                borderRadius: BorderRadius.circular(8),
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: tokens.surfaceMuted,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: tokens.cardBorderSoft),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildFileIcon(
+                                cert,
+                                isDark: isDark,
+                                tokens: tokens,
                               ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.workspace_premium,
-                                  color: tokens.primary,
-                                  size: 22,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      certName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: tokens.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _fileSubtitle(
+                                        cert,
+                                        fallback:
+                                            'PDF, DOC, DOCX, PNG, or JPG',
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: tokens.textSecondary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    certName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: tokens.textPrimary,
-                                    ),
+                              if (certUrl.isNotEmpty ||
+                                  (cert['data'] as String? ?? '').isNotEmpty)
+                                IconButton(
+                                  tooltip: 'View certification',
+                                  icon: Icon(
+                                    Icons.open_in_new,
+                                    size: 20,
+                                    color: tokens.primary,
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _fileSubtitle(
-                                      cert,
-                                      fallback: 'PDF, DOC, DOCX, PNG, or JPG',
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: tokens.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (certUrl.isNotEmpty)
+                                  onPressed: () => _viewResumeFile(cert),
+                                ),
                               IconButton(
-                                tooltip: 'View certification',
+                                tooltip: 'Remove certification',
                                 icon: Icon(
-                                  Icons.open_in_new,
+                                  Icons.delete_outline,
                                   size: 20,
-                                  color: tokens.primary,
+                                  color: isDark
+                                      ? AppColors.dangerLight
+                                      : AppColors.danger,
                                 ),
-                                onPressed: () =>
-                                    _viewDocument(certUrl, certName),
+                                onPressed: _uploadingCertification
+                                    ? null
+                                    : () => _removeCertification(index),
                               ),
-                            IconButton(
-                              tooltip: 'Remove certification',
-                              icon: Icon(
-                                Icons.delete_outline,
-                                size: 20,
-                                color: isDark
-                                    ? AppColors.dangerLight
-                                    : AppColors.danger,
-                              ),
-                              onPressed: _uploadingCertification
-                                  ? null
-                                  : () => _removeCertification(index),
-                            ),
-                          ],
+                            ],
+                          ),
                         );
                       },
                     ),
@@ -1641,42 +2147,334 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
-class _ProfileInfoPill extends StatelessWidget {
+class _ProfileSectionHeader extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final bool highlight;
+  final Color? iconColor;
+  final Color? iconBg;
+  final String title;
+  final String? badgeText;
+  final Color? badgeColor;
+  final String? actionLabel;
+  final IconData? actionIcon;
+  final VoidCallback? onAction;
 
-  const _ProfileInfoPill({
+  const _ProfileSectionHeader({
     required this.icon,
-    required this.label,
-    this.highlight = false,
+    required this.title,
+    this.iconColor,
+    this.iconBg,
+    this.badgeText,
+    this.badgeColor,
+    this.actionLabel,
+    this.actionIcon,
+    this.onAction,
   });
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    final color = highlight ? tokens.primary : tokens.textSecondary;
+    final primaryColor = iconColor ?? tokens.primary;
+    final bgColor = iconBg ?? tokens.primarySoftBg;
+
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(
+            child: Icon(icon, size: 18, color: primaryColor),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: tokens.textPrimary,
+                  ),
+                ),
+              ),
+              if (badgeText != null && badgeText!.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: badgeColor ?? tokens.primarySoftBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    badgeText!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: badgeColor != null ? Colors.white : tokens.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (onAction != null && (actionLabel != null || actionIcon != null))
+          TextButton.icon(
+            onPressed: onAction,
+            icon: Icon(
+              actionIcon ?? Icons.edit_outlined,
+              size: 14,
+              color: tokens.primary,
+            ),
+            label: Text(
+              actionLabel ?? 'Edit',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: tokens.primary,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ProfileStrengthCard extends StatelessWidget {
+  final int percentage;
+  final Map<String, String> tip;
+  final VoidCallback onAction;
+
+  const _ProfileStrengthCard({
+    required this.percentage,
+    required this.tip,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    final isDark = context.isDarkMode;
+
+    String level;
+    Color levelColor;
+    Color levelBg;
+    if (percentage >= 85) {
+      level = 'All-Star';
+      levelColor = isDark ? AppColors.successLight : AppColors.success;
+      levelBg = isDark ? AppColors.successDarkBg : AppColors.successBg;
+    } else if (percentage >= 50) {
+      level = 'Intermediate';
+      levelColor = isDark ? AppColors.primaryLight : AppColors.primary;
+      levelBg = tokens.primarySoftBg;
+    } else {
+      level = 'Beginner';
+      levelColor = isDark ? AppColors.warningLight : AppColors.warning;
+      levelBg = isDark ? AppColors.warningDarkBg : AppColors.warningBg;
+    }
+
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: tokens.primarySoftBg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.insights_rounded,
+                      size: 16,
+                      color: tokens.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Profile Strength',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: tokens.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: levelBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$level • $percentage%',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: levelColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: percentage / 100.0,
+              minHeight: 8,
+              backgroundColor: tokens.surfaceMuted,
+              valueColor: AlwaysStoppedAnimation<Color>(levelColor),
+            ),
+          ),
+          if (percentage < 100 && (tip['tip'] ?? '').isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: tokens.surfaceMuted,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: tokens.cardBorderSoft),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome,
+                    size: 16,
+                    color: tokens.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      tip['tip'] ?? '',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tokens.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: onAction,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: tokens.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    child: Text(
+                      tip['action'] ?? 'Complete',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String buttonLabel;
+  final VoidCallback onAction;
+
+  const _ProfileEmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.buttonLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
     return Container(
-      constraints: const BoxConstraints(maxWidth: 220),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
         color: tokens.surfaceMuted,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: tokens.cardBorderSoft),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
         children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                color: color,
-                fontWeight: FontWeight.w500,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: tokens.cardBackground,
+              shape: BoxShape.circle,
+              border: Border.all(color: tokens.cardBorderSoft),
+            ),
+            child: Icon(icon, size: 24, color: tokens.textSecondary),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: tokens.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 12,
+              color: tokens.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onAction,
+            icon: const Icon(Icons.add, size: 14),
+            label: Text(buttonLabel),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: tokens.primary,
+              side: BorderSide(color: tokens.primary.withValues(alpha: 0.4)),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),
@@ -1686,40 +2484,76 @@ class _ProfileInfoPill extends StatelessWidget {
   }
 }
 
-class _AddInfoButton extends StatelessWidget {
+class _ProfileInfoPill extends StatelessWidget {
+  final IconData icon;
   final String label;
-  final VoidCallback onPressed;
+  final bool highlight;
+  final bool isPrompt;
+  final VoidCallback? onTap;
 
-  const _AddInfoButton({required this.label, required this.onPressed});
+  const _ProfileInfoPill({
+    required this.icon,
+    required this.label,
+    this.highlight = false,
+    this.isPrompt = false,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-        decoration: BoxDecoration(
-          color: tokens.surfaceMuted,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: tokens.cardBorderSoft),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add, size: 16, color: tokens.primary),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: tokens.primary,
-              ),
+    final color = highlight
+        ? tokens.primary
+        : (isPrompt ? tokens.textFaint : tokens.textSecondary);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 240),
+          decoration: BoxDecoration(
+            color: tokens.surfaceMuted,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isPrompt
+                  ? tokens.primary.withValues(alpha: 0.25)
+                  : tokens.cardBorderSoft,
             ),
-          ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: color,
+                    fontWeight: isPrompt ? FontWeight.w400 : FontWeight.w500,
+                    fontStyle: isPrompt ? FontStyle.italic : FontStyle.normal,
+                  ),
+                ),
+              ),
+              if (onTap != null &&
+                  !isPrompt &&
+                  (highlight ||
+                      icon == Icons.email_outlined ||
+                      icon == Icons.phone_outlined)) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_outward,
+                  size: 11,
+                  color: color.withValues(alpha: 0.6),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -1728,14 +2562,16 @@ class _AddInfoButton extends StatelessWidget {
 
 class _SkillTag extends StatelessWidget {
   final String skill;
+  final bool isVerified;
 
-  const _SkillTag({required this.skill});
+  const _SkillTag({required this.skill, this.isVerified = false});
 
   @override
   Widget build(BuildContext context) {
     return SkillChip(
       label: skill,
-      status: SkillChipStatus.neutral,
+      status: isVerified ? SkillChipStatus.verified : SkillChipStatus.neutral,
+      isVerified: isVerified,
       size: SkillChipSize.medium,
     );
   }
@@ -2466,6 +3302,7 @@ class _ExperienceItem extends StatelessWidget {
   final String company;
   final String description;
   final bool isActive;
+  final bool isLast;
 
   const _ExperienceItem({
     required this.year,
@@ -2473,76 +3310,128 @@ class _ExperienceItem extends StatelessWidget {
     required this.company,
     required this.description,
     required this.isActive,
+    this.isLast = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: isActive ? tokens.primary : tokens.cardBorder,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isActive ? tokens.primary : tokens.cardBorder,
-                  width: 3,
-                ),
-              ),
-            ),
-            Container(
-              width: 2,
-              height: 100,
-              color: tokens.cardBorderSoft,
-              margin: const EdgeInsets.symmetric(vertical: 4),
-            ),
-          ],
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
             children: [
-              Text(
-                year,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: tokens.textSecondary,
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: isActive ? tokens.primary : tokens.surfaceMuted,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isActive ? tokens.primary : tokens.cardBorder,
+                    width: 2.5,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: tokens.textPrimary,
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: tokens.cardBorderSoft,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                company,
-                style: TextStyle(fontSize: 14, color: tokens.textSecondary),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: tokens.textSecondary,
-                  height: 1.4,
-                ),
-              ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: tokens.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (isActive)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tokens.primarySoftBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Latest',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: tokens.primary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.business_outlined,
+                      size: 13,
+                      color: tokens.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        company,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: tokens.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (year.isNotEmpty && year != '—') ...[
+                      const SizedBox(width: 6),
+                      Text('•', style: TextStyle(color: tokens.textFaint)),
+                      const SizedBox(width: 6),
+                      Text(
+                        year,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: tokens.textFaint,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (description.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: tokens.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

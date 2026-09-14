@@ -13,6 +13,7 @@ import '../services/session_store.dart';
 import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/widgets.dart';
+import 'sign_in_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -28,31 +29,94 @@ class _DashboardPageState extends State<DashboardPage> {
   List<Job> _jobs = const [];
   List<JobApplication> _applications = const [];
 
+  String _cachedGreetingName = '';
+  double _cachedProfileCompletion = 0.0;
+  int _cachedAvgMatch = 0;
+  List<Job> _cachedTopMatches = const [];
+  List<int> _cachedWeeklyActivity = const [0, 0, 0, 0, 0, 0, 0];
+  List<String> _cachedWeeklyLabels = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  bool _cachedHasAnyAssessment = false;
+
+  void _recomputeDerivedMetrics() {
+    _cachedGreetingName = _greetingName();
+    _cachedProfileCompletion = _profileCompletion();
+    _cachedAvgMatch = _averageMatch();
+    _cachedTopMatches = _topMatches();
+    _cachedWeeklyActivity = _weeklyActivity();
+    _cachedWeeklyLabels = _weeklyLabels();
+    _cachedHasAnyAssessment = _hasAnyAssessment();
+  }
+
   @override
   void initState() {
     super.initState();
-    _load();
+    _recomputeDerivedMetrics();
+    _initFromCacheAndLoad();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  Future<void> _initFromCacheAndLoad() async {
+    // 1. Immediately hydrate from cache so the screen displays without delay
+    final cachedJobsRaw = await getCachedJobsRaw();
+    final cachedAppsRaw = await getCachedMyApplications();
+    if (!mounted) return;
+
+    if (cachedJobsRaw.isNotEmpty || _profile.isNotEmpty) {
+      final rawJobs = cachedJobsRaw.map(Job.fromJson).toList();
+      final applications = cachedAppsRaw.map(JobApplication.fromJson).toList();
+      final jobs = applyOwnSkillMatch(
+        jobs: rawJobs,
+        mySkillKeys: readMySkillKeys(_profile),
+      );
+      setState(() {
+        _jobs = jobs;
+        _applications = applications;
+        _loading = false;
+        _recomputeDerivedMetrics();
+      });
+    }
+
+    // 2. Fetch fresh data in background (silent if cache is already shown)
+    await _load(silent: _jobs.isNotEmpty);
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
-      final results = await Future.wait([
-        fetchMyProfile(),
-        fetchJobsRaw(),
-        fetchMyApplications(),
-      ]);
+      final profileFuture = fetchMyProfile().catchError((e) {
+        debugPrint('fetchMyProfile error: $e');
+        return _profile;
+      });
+      bool jobsFailed = false;
+      final jobsFuture = fetchJobsRaw().catchError((e) {
+        debugPrint('fetchJobsRaw error: $e');
+        jobsFailed = true;
+        return <Map<String, dynamic>>[];
+      });
+      bool appsFailed = false;
+      final appsFuture = fetchMyApplications().catchError((e) {
+        debugPrint('fetchMyApplications error: $e');
+        appsFailed = true;
+        return <Map<String, dynamic>>[];
+      });
+
+      final results = await Future.wait([profileFuture, jobsFuture, appsFuture]);
       if (!mounted) return;
       final profile = results[0] as Map<String, dynamic>;
-      final rawJobs = (results[1] as List<Map<String, dynamic>>)
-          .map(Job.fromJson)
-          .toList();
-      final applications = (results[2] as List<Map<String, dynamic>>)
-          .map(JobApplication.fromJson)
-          .toList();
+      final rawJobsList = results[1] as List<Map<String, dynamic>>;
+      final rawAppsList = results[2] as List<Map<String, dynamic>>;
+
+      final rawJobs = jobsFailed
+          ? _jobs
+          : rawJobsList.map(Job.fromJson).toList();
+      final applications = appsFailed
+          ? _applications
+          : rawAppsList.map(JobApplication.fromJson).toList();
+
       final jobs = applyOwnSkillMatch(
         jobs: rawJobs,
         mySkillKeys: readMySkillKeys(profile),
@@ -62,12 +126,16 @@ class _DashboardPageState extends State<DashboardPage> {
         _jobs = jobs;
         _applications = applications;
         _loading = false;
+        _error = null;
+        _recomputeDerivedMetrics();
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        if (_jobs.isEmpty) {
+          _error = e.toString();
+        }
       });
     }
   }
@@ -169,12 +237,12 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    final name = _greetingName();
+    final name = _cachedGreetingName;
     final applied = _applications.length;
     final matches = _jobs.length;
-    final avgMatch = _averageMatch();
-    final profileCompletion = _profileCompletion();
-    final topMatches = _topMatches();
+    final avgMatch = _cachedAvgMatch;
+    final profileCompletion = _cachedProfileCompletion;
+    final topMatches = _cachedTopMatches;
 
     return Scaffold(
       appBar: const AppTopBar(),
@@ -296,6 +364,23 @@ class _DashboardPageState extends State<DashboardPage> {
                             style: const TextStyle(color: AppColors.danger, fontSize: 13),
                           ),
                         ),
+                        if (SessionStore.token == null || SessionStore.token!.isEmpty)
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (_) => const SignInPage()),
+                                (_) => false,
+                              );
+                            },
+                            child: const Text(
+                              'Sign In',
+                              style: TextStyle(
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -353,7 +438,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(height: 20),
 
                 // Skill Assessment Banner
-                if (!_hasAnyAssessment()) ...[
+                if (!_cachedHasAnyAssessment) ...[
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -531,8 +616,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         child: CustomPaint(
                           size: Size.infinite,
                           painter: BarChartPainter(
-                            days: _weeklyLabels(),
-                            values: _weeklyActivity(),
+                            days: _cachedWeeklyLabels,
+                            values: _cachedWeeklyActivity,
                             emptyBarColor: tokens.cardBorderSoft,
                             gridColor: tokens.cardBorderSoft,
                             labelColor: tokens.textSecondary,

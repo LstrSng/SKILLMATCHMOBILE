@@ -37,6 +37,9 @@ class TrainingLinksList extends StatelessWidget {
             final isFree = (link.isFree == true) || link.label.toLowerCase().contains('free');
             final provider = link.provider;
             final type = link.type;
+            final isTesda = (provider?.toLowerCase().contains('tesda') ?? false) ||
+                (type?.toLowerCase().contains('tesda') ?? false) ||
+                link.label.toLowerCase().contains('tesda');
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -79,12 +82,15 @@ class TrainingLinksList extends StatelessWidget {
                               Row(
                                 children: [
                                   if (provider != null)
-                                    Text(
-                                      provider,
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w500,
-                                        color: tokens.textSecondary,
+                                    Flexible(
+                                      child: Text(
+                                        provider,
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: tokens.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   if (provider != null && type != null)
@@ -96,11 +102,14 @@ class TrainingLinksList extends StatelessWidget {
                                       ),
                                     ),
                                   if (type != null)
-                                    Text(
-                                      type,
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        color: tokens.textSecondary,
+                                    Flexible(
+                                      child: Text(
+                                        type,
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: tokens.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                 ],
@@ -109,6 +118,31 @@ class TrainingLinksList extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (isTesda) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: tokens.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: tokens.primary.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Text(
+                            'TESDA',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: tokens.primary,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ],
                       if (isFree) ...[
                         const SizedBox(width: 8),
                         Container(

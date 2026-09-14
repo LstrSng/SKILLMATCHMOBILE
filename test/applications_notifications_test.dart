@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skillmatch/models/job_application.dart';
 import 'package:skillmatch/services/notification_store.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('AppNotification Model Tests', () {
     test('serializes and deserializes type, targetId, and actionLabel correctly', () {
       final now = DateTime.now();
@@ -128,6 +130,60 @@ void main() {
       expect(withdrawnApp.isWithdrawn, isTrue);
       expect(withdrawnApp.isClosed, isTrue);
       expect(withdrawnApp.canWithdraw, isFalse, reason: 'Already withdrawn applicants cannot withdraw');
+    });
+
+    test('parses statusHistory step with MongoDB "at" timestamp field', () {
+      final json = {
+        'id': 'app-100',
+        'jobId': 'job-43',
+        'jobTitle': 'Backend Engineer',
+        'company': 'SkillMatch Corp',
+        'createdAt': '2026-08-20T10:00:00Z',
+        'status': 'Applied',
+        'statusHistory': [
+          {
+            'status': 'Applied',
+            'at': '2026-08-20T10:00:00Z',
+          },
+        ],
+      };
+
+      final app = JobApplication.fromJson(json);
+      expect(app.statusHistory.length, equals(1));
+      expect(app.statusHistory[0].date, equals(DateTime.parse('2026-08-20T10:00:00Z')));
+    });
+
+    test('NotificationStore unreadCount calculates based on isRead', () async {
+      SharedPreferences.setMockInitialValues({});
+      final n1 = AppNotification(
+        id: 'n1',
+        title: 'N1',
+        message: 'M1',
+        createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        isRead: false,
+      );
+      final n2 = AppNotification(
+        id: 'n2',
+        title: 'N2',
+        message: 'M2',
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        isRead: true,
+      );
+      final n3 = AppNotification(
+        id: 'n3',
+        title: 'N3',
+        message: 'M3',
+        createdAt: DateTime.now(),
+        isRead: false,
+      );
+
+      await NotificationStore.saveAll([n1, n2, n3]);
+      final count = await NotificationStore.getUnreadCount();
+      expect(count, equals(2));
+
+      await NotificationStore.markRead('n1');
+      final updatedCount = await NotificationStore.getUnreadCount();
+      expect(updatedCount, equals(1));
     });
   });
 }

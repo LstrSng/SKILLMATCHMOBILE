@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../models/skill_assessment.dart';
 import '../services/assessments_api.dart';
 import '../services/profile_api.dart';
+import '../services/session_store.dart';
 import '../services/skill_assessment_bank.dart';
 import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
@@ -39,7 +40,8 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
   List<AssessmentCategory> _categories = [];
   List<String> _tracks = ['All'];
   String _selectedTrack = 'All';
-  String _searchQuery = '';
+  String _debouncedQuery = '';
+  Timer? _searchDebounce;
   final TextEditingController _searchController = TextEditingController();
 
   _Step _step = _Step.categories;
@@ -54,6 +56,17 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
   Timer? _questionTimer;
   int _secondsRemaining = kQuestionTimeLimitSeconds;
 
+  void _onSearchChanged(String val) {
+    _searchDebounce?.cancel();
+    if (val.trim().isEmpty) {
+      setState(() => _debouncedQuery = '');
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) setState(() => _debouncedQuery = val.trim().toLowerCase());
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -61,7 +74,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
       _selectedTrack = widget.initialTrack!;
     }
     if (widget.initialSkill != null && widget.initialSkill!.isNotEmpty) {
-      _searchQuery = widget.initialSkill!;
+      _debouncedQuery = widget.initialSkill!.trim().toLowerCase();
       _searchController.text = widget.initialSkill!;
     }
     _load();
@@ -69,6 +82,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _stopQuestionTimer();
     _searchController.dispose();
     super.dispose();
@@ -111,7 +125,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 2),
-          backgroundColor: selected >= 0 ? AppColors.primary : AppColors.warning,
+          backgroundColor: selected >= 0
+              ? AppColors.primary
+              : AppColors.warning,
           content: Text(
             selected >= 0
                 ? "Time's up! Submitted your selected answer."
@@ -165,7 +181,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
           dbCategories = remote;
         }
       } catch (apiErr) {
-        debugPrint('Live API fetch skipped: $apiErr (using preloaded PSF database bank)');
+        debugPrint(
+          'Live API fetch skipped: $apiErr (using preloaded PSF database bank)',
+        );
       }
 
       // Collect unique tracks
@@ -200,7 +218,8 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
           (c) => c.key == widget.initialRoleId || c.id == widget.initialRoleId,
           orElse: () => dbCategories.first,
         );
-        if (match.key == widget.initialRoleId || match.id == widget.initialRoleId) {
+        if (match.key == widget.initialRoleId ||
+            match.id == widget.initialRoleId) {
           _startCategory(match);
         }
       }
@@ -233,7 +252,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
     if (fullCategory.questions.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No questions available for this assessment yet.')),
+        const SnackBar(
+          content: Text('No questions available for this assessment yet.'),
+        ),
       );
       return;
     }
@@ -287,6 +308,27 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
     _startQuestionTimer();
   }
 
+  List<Map<String, dynamic>> _collectEngineAnswers() {
+    final answers = <Map<String, dynamic>>[];
+    final engine = _engine;
+    if (engine == null) return answers;
+
+    for (final r in engine.recordedAnswers) {
+      final opt =
+          (r.selectedIndex >= 0 && r.selectedIndex < r.question.options.length)
+          ? r.question.options[r.selectedIndex]
+          : '';
+      answers.add({
+        'questionId': r.question.source.id,
+        'selectedAnswer': opt,
+        'selectedIndex': r.selectedIndex,
+        'isCorrect': r.isCorrect,
+        'prompt': r.question.source.text,
+      });
+    }
+    return answers;
+  }
+
   Future<void> _autoSaveResult(AssessmentResult result) async {
     try {
       final category = _activeCategory;
@@ -294,21 +336,37 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
           ? category!.id
           : (category?.key ?? result.categoryKey);
 
+      final answers = _collectEngineAnswers();
+
       // Save via dedicated assessment submit API in MongoDB
-      await submitAssessment(
+      final res = await submitAssessment(
         assessmentId: categoryId,
         correctCount: result.correctCount,
         totalCount: result.totalCount,
+        answers: answers,
       );
 
-      // Also merge to local profile data
-      final mergedProfile = mergeAssessmentResult(_profileData, result);
-      await updateMyProfile({'profile': mergedProfile});
+      // Synchronize SessionStore and local profile without wiping out other fields
+      Map<String, dynamic> updatedProfile = mergeAssessmentResult(
+        _profileData,
+        result,
+      );
+      if (res['user'] is Map) {
+        final userDoc = Map<String, dynamic>.from(res['user'] as Map);
+        if (userDoc['profile'] is Map) {
+          updatedProfile = Map<String, dynamic>.from(userDoc['profile'] as Map);
+        }
+        await SessionStore.updateUser(userDoc);
+      } else if (SessionStore.user != null) {
+        final currentUser = Map<String, dynamic>.from(SessionStore.user!);
+        currentUser['profile'] = updatedProfile;
+        await SessionStore.updateUser(currentUser);
+      }
 
       if (!mounted) return;
       setState(() {
-        _profileData = mergedProfile;
-        _results = readAssessmentResults(mergedProfile);
+        _profileData = updatedProfile;
+        _results = readAssessmentResults(updatedProfile);
       });
     } catch (e) {
       debugPrint('Auto-save assessment error: $e');
@@ -328,22 +386,37 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
           ? category!.id
           : (category?.key ?? result.categoryKey);
 
+      final answers = _collectEngineAnswers();
+
       // 1. Submit to MongoDB assessments collection backend
-      await submitAssessment(
+      final res = await submitAssessment(
         assessmentId: categoryId,
         correctCount: result.correctCount,
         totalCount: result.totalCount,
+        answers: answers,
       );
 
-      // 2. Persist to user profile document in MongoDB
-      final mergedProfile = mergeAssessmentResult(_profileData, result);
-      final updated = await updateMyProfile({'profile': mergedProfile});
+      // 2. Synchronize SessionStore and local profile
+      Map<String, dynamic> updatedProfile = mergeAssessmentResult(
+        _profileData,
+        result,
+      );
+      if (res['user'] is Map) {
+        final userDoc = Map<String, dynamic>.from(res['user'] as Map);
+        if (userDoc['profile'] is Map) {
+          updatedProfile = Map<String, dynamic>.from(userDoc['profile'] as Map);
+        }
+        await SessionStore.updateUser(userDoc);
+      } else if (SessionStore.user != null) {
+        final currentUser = Map<String, dynamic>.from(SessionStore.user!);
+        currentUser['profile'] = updatedProfile;
+        await SessionStore.updateUser(currentUser);
+      }
 
       if (!mounted) return;
-      final profileData = _asStringKeyed(updated['profile']);
       setState(() {
-        _profileData = profileData;
-        _results = readAssessmentResults(profileData);
+        _profileData = updatedProfile;
+        _results = readAssessmentResults(updatedProfile);
         _saving = false;
       });
 
@@ -354,16 +427,18 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                 ? 'Score saved to your profile and visible to employers!'
                 : 'Assessment results recorded to your profile.',
           ),
-          backgroundColor: result.passed ? AppColors.success : AppColors.primary,
+          backgroundColor: result.passed
+              ? AppColors.success
+              : AppColors.primary,
         ),
       );
       _exitToCategories();
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save result: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save result: $e')));
     }
   }
 
@@ -375,7 +450,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (dialogCtx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text('Exit Assessment?'),
           content: const Text(
             'Your progress for this assessment will be lost if you leave now.',
@@ -417,12 +494,13 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
 
   List<AssessmentCategory> get _filteredCategories {
     return _categories.where((c) {
-      final matchesTrack = _selectedTrack == 'All' ||
+      final matchesTrack =
+          _selectedTrack == 'All' ||
           c.track.toLowerCase() == _selectedTrack.toLowerCase();
       if (!matchesTrack) return false;
 
-      if (_searchQuery.trim().isEmpty) return true;
-      final q = _searchQuery.toLowerCase();
+      if (_debouncedQuery.isEmpty) return true;
+      final q = _debouncedQuery;
       return c.label.toLowerCase().contains(q) ||
           c.title.toLowerCase().contains(q) ||
           c.track.toLowerCase().contains(q) ||
@@ -476,30 +554,34 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.cloud_off_rounded, size: 48, color: tokens.textFaint),
-                          const SizedBox(height: 12),
-                          Text(
-                            _error!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: tokens.textSecondary),
-                          ),
-                          const SizedBox(height: 16),
-                          FilledButton.icon(
-                            onPressed: _load,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
-                          ),
-                        ],
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.cloud_off_rounded,
+                        size: 48,
+                        color: tokens.textFaint,
                       ),
-                    ),
-                  )
-                : _buildStep(context),
+                      const SizedBox(height: 12),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: tokens.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: _load,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : _buildStep(context),
       ),
     );
   }
@@ -532,279 +614,346 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: SingleChildScrollView(
+      child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Hero
-            const Text(
-              'Philippine Skills Framework (PSF-SDS)',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Verify Your Competencies',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: tokens.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Take standardized multiple-choice assessments designed for IT & Design roles. '
-              'Scores and verified badges are saved to your profile and displayed directly to employers.',
-              style: TextStyle(fontSize: 13, color: tokens.textSecondary, height: 1.4),
-            ),
-            const SizedBox(height: 16),
-
-            // Search Bar
-            TextField(
-              controller: _searchController,
-              onChanged: (v) => setState(() => _searchQuery = v),
-              decoration: InputDecoration(
-                hintText: 'Search roles, skills, or tracks...',
-                prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: tokens.cardBackground,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: tokens.cardBorderSoft),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: tokens.cardBorderSoft),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Track Filter Pills
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _tracks.map((track) {
-                  final isSelected = _selectedTrack == track;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      selected: isSelected,
-                      label: Text(track),
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? Colors.white : tokens.textSecondary,
-                      ),
-                      backgroundColor: tokens.cardBackground,
-                      selectedColor: AppColors.primary,
-                      checkmarkColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: isSelected ? AppColors.primary : tokens.cardBorderSoft,
-                        ),
-                      ),
-                      onSelected: (_) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _selectedTrack = track);
-                      },
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Hero
+                  const Text(
+                    'Philippine Skills Framework (PSF-SDS)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                      letterSpacing: 0.5,
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Assessments Count
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${filtered.length} Assessment${filtered.length == 1 ? '' : 's'} available',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: tokens.textFaint,
                   ),
-                ),
-                if (_results.isNotEmpty)
+                  const SizedBox(height: 4),
                   Text(
-                    '${_results.length} Completed',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.success,
+                    'Verify Your Competencies',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: tokens.textPrimary,
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Assessment Records Summary
-            if (_results.isNotEmpty) ...[
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.verified_rounded,
-                              size: 18,
-                              color: AppColors.success,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Assessment Records (${_results.length})',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: tokens.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.successBg,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: const Text(
-                            'Saved to Profile',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.success,
-                            ),
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 6),
+                  Text(
+                    'Take standardized multiple-choice assessments designed for IT & Design roles. '
+                    'Scores and verified badges are saved to your profile and displayed directly to employers.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: tokens.textSecondary,
+                      height: 1.4,
                     ),
-                    const SizedBox(height: 10),
-                    const Divider(height: 1),
-                    const SizedBox(height: 10),
-                    for (final res in _results.values.toList().take(4)) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: res.passed ? AppColors.successBg : AppColors.warningBg,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                res.passed ? Icons.check : Icons.priority_high,
-                                size: 12,
-                                color: res.passed ? AppColors.success : AppColors.warning,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Search Bar
+                  TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search roles, skills, or tracks...',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _searchController,
+                        builder: (context, value, _) {
+                          if (value.text.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () {
+                              _searchDebounce?.cancel();
+                              _searchController.clear();
+                              setState(() => _debouncedQuery = '');
+                            },
+                          );
+                        },
+                      ),
+                      filled: true,
+                      fillColor: tokens.cardBackground,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: tokens.cardBorderSoft),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: tokens.cardBorderSoft),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Track Filter Pills
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _tracks.map((track) {
+                        final isSelected = _selectedTrack == track;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            selected: isSelected,
+                            label: Text(track),
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : tokens.textSecondary,
+                            ),
+                            backgroundColor: tokens.cardBackground,
+                            selectedColor: AppColors.primary,
+                            checkmarkColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : tokens.cardBorderSoft,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            onSelected: (_) {
+                              HapticFeedback.selectionClick();
+                              setState(() => _selectedTrack = track);
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Assessments Count
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${filtered.length} Assessment${filtered.length == 1 ? '' : 's'} available',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: tokens.textFaint,
+                        ),
+                      ),
+                      if (_results.isNotEmpty)
+                        Text(
+                          '${_results.length} Completed',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.success,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Assessment Records Summary
+                  if (_results.isNotEmpty) ...[
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
                                 children: [
+                                  const Icon(
+                                    Icons.verified_rounded,
+                                    size: 18,
+                                    color: AppColors.success,
+                                  ),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    res.roleTitle?.isNotEmpty == true
-                                        ? res.roleTitle!
-                                        : res.categoryKey,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    'Assessment Records (${_results.length})',
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
                                       color: tokens.textPrimary,
                                     ),
                                   ),
-                                  Text(
-                                    'Score: ${res.scorePercentage}% • Recorded on ${res.formattedDateOnly}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: tokens.textFaint,
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.successBg,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: const Text(
+                                  'Saved to Profile',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.success,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          const Divider(height: 1),
+                          const SizedBox(height: 10),
+                          for (final res in _results.values.toList().take(
+                            4,
+                          )) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: res.passed
+                                          ? AppColors.successBg
+                                          : AppColors.warningBg,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      res.passed
+                                          ? Icons.check
+                                          : Icons.priority_high,
+                                      size: 12,
+                                      color: res.passed
+                                          ? AppColors.success
+                                          : AppColors.warning,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          res.roleTitle?.isNotEmpty == true
+                                              ? res.roleTitle!
+                                              : res.categoryKey,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: tokens.textPrimary,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Score: ${res.scorePercentage}% • Recorded on ${res.formattedDateOnly}',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: tokens.textFaint,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: res.passed
+                                          ? AppColors.successBg
+                                          : AppColors.warningBg,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '${res.scorePercentage}%',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: res.passed
+                                            ? AppColors.success
+                                            : AppColors.warning,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: res.passed ? AppColors.successBg : AppColors.warningBg,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${res.scorePercentage}%',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: res.passed ? AppColors.success : AppColors.warning,
-                                ),
-                              ),
-                            ),
                           ],
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
+                    const SizedBox(height: 14),
                   ],
-                ),
+                ],
               ),
-              const SizedBox(height: 14),
-            ],
+            ),
+          ),
 
-            // Assessments List
-            if (filtered.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Column(
-                    children: [
-                      Icon(Icons.search_off_rounded, size: 48, color: tokens.textFaint),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No assessments found matching "$_searchQuery"',
-                        style: TextStyle(color: tokens.textSecondary),
-                      ),
-                    ],
+          // Assessments List
+          if (filtered.isEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 48,
+                          color: tokens.textFaint,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _debouncedQuery.isNotEmpty
+                              ? 'No assessments found matching "$_debouncedQuery"'
+                              : 'No assessments found.',
+                          style: TextStyle(color: tokens.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              )
-            else
-              for (final category in filtered) ...[
-                _DbAssessmentCard(
-                  category: category,
-                  result: _results[category.key] ?? _results[category.id],
-                  onTap: () => _startCategory(category),
-                ),
-                const SizedBox(height: 12),
-              ],
-          ],
-        ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList.separated(
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final category = filtered[index];
+                  return _DbAssessmentCard(
+                    category: category,
+                    result: _results[category.key] ?? _results[category.id],
+                    onTap: () => _startCategory(category),
+                  );
+                },
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
       ),
     );
   }
@@ -821,18 +970,20 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
     final currentQNumber = engine.askedCount + 1;
     final progress = (engine.askedCount / totalQ).clamp(0.0, 1.0);
 
-    final timerProgress =
-        (_secondsRemaining / kQuestionTimeLimitSeconds).clamp(0.0, 1.0);
+    final timerProgress = (_secondsRemaining / kQuestionTimeLimitSeconds).clamp(
+      0.0,
+      1.0,
+    );
     final timerColor = _secondsRemaining <= 5
         ? AppColors.danger
         : _secondsRemaining <= 10
-            ? AppColors.warning
-            : AppColors.primary;
+        ? AppColors.warning
+        : AppColors.primary;
     final timerBg = _secondsRemaining <= 5
         ? AppColors.dangerBg
         : _secondsRemaining <= 10
-            ? AppColors.warningBg
-            : AppColors.primarySoftBg;
+        ? AppColors.warningBg
+        : AppColors.primarySoftBg;
 
     final diffColor = switch (question.source.difficulty) {
       1 => AppColors.success,
@@ -859,7 +1010,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                 value: progress,
                 minHeight: 6,
                 backgroundColor: tokens.cardBorderSoft,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.primary,
+                ),
               ),
             ),
             const SizedBox(height: 5),
@@ -891,7 +1044,10 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                   children: [
                     // 30s Countdown Timer Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: timerBg,
                         borderRadius: BorderRadius.circular(999),
@@ -924,7 +1080,10 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                     ),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: diffBg,
                         borderRadius: BorderRadius.circular(999),
@@ -948,7 +1107,10 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
             if (question.source.competency.isNotEmpty)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: tokens.surfaceMuted,
                   borderRadius: BorderRadius.circular(8),
@@ -956,7 +1118,11 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.workspace_premium_outlined, size: 16, color: AppColors.primary),
+                    const Icon(
+                      Icons.workspace_premium_outlined,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -1019,8 +1185,13 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                   ),
                 ),
                 child: Text(
-                  currentQNumber >= totalQ ? 'Submit Assessment' : 'Next Question',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  currentQNumber >= totalQ
+                      ? 'Submit Assessment'
+                      : 'Next Question',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -1066,7 +1237,10 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: statusBg,
                               borderRadius: BorderRadius.circular(999),
@@ -1132,7 +1306,10 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                 // Official Assessment Record Banner
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: tokens.surfaceMuted,
                     borderRadius: BorderRadius.circular(8),
@@ -1141,7 +1318,11 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.event_available_rounded, size: 15, color: AppColors.primary),
+                      const Icon(
+                        Icons.event_available_rounded,
+                        size: 15,
+                        color: AppColors.primary,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Score Record Date: ${result.formattedDate}',
@@ -1165,11 +1346,17 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
             decoration: BoxDecoration(
               color: AppColors.primarySoftBg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.2),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 22),
+                const Icon(
+                  Icons.verified_user_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -1202,10 +1389,14 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                       ),
                     )
                   : const Icon(Icons.check_circle_outline, size: 20),
-              label: Text(_saving ? 'Syncing with database...' : 'Save & Finish'),
+              label: Text(
+                _saving ? 'Syncing with database...' : 'Save & Finish',
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -1219,7 +1410,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                   onPressed: () => _startCategory(category),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text('Retake Quiz'),
                 ),
@@ -1241,7 +1434,10 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
               onTap: () => setState(() => _showReview = !_showReview),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: tokens.cardBackground,
                   borderRadius: BorderRadius.circular(12),
@@ -1253,7 +1449,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                     Row(
                       children: [
                         Icon(
-                          _showReview ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          _showReview
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           size: 18,
                           color: AppColors.primary,
                         ),
@@ -1269,7 +1467,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                       ],
                     ),
                     Icon(
-                      _showReview ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      _showReview
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
                       color: tokens.textSecondary,
                     ),
                   ],
@@ -1311,7 +1511,11 @@ class _StatColumn extends StatelessWidget {
       children: [
         Text(
           value,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
         ),
         const SizedBox(height: 2),
         Text(
@@ -1413,10 +1617,14 @@ class _DbAssessmentCard extends StatelessWidget {
     if (t.contains('ui') || t.contains('design') || t.contains('product')) {
       return Icons.palette_outlined;
     }
-    if (t.contains('software') || t.contains('engineering') || t.contains('architecture')) {
+    if (t.contains('software') ||
+        t.contains('engineering') ||
+        t.contains('architecture')) {
       return Icons.code_rounded;
     }
-    if (t.contains('infrastructure') || t.contains('cloud') || t.contains('operations')) {
+    if (t.contains('infrastructure') ||
+        t.contains('cloud') ||
+        t.contains('operations')) {
       return Icons.cloud_outlined;
     }
     if (t.contains('security') || t.contains('cyber') || t.contains('audit')) {
@@ -1425,7 +1633,9 @@ class _DbAssessmentCard extends StatelessWidget {
     if (t.contains('qa') || t.contains('testing') || t.contains('quality')) {
       return Icons.bug_report_outlined;
     }
-    if (t.contains('business') || t.contains('analysis') || t.contains('delivery')) {
+    if (t.contains('business') ||
+        t.contains('analysis') ||
+        t.contains('delivery')) {
       return Icons.analytics_outlined;
     }
     return Icons.quiz_outlined;
@@ -1489,9 +1699,14 @@ class _DbAssessmentCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: result!.passed ? AppColors.successBg : AppColors.warningBg,
+                        color: result!.passed
+                            ? AppColors.successBg
+                            : AppColors.warningBg,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -1499,7 +1714,9 @@ class _DbAssessmentCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: result!.passed ? AppColors.success : AppColors.warning,
+                          color: result!.passed
+                              ? AppColors.success
+                              : AppColors.warning,
                         ),
                       ),
                     ),
@@ -1534,9 +1751,15 @@ class _DbAssessmentCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _MetaPill(icon: Icons.help_outline_rounded, label: '$questionsCount questions'),
+              _MetaPill(
+                icon: Icons.help_outline_rounded,
+                label: '$questionsCount questions',
+              ),
               const SizedBox(width: 8),
-              const _MetaPill(icon: Icons.timer_outlined, label: '30s / question'),
+              const _MetaPill(
+                icon: Icons.timer_outlined,
+                label: '30s / question',
+              ),
               const SizedBox(width: 8),
               _MetaPill(
                 icon: Icons.check_circle_outline,
@@ -1555,7 +1778,11 @@ class _DbAssessmentCard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.history_rounded, size: 12, color: tokens.textSecondary),
+                  Icon(
+                    Icons.history_rounded,
+                    size: 12,
+                    color: tokens.textSecondary,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'Score: ${result!.scorePercentage}% • Recorded on ${result!.formattedDate}',
@@ -1621,10 +1848,14 @@ class _AnswerReviewTile extends StatelessWidget {
     final tokens = context.appColors;
     final q = record.question;
     final isCorrect = record.isCorrect;
-    final userOption = record.selectedIndex >= 0 && record.selectedIndex < q.options.length
+    final userOption =
+        record.selectedIndex >= 0 && record.selectedIndex < q.options.length
         ? q.options[record.selectedIndex]
-        : (record.selectedIndex == -1 ? 'Timed out (No answer)' : 'None selected');
-    final correctOption = q.correctIndex >= 0 && q.correctIndex < q.options.length
+        : (record.selectedIndex == -1
+              ? 'Timed out (No answer)'
+              : 'None selected');
+    final correctOption =
+        q.correctIndex >= 0 && q.correctIndex < q.options.length
         ? q.options[q.correctIndex]
         : '';
 
@@ -1634,7 +1865,9 @@ class _AnswerReviewTile extends StatelessWidget {
         color: tokens.cardBackground,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isCorrect ? AppColors.success.withValues(alpha: 0.3) : AppColors.danger.withValues(alpha: 0.3),
+          color: isCorrect
+              ? AppColors.success.withValues(alpha: 0.3)
+              : AppColors.danger.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -1666,7 +1899,11 @@ class _AnswerReviewTile extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             q.source.text,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: tokens.textPrimary),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: tokens.textPrimary,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -1698,7 +1935,11 @@ class _AnswerReviewTile extends StatelessWidget {
               ),
               child: Text(
                 '💡 Explanation: ${q.source.explanation}',
-                style: TextStyle(fontSize: 11, color: tokens.textSecondary, height: 1.3),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: tokens.textSecondary,
+                  height: 1.3,
+                ),
               ),
             ),
           ],

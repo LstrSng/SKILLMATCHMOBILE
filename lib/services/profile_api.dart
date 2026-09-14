@@ -9,7 +9,7 @@ import 'session_store.dart';
 
 Uri _meUri() => Uri.parse('$kApiBaseUrl/api/me');
 
-const _kTimeout = Duration(seconds: 90);
+const _kTimeout = Duration(seconds: 20);
 
 Future<T> _withNetworkErrors<T>(Future<T> Function() run) async {
   try {
@@ -32,9 +32,23 @@ String _apiErrorMessage(String fallback, String body) {
   return fallback;
 }
 
+Future<Map<String, dynamic>>? _inFlightFetchProfile;
+
+/// Clears in-flight profile fetch future.
+void clearProfileCache() {
+  _inFlightFetchProfile = null;
+}
+
 Future<Map<String, dynamic>> fetchMyProfile() async {
-  return _withNetworkErrors(() async {
+  final inFlight = _inFlightFetchProfile;
+  if (inFlight != null) return inFlight;
+
+  final future = _withNetworkErrors(() async {
     final res = await authedGet(_meUri());
+    if (res.statusCode == 401) {
+      await SessionStore.clear();
+      throw AuthedException('Invalid auth token.', statusCode: 401);
+    }
     if (res.statusCode < 200 || res.statusCode >= 300) {
       final message = _apiErrorMessage(
         'Could not load profile (${res.statusCode}).',
@@ -50,6 +64,13 @@ Future<Map<String, dynamic>> fetchMyProfile() async {
     await SessionStore.updateUser(map);
     return map;
   });
+
+  _inFlightFetchProfile = future;
+  try {
+    return await future;
+  } finally {
+    _inFlightFetchProfile = null;
+  }
 }
 
 Future<Map<String, dynamic>> updateMyProfile(Map<String, dynamic> patch) async {

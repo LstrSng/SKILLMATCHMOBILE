@@ -103,7 +103,8 @@ class ApplicationStatusStep {
   });
 
   factory ApplicationStatusStep.fromJson(Map<String, dynamic> json) {
-    final rawDate = (json['date'] as Object?)?.toString().trim() ??
+    final rawDate = (json['at'] as Object?)?.toString().trim() ??
+        (json['date'] as Object?)?.toString().trim() ??
         (json['updatedAt'] as Object?)?.toString().trim() ??
         '';
     return ApplicationStatusStep(

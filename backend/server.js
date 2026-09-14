@@ -237,6 +237,13 @@ const JOBS_QUERY_LIMIT = Math.min(
   500
 );
 
+function stripLevelSuffix(str) {
+  return String(str || "")
+    .trim()
+    .replace(/\s*\(?\s*(?:level\s*\d+|lvl\s*\d+|beginner|intermediate|advanced|basic|expert)\s*\)?\s*$/i, "")
+    .trim();
+}
+
 // Mobile match analytics: compare applicant skills vs. job skills
 app.get(
   "/api/mobile/match/:applicantId/:jobId",
@@ -261,26 +268,44 @@ app.get(
 
       const job = normalizeJobDoc(jobDoc);
 
-      // Collect job skill candidates
-      const jobSkills = Array.isArray(job.matchedSkills) && job.matchedSkills.length
-        ? job.matchedSkills
-        : Array.isArray(job.unmatchedSkills) && job.unmatchedSkills.length
-        ? [...job.matchedSkills, ...job.unmatchedSkills]
-        : [];
+      // Collect job skill candidates (both matched and unmatched)
+      const allSkills = [
+        ...(Array.isArray(job.matchedSkills) ? job.matchedSkills : []),
+        ...(Array.isArray(job.unmatchedSkills) ? job.unmatchedSkills : []),
+      ];
+      const seen = new Set();
+      const jobSkills = [];
+      for (const s of allSkills) {
+        const norm = String(s ?? "").trim();
+        if (!norm) continue;
+        const key = norm.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          jobSkills.push(norm);
+        }
+      }
 
       const applicantSkills = Array.isArray(applicant.skills)
         ? applicant.skills.map((s) => String(s).trim()).filter(Boolean)
         : [];
 
-      const lowerApplicant = new Set(applicantSkills.map((s) => s.toLowerCase()));
+      const lowerApplicant = new Set(
+        applicantSkills.flatMap((s) => [s.toLowerCase(), stripLevelSuffix(s).toLowerCase()])
+      );
 
       const matchedSkills = [];
       const missingSkills = [];
       for (const s of jobSkills) {
         const raw = String(s ?? "").trim();
         if (!raw) continue;
-        if (lowerApplicant.has(raw.toLowerCase())) matchedSkills.push(raw);
-        else missingSkills.push(raw);
+        if (
+          lowerApplicant.has(raw.toLowerCase()) ||
+          lowerApplicant.has(stripLevelSuffix(raw).toLowerCase())
+        ) {
+          matchedSkills.push(raw);
+        } else {
+          missingSkills.push(raw);
+        }
       }
 
       const total = matchedSkills.length + missingSkills.length;
@@ -358,7 +383,12 @@ app.get("/api/jobs", requireDb, async (req, res) => {
     }
 
     const applicantSkillsSet = applicant && Array.isArray(applicant.skills)
-      ? new Set(applicant.skills.map((s) => String(s).trim().toLowerCase()))
+      ? new Set(
+          applicant.skills
+            .map((s) => String(s).trim().toLowerCase())
+            .filter(Boolean)
+            .flatMap((s) => [s, stripLevelSuffix(s).toLowerCase()])
+        )
       : null;
 
     const jobs = raw.map((doc) => {
@@ -366,19 +396,35 @@ app.get("/api/jobs", requireDb, async (req, res) => {
       const job = normalizeJobDoc(doc, poster);
 
       if (applicantSkillsSet) {
-        const jobSkills = (Array.isArray(job.matchedSkills) && job.matchedSkills.length)
-          ? job.matchedSkills
-          : (Array.isArray(job.unmatchedSkills) && job.unmatchedSkills.length)
-            ? [...job.matchedSkills, ...job.unmatchedSkills]
-            : [];
+        const allSkills = [
+          ...(Array.isArray(job.matchedSkills) ? job.matchedSkills : []),
+          ...(Array.isArray(job.unmatchedSkills) ? job.unmatchedSkills : []),
+        ];
+        const seen = new Set();
+        const jobSkills = [];
+        for (const s of allSkills) {
+          const norm = String(s ?? "").trim();
+          if (!norm) continue;
+          const key = norm.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            jobSkills.push(norm);
+          }
+        }
 
         const matchedSkills = [];
         const missingSkills = [];
         for (const s of jobSkills) {
           const rawSkill = String(s ?? "").trim();
           if (!rawSkill) continue;
-          if (applicantSkillsSet.has(rawSkill.toLowerCase())) matchedSkills.push(rawSkill);
-          else missingSkills.push(rawSkill);
+          if (
+            applicantSkillsSet.has(rawSkill.toLowerCase()) ||
+            applicantSkillsSet.has(stripLevelSuffix(rawSkill).toLowerCase())
+          ) {
+            matchedSkills.push(rawSkill);
+          } else {
+            missingSkills.push(rawSkill);
+          }
         }
 
         const total = matchedSkills.length + missingSkills.length;
@@ -692,9 +738,41 @@ app.post("/api/assessments/:id/submit", requireDb, async (req, res) => {
     }
 
     const body = req.body ?? {};
-    const correctCount = Number(body.correctCount) || 0;
-    const totalCount = Number(body.totalCount) || (doc?.questions?.length ?? 0) || 1;
-    const percentage = Math.round((correctCount / totalCount) * 100);
+    let correctCount = 0;
+    let totalCount = Array.isArray(doc?.questions) && doc.questions.length > 0
+      ? doc.questions.length
+      : Math.max(1, Number(body.totalCount) || 1);
+
+    if (Array.isArray(body.answers) && doc?.questions?.length) {
+      totalCount = doc.questions.length;
+      let computedCorrect = 0;
+      for (const ans of body.answers) {
+        if (!ans) continue;
+        const qId = String(ans.questionId || "").trim();
+        const selAns = String(ans.selectedAnswer ?? "").trim().toLowerCase();
+        const q = doc.questions.find(
+          (item) =>
+            (qId && (item.questionId === qId || String(item._id) === qId)) ||
+            (ans.prompt && item.prompt && item.prompt.trim() === ans.prompt.trim())
+        );
+        if (q) {
+          const target = String(q.correctAnswer ?? "").trim().toLowerCase();
+          if (selAns && target && selAns === target) {
+            computedCorrect += 1;
+          } else if (ans.isCorrect === true && !selAns) {
+            computedCorrect += 1;
+          }
+        } else if (ans.isCorrect === true) {
+          computedCorrect += 1;
+        }
+      }
+      correctCount = Math.min(computedCorrect, totalCount);
+    } else {
+      correctCount = Math.max(0, Math.min(Number(body.correctCount) || 0, totalCount));
+      totalCount = Math.max(1, Number(body.totalCount) || totalCount);
+    }
+
+    const percentage = Math.max(0, Math.min(100, Math.round((correctCount / totalCount) * 100)));
     const passingThreshold = Number(doc?.passingScorePercentage) || 70;
     const passed = percentage >= passingThreshold;
 
@@ -1182,7 +1260,34 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
       }
     }
     if (body.profile !== undefined && body.profile && typeof body.profile === "object") {
-      patch.profile = body.profile;
+      const existingProfile = (req.user.profile && typeof req.user.profile === "object")
+        ? req.user.profile
+        : {};
+      patch.profile = {
+        ...existingProfile,
+        ...body.profile,
+        skillAssessments: {
+          ...(existingProfile.skillAssessments || {}),
+          ...(body.profile.skillAssessments || {}),
+        },
+      };
+      if (Array.isArray(body.profile.certifications)) {
+        patch.profile.certifications = body.profile.certifications;
+      } else if (existingProfile.certifications) {
+        patch.profile.certifications = existingProfile.certifications;
+      }
+      if (Array.isArray(body.profile.assessmentRecords)) {
+        patch.profile.assessmentRecords = body.profile.assessmentRecords;
+      } else if (existingProfile.assessmentRecords) {
+        patch.profile.assessmentRecords = existingProfile.assessmentRecords;
+      }
+      if (body.profile.resume !== undefined) {
+        patch.profile.resume = body.profile.resume;
+      } else if (body.profile.removeResume === true || body.removeResume === true) {
+        patch.profile.resume = null;
+      } else if (existingProfile.resume !== undefined) {
+        patch.profile.resume = existingProfile.resume;
+      }
     }
     const updated = await User.findByIdAndUpdate(req.user._id, patch, {
       new: true,
@@ -1203,6 +1308,33 @@ app.post("/api/applications", requireDb, requireAuth, async (req, res) => {
     }
 
     const snapshot = jobSnapshot && typeof jobSnapshot === "object" ? jobSnapshot : {};
+
+    const existing = await Application.findOne({
+      userId: req.user._id,
+      jobId: String(jobId),
+    });
+
+    if (existing) {
+      if (existing.status === "Withdrawn") {
+        existing.status = "Applied";
+        existing.withdrawnAt = null;
+        existing.jobSnapshot = {
+          title: String(snapshot.title ?? existing.jobSnapshot?.title ?? ""),
+          company: String(snapshot.company ?? existing.jobSnapshot?.company ?? ""),
+          location: String(snapshot.location ?? existing.jobSnapshot?.location ?? ""),
+          salary: String(snapshot.salary ?? existing.jobSnapshot?.salary ?? ""),
+          jobType: String(snapshot.jobType ?? existing.jobSnapshot?.jobType ?? ""),
+          postedDate: String(snapshot.postedDate ?? existing.jobSnapshot?.postedDate ?? ""),
+          matchPercentage: Number(snapshot.matchPercentage ?? existing.jobSnapshot?.matchPercentage ?? 0) || 0,
+        };
+        existing.statusHistory.push({ status: "Applied", at: new Date() });
+        const saved = await existing.save();
+        return res.status(200).json({ application: saved, reactivated: true });
+      } else {
+        return res.status(409).json({ message: "You already applied to this job." });
+      }
+    }
+
     const doc = await Application.create({
       userId: req.user._id,
       jobId: String(jobId),
@@ -1247,17 +1379,10 @@ app.patch("/api/applications/:id", requireDb, requireAuth, async (req, res) => {
     const next = String(status ?? "").trim();
     if (!next) return res.status(400).json({ message: "status is required." });
 
-    const allowed = new Set([
-      "Applied",
-      "Screening",
-      "Interview",
-      "Offer",
-      "Hired",
-      "Rejected",
-      "Withdrawn",
-    ]);
-    if (!allowed.has(next)) {
-      return res.status(400).json({ message: "Invalid status." });
+    if (next !== "Withdrawn") {
+      return res.status(403).json({
+        message: "Applicants can only withdraw their own applications.",
+      });
     }
 
     const existing = await Application.findOne({
@@ -1266,24 +1391,22 @@ app.patch("/api/applications/:id", requireDb, requireAuth, async (req, res) => {
     });
     if (!existing) return res.status(404).json({ message: "Application not found." });
 
-    if (next === "Withdrawn") {
-      if (existing.status === "Hired") {
-        return res.status(400).json({
-          message: "Cannot withdraw an application once hired.",
-        });
-      }
-      if (existing.status === "Rejected") {
-        return res.status(400).json({
-          message: "Cannot withdraw a rejected application.",
-        });
-      }
-      if (existing.status === "Withdrawn") {
-        return res.status(400).json({
-          message: "Application is already withdrawn.",
-        });
-      }
-      existing.withdrawnAt = new Date();
+    if (existing.status === "Hired") {
+      return res.status(400).json({
+        message: "Cannot withdraw an application once hired.",
+      });
     }
+    if (existing.status === "Rejected") {
+      return res.status(400).json({
+        message: "Cannot withdraw a rejected application.",
+      });
+    }
+    if (existing.status === "Withdrawn") {
+      return res.status(400).json({
+        message: "Application is already withdrawn.",
+      });
+    }
+    existing.withdrawnAt = new Date();
 
     existing.status = next;
     existing.statusHistory.push({ status: next, at: new Date() });

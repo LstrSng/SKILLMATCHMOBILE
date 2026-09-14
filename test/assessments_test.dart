@@ -85,11 +85,12 @@ void main() {
 
       final q1 = engine.nextQuestion()!;
       expect(q1.source.id, 'q1');
-      engine.submitAnswer(0); // correct
+      engine.submitAnswer(q1.correctIndex); // correct
 
       final q2 = engine.nextQuestion()!;
       expect(q2.source.id, 'q2');
-      engine.submitAnswer(0); // wrong (expected 1)
+      final wrongIndex = (q2.correctIndex + 1) % q2.options.length;
+      engine.submitAnswer(wrongIndex); // wrong
 
       expect(engine.isComplete, isTrue);
       final result = engine.buildResult();

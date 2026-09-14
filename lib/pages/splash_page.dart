@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:skillmatch/theme/app_colors.dart';
 
+import 'dart:async';
+
+import '../services/applications_api.dart';
+import '../services/jobs_api.dart';
+import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import 'landing_page.dart';
 import 'main_navigation_page.dart';
@@ -31,11 +36,28 @@ class _SplashPageState extends State<SplashPage>
     );
     _opacity = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+
+    // Warm up cache & prefetch network data in the background during splash
+    _prefetch();
     _navigateNext();
   }
 
+  void _prefetch() {
+    // Prime disk cache into memory
+    unawaited(getCachedJobsRaw());
+
+    // Pre-trigger network fetch to wake up server and populate cache early
+    unawaited(fetchJobsRaw().catchError((_) => <Map<String, dynamic>>[]));
+
+    final signedIn = SessionStore.token != null && SessionStore.token!.isNotEmpty;
+    if (signedIn) {
+      unawaited(fetchMyProfile().catchError((_) => <String, dynamic>{}));
+      unawaited(fetchMyApplications().catchError((_) => <Map<String, dynamic>>[]));
+    }
+  }
+
   Future<void> _navigateNext() async {
-    await Future.delayed(const Duration(milliseconds: 1400));
+    await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
     final signedIn = SessionStore.token != null && SessionStore.token!.isNotEmpty;
     Navigator.pushReplacement(

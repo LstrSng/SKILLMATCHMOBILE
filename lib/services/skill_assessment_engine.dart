@@ -111,10 +111,24 @@ class AssessmentEngine {
   }
 
   PresentedQuestion _present(AssessmentQuestion source) {
+    if (source.options.isEmpty) {
+      return PresentedQuestion(
+        source: source,
+        options: const [],
+        correctIndex: -1,
+      );
+    }
+    final indexed = List.generate(
+      source.options.length,
+      (i) => (option: source.options[i], isCorrect: i == source.correctIndex),
+    );
+    indexed.shuffle(_random);
+    final shuffledOptions = indexed.map((e) => e.option).toList();
+    final newCorrectIndex = indexed.indexWhere((e) => e.isCorrect);
     return PresentedQuestion(
       source: source,
-      options: source.options,
-      correctIndex: source.correctIndex,
+      options: shuffledOptions,
+      correctIndex: newCorrectIndex,
     );
   }
 

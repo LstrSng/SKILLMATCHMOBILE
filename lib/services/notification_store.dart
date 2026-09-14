@@ -192,6 +192,7 @@ class NotificationStore {
   }
 
   static Future<void> clearAll() async {
+    _lastAppSyncTime = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey());
     unreadCountNotifier.value = 0;
@@ -206,13 +207,7 @@ class NotificationStore {
 
   static Future<int> getUnreadCount() async {
     final notifications = await load();
-    final lastReadAt = await loadLastReadAt();
-    if (lastReadAt == null) {
-      return notifications.where((n) => !n.isRead).length;
-    }
-    return notifications
-        .where((item) => !item.isRead && item.createdAt.isAfter(lastReadAt))
-        .length;
+    return notifications.where((item) => !item.isRead).length;
   }
 
   static Future<void> refreshUnreadCount() async {
@@ -308,7 +303,17 @@ class NotificationStore {
     await saveApplicationStatuses(nextStatuses);
   }
 
-  static Future<void> syncApplicationUpdates() async {
+  static DateTime? _lastAppSyncTime;
+  static const Duration _kAppSyncCooldown = Duration(seconds: 45);
+
+  static Future<void> syncApplicationUpdates({bool force = false}) async {
+    final now = DateTime.now();
+    if (!force &&
+        _lastAppSyncTime != null &&
+        now.difference(_lastAppSyncTime!) < _kAppSyncCooldown) {
+      return;
+    }
+    _lastAppSyncTime = now;
     final rawApplications = await fetchMyApplications();
     await syncApplicationUpdatesFromList(rawApplications);
   }

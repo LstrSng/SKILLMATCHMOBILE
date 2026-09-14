@@ -56,19 +56,40 @@ class _JobDetailPageState extends State<JobDetailPage> {
   JobMatchResult? _matchResult;
   String? _csvDescription;
 
-  /// The CSV role's own description when a role match was found, falling
-  /// back to whatever description the caller passed in.
+  /// Prioritize the employer's custom posting description, falling back
+  /// to the PSF/CSV framework role description if none was provided.
   String get _displayDescription {
+    final raw = widget.description.trim();
+    if (raw.isNotEmpty) return raw;
     final csv = _csvDescription?.trim() ?? '';
     if (csv.isNotEmpty) return csv;
-    return widget.description;
+    return '';
   }
 
   @override
   void initState() {
     super.initState();
+    _checkIfApplied();
     _loadMatchResult();
     _loadBookmarkState();
+  }
+
+  bool _isApplied = false;
+
+  Future<void> _checkIfApplied() async {
+    if (widget.jobId.trim().isEmpty) return;
+    try {
+      final cached =
+          memoryCachedApplications ?? await getCachedMyApplications();
+      final match = cached.any((a) {
+        final jId = (a['jobId'] as Object?)?.toString().trim() ?? '';
+        if (jId != widget.jobId.trim()) return false;
+        final status =
+            (a['status'] as Object?)?.toString().trim().toLowerCase() ?? '';
+        return status != 'withdrawn' && status != 'rejected';
+      });
+      if (mounted) setState(() => _isApplied = match);
+    } catch (_) {}
   }
 
   Future<void> _loadBookmarkState() async {
@@ -110,6 +131,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         recommendation: _recommendationFor(
           widget.matchPercentage,
           widget.unmatchedSkills,
+          jobTitle: widget.title,
         ),
       );
 
@@ -128,20 +150,47 @@ class _JobDetailPageState extends State<JobDetailPage> {
     }
   }
 
-  static String _recommendationFor(int score, List<String> missing) {
-    if (score >= 80) return 'Great fit — you match most required skills for this position.';
-    if (score >= 50) {
-      return 'Good fit — consider taking a quiz or pathway on missing skills to boost your match score.';
+  static String _recommendationFor(
+    int score,
+    List<String> missing, {
+    String jobTitle = '',
+  }) {
+    if (score >= 80) {
+      if (missing.isEmpty) {
+        return 'Outstanding match ($score%)! You meet all required skills for this position. Ready to apply!';
+      }
+      final targetSkill =
+          _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
+      final rx = resolveSkillPrescription(targetSkill);
+      return 'Strong fit ($score%). You match most requirements. Consider closing minor gaps in ${missing.take(2).join(', ')} with ${rx.tesdaProgram} or ${rx.globalCert} to maximize readiness.';
     }
-    if (score > 0) {
-      return 'Skill gap detected — consider training in ${missing.take(3).join(', ')} to qualify.';
+    if (score >= 50) {
+      final targetSkill =
+          _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
+      final rx = resolveSkillPrescription(targetSkill);
+      return 'Good fit ($score%). Recommended upskilling: ${rx.tesdaProgram} (via e-TESDA/accredited TVET) or industry certs (${rx.globalCert}) to close gaps in ${missing.take(3).join(', ')}.';
+    }
+    if (missing.isNotEmpty) {
+      final targetSkill =
+          _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
+      final rx = resolveSkillPrescription(targetSkill);
+      final roleDesc =
+          jobTitle.trim().isNotEmpty ? 'this $jobTitle role' : 'this position';
+      final cleanGaps = missing.take(3).join(', ');
+      if (missing.length == 1 ||
+          targetSkill.toLowerCase() == missing.first.toLowerCase()) {
+        return 'Skill gap detected in $cleanGaps. Recommended certification tracks for $roleDesc: ${rx.tesdaProgram} or ${rx.globalCert} to qualify.';
+      }
+      return 'Skill gap detected in $cleanGaps. For $roleDesc, prioritize $targetSkill via ${rx.tesdaProgram} or ${rx.globalCert} to qualify.';
     }
     return 'No recommendation available.';
   }
 
   Future<void> _applyNow() async {
     if (_applying) return;
-    if (_displayScore <= 0) {
+    final totalSkills = (_matchResult?.matchedSkills.length ?? widget.matchedSkills.length) +
+        (_matchResult?.missingSkills.length ?? widget.unmatchedSkills.length);
+    if (totalSkills > 0 && _displayScore <= 0) {
       showAppToast(
         context,
         'You need to match at least 1 required skill to apply.',
@@ -167,6 +216,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         },
       );
       if (!mounted) return;
+      setState(() => _isApplied = true);
       showAppToast(
         context,
         'Application submitted successfully!',
@@ -216,7 +266,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const SkillAssessmentPage(),
+        builder: (context) => SkillAssessmentPage(initialSkill: skill),
       ),
     );
   }
@@ -289,6 +339,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
               matchScore: _displayScore,
               isBookmarked: _isBookmarked,
               applying: _applying,
+              isApplied: _isApplied,
               onApply: _applyNow,
               onBookmarkToggle: _toggleBookmark,
             ),
@@ -329,8 +380,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
       );
     }
 
-    final tokens = context.appColors;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: CenteredFormWidth(
@@ -354,41 +403,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
             // Description Section
             if (_displayDescription.trim().isNotEmpty) ...[
               const SizedBox(height: 16),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.description_outlined,
-                          size: 18,
-                          color: tokens.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Job Description',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: tokens.textPrimary,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _displayDescription,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: tokens.textSecondary,
-                        height: 1.55,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              CollapsibleJobDescription(description: _displayDescription),
             ],
             const SizedBox(height: 16),
 
@@ -403,9 +418,137 @@ class _JobDetailPageState extends State<JobDetailPage> {
             const SizedBox(height: 16),
 
             // Recommendation Summary Card
-            RecommendationCard(recommendation: result.recommendation),
+            RecommendationCard(
+              recommendation: result.recommendation,
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Collapsible card for job descriptions, showing the first [trimLines] lines with a 'See more' toggle.
+class CollapsibleJobDescription extends StatefulWidget {
+  const CollapsibleJobDescription({
+    super.key,
+    required this.description,
+    this.trimLines = 4,
+  });
+
+  final String description;
+  final int trimLines;
+
+  @override
+  State<CollapsibleJobDescription> createState() =>
+      _CollapsibleJobDescriptionState();
+}
+
+class _CollapsibleJobDescriptionState extends State<CollapsibleJobDescription> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+
+    return AppCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.description_outlined,
+                size: 18,
+                color: tokens.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Job Description',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: tokens.textPrimary,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final textStyle = TextStyle(
+                fontSize: 14,
+                color: tokens.textSecondary,
+                height: 1.55,
+              );
+              final span = TextSpan(
+                text: widget.description,
+                style: textStyle,
+              );
+              final tp = TextPainter(
+                text: span,
+                maxLines: widget.trimLines,
+                textDirection: Directionality.of(context),
+              )..layout(maxWidth: constraints.maxWidth);
+
+              final isOverflowing = tp.didExceedMaxLines;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      widget.description,
+                      style: textStyle,
+                      maxLines: _isExpanded ? null : widget.trimLines,
+                      overflow: _isExpanded
+                          ? TextOverflow.visible
+                          : TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isOverflowing) ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _isExpanded = !_isExpanded);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _isExpanded ? 'Show less' : 'See more',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: tokens.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              _isExpanded
+                                  ? Icons.keyboard_arrow_up_rounded
+                                  : Icons.keyboard_arrow_down_rounded,
+                              size: 16,
+                              color: tokens.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -748,7 +891,12 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
               (skill) => _MatchedSkillRow(skill: skill),
             ),
             ...displayedMissing.map(
-              (skill) => _MissingSkillRow(skill: skill),
+              (skill) => _MissingSkillRow(
+                skill: skill,
+                onLearn: widget.onLearnSkill != null
+                    ? () => widget.onLearnSkill!(skill)
+                    : null,
+              ),
             ),
           ],
         ],
@@ -865,9 +1013,13 @@ class _MatchedSkillRow extends StatelessWidget {
 }
 
 class _MissingSkillRow extends StatelessWidget {
-  const _MissingSkillRow({required this.skill});
+  const _MissingSkillRow({
+    required this.skill,
+    this.onLearn,
+  });
 
   final String skill;
+  final VoidCallback? onLearn;
 
   @override
   Widget build(BuildContext context) {
@@ -919,6 +1071,41 @@ class _MissingSkillRow extends StatelessWidget {
               ],
             ),
           ),
+          if (onLearn != null) ...[
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onLearn!();
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: tokens.primarySoftBg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: tokens.primary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.explore_outlined, size: 13, color: tokens.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Learn',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: tokens.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(Icons.chevron_right_rounded, size: 13, color: tokens.primary),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -931,6 +1118,7 @@ class _JobDetailBottomBar extends StatelessWidget {
     required this.matchScore,
     required this.isBookmarked,
     required this.applying,
+    this.isApplied = false,
     required this.onApply,
     required this.onBookmarkToggle,
   });
@@ -938,6 +1126,7 @@ class _JobDetailBottomBar extends StatelessWidget {
   final int matchScore;
   final bool isBookmarked;
   final bool applying;
+  final bool isApplied;
   final VoidCallback onApply;
   final VoidCallback onBookmarkToggle;
 
@@ -993,13 +1182,19 @@ class _JobDetailBottomBar extends StatelessWidget {
               height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor:
+                      isApplied ? tokens.success : AppColors.primary,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.35),
+                  disabledBackgroundColor: isApplied
+                      ? tokens.success.withValues(alpha: 0.8)
+                      : AppColors.primary.withValues(alpha: 0.35),
+                  disabledForegroundColor: Colors.white,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                onPressed: applying ? null : onApply,
+                onPressed: (applying || isApplied) ? null : onApply,
                 child: applying
                     ? const SizedBox(
                         height: 20,
@@ -1013,7 +1208,11 @@ class _JobDetailBottomBar extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            matchScore <= 0 ? 'Boost Match to Apply' : 'Apply Now',
+                            isApplied
+                                ? 'Applied'
+                                : (matchScore <= 0
+                                    ? 'Boost Match to Apply'
+                                    : 'Apply Now'),
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
@@ -1021,9 +1220,11 @@ class _JobDetailBottomBar extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Icon(
-                            matchScore <= 0
-                                ? Icons.lock_outline_rounded
-                                : Icons.arrow_forward_rounded,
+                            isApplied
+                                ? Icons.check_circle_rounded
+                                : (matchScore <= 0
+                                    ? Icons.lock_outline_rounded
+                                    : Icons.arrow_forward_rounded),
                             size: 18,
                           ),
                         ],
@@ -1037,8 +1238,327 @@ class _JobDetailBottomBar extends StatelessWidget {
   }
 }
 
+class SkillPrescription {
+  final String skill;
+  final String tesdaProgram;
+  final String globalCert;
+  final String providerSummary;
+  final String searchKeyword;
+
+  const SkillPrescription({
+    required this.skill,
+    required this.tesdaProgram,
+    required this.globalCert,
+    required this.providerSummary,
+    required this.searchKeyword,
+  });
+}
+
+bool _hasSkillKeyword(String text, String keyword) {
+  final lower = text.toLowerCase();
+  final k = keyword.toLowerCase();
+  if (k.length <= 2 && RegExp(r'^[a-z0-9]+$').hasMatch(k)) {
+    return RegExp(r'\b' + RegExp.escape(k) + r'\b', caseSensitive: false)
+        .hasMatch(lower);
+  }
+  return lower.contains(k);
+}
+
+String _selectPrimaryPrescriptionSkill(
+  List<String> missing, {
+  String jobTitle = '',
+}) {
+  if (missing.isEmpty) return '';
+  if (missing.length == 1 || jobTitle.trim().isEmpty) return missing.first;
+
+  final titleLower = jobTitle.toLowerCase();
+
+  final isUiDesign = titleLower.contains('ui') ||
+      titleLower.contains('ux') ||
+      titleLower.contains('interface') ||
+      titleLower.contains('design') ||
+      titleLower.contains('frontend') ||
+      titleLower.contains('front-end') ||
+      titleLower.contains('web');
+
+  final isMobile = titleLower.contains('mobile') ||
+      titleLower.contains('android') ||
+      titleLower.contains('ios') ||
+      titleLower.contains('flutter');
+
+  final isDataAi = titleLower.contains('data') ||
+      titleLower.contains('analytics') ||
+      titleLower.contains('machine learning') ||
+      titleLower.contains('ai');
+
+  final isDevOps = titleLower.contains('devops') ||
+      titleLower.contains('cloud') ||
+      titleLower.contains('sysadmin') ||
+      titleLower.contains('infrastructure');
+
+  final isQa = titleLower.contains('qa') ||
+      titleLower.contains('test') ||
+      titleLower.contains('quality');
+
+  final isCyber = titleLower.contains('security') ||
+      titleLower.contains('cyber');
+
+  for (final skill in missing) {
+    final sLower = skill.toLowerCase();
+    if (isUiDesign) {
+      if (_hasSkillKeyword(sLower, 'typescript') ||
+          _hasSkillKeyword(sLower, 'ts') ||
+          _hasSkillKeyword(sLower, 'react') ||
+          _hasSkillKeyword(sLower, 'javascript') ||
+          _hasSkillKeyword(sLower, 'js') ||
+          _hasSkillKeyword(sLower, 'css') ||
+          _hasSkillKeyword(sLower, 'html') ||
+          _hasSkillKeyword(sLower, 'figma') ||
+          _hasSkillKeyword(sLower, 'design') ||
+          _hasSkillKeyword(sLower, 'ui') ||
+          _hasSkillKeyword(sLower, 'ux') ||
+          _hasSkillKeyword(sLower, 'web')) {
+        return skill;
+      }
+    }
+    if (isMobile) {
+      if (_hasSkillKeyword(sLower, 'flutter') ||
+          _hasSkillKeyword(sLower, 'dart') ||
+          _hasSkillKeyword(sLower, 'android') ||
+          _hasSkillKeyword(sLower, 'ios') ||
+          _hasSkillKeyword(sLower, 'swift') ||
+          _hasSkillKeyword(sLower, 'kotlin') ||
+          _hasSkillKeyword(sLower, 'mobile')) {
+        return skill;
+      }
+    }
+    if (isDataAi) {
+      if (_hasSkillKeyword(sLower, 'python') ||
+          _hasSkillKeyword(sLower, 'data') ||
+          _hasSkillKeyword(sLower, 'analytics') ||
+          _hasSkillKeyword(sLower, 'pandas') ||
+          _hasSkillKeyword(sLower, 'sql') ||
+          _hasSkillKeyword(sLower, 'ai')) {
+        return skill;
+      }
+    }
+    if (isDevOps) {
+      if (_hasSkillKeyword(sLower, 'docker') ||
+          _hasSkillKeyword(sLower, 'kubernetes') ||
+          _hasSkillKeyword(sLower, 'k8s') ||
+          _hasSkillKeyword(sLower, 'aws') ||
+          _hasSkillKeyword(sLower, 'cloud') ||
+          _hasSkillKeyword(sLower, 'devops')) {
+        return skill;
+      }
+    }
+    if (isQa) {
+      if (_hasSkillKeyword(sLower, 'qa') ||
+          _hasSkillKeyword(sLower, 'test') ||
+          _hasSkillKeyword(sLower, 'selenium') ||
+          _hasSkillKeyword(sLower, 'automation')) {
+        return skill;
+      }
+    }
+    if (isCyber) {
+      if (_hasSkillKeyword(sLower, 'security') ||
+          _hasSkillKeyword(sLower, 'cyber')) {
+        return skill;
+      }
+    }
+  }
+
+  return missing.first;
+}
+
+@visibleForTesting
+String selectPrimaryPrescriptionSkill(
+  List<String> missing, {
+  String jobTitle = '',
+}) =>
+    _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
+
+@visibleForTesting
+String buildJobRecommendation(
+  int score,
+  List<String> missing, {
+  String jobTitle = '',
+}) =>
+    _JobDetailPageState._recommendationFor(score, missing, jobTitle: jobTitle);
+
+SkillPrescription resolveSkillPrescription(String skill) {
+  final lower = skill.toLowerCase();
+
+  bool has(List<String> keywords) =>
+      keywords.any((k) => _hasSkillKeyword(lower, k));
+
+  if (has(['docker', 'kubernetes', 'k8s', 'container', 'ci/cd', 'devops', 'jenkins', 'ansible', 'terraform'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Computer Systems Servicing (CSS) NC II',
+      globalCert: 'Docker Certified Associate (DCA) • CKA Kubernetes',
+      providerSummary: 'Linux Foundation / Docker / Coursera',
+      searchKeyword: 'DevOps',
+    );
+  }
+
+  if (has(['typescript', 'ts'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Web Development NC III',
+      globalCert: 'Microsoft Learn TypeScript • Meta Front-End Developer Cert',
+      providerSummary: 'Microsoft / Meta (Coursera) / freeCodeCamp',
+      searchKeyword: 'TypeScript',
+    );
+  }
+
+  if (has(['react', 'vue', 'angular', 'frontend', 'front-end', 'html', 'css', 'javascript', 'js', 'web', 'tailwind', 'bootstrap'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Web Development NC III',
+      globalCert: 'Meta Front-End Developer Cert • freeCodeCamp Full Stack',
+      providerSummary: 'e-TESDA / Meta (Coursera) / freeCodeCamp',
+      searchKeyword: 'Web',
+    );
+  }
+
+  if (has(['node', 'backend', 'back-end', 'express', 'django', 'fastapi', 'flask', 'api', 'rest', 'graphql'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Web Development NC III',
+      globalCert: 'Meta Back-End Developer Cert • IBM Full Stack Developer',
+      providerSummary: 'e-TESDA / Meta / IBM (Coursera)',
+      searchKeyword: 'Back-End',
+    );
+  }
+
+  if (has(['flutter', 'dart', 'android', 'ios', 'swift', 'kotlin', 'mobile', 'react native'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Web Development NC III (Mobile & Web)',
+      globalCert: 'Google Associate Android Developer • Meta React Native',
+      providerSummary: 'e-TESDA / Google / Coursera',
+      searchKeyword: 'Mobile',
+    );
+  }
+
+  if (has(['aws', 'azure', 'gcp', 'cloud'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Computer Systems Servicing (CSS) NC II',
+      globalCert: 'AWS Certified Cloud Practitioner • Azure Fundamentals (AZ-900)',
+      providerSummary: 'Amazon Web Services / Microsoft Learn',
+      searchKeyword: 'Cloud',
+    );
+  }
+
+  if (has(['sql', 'database', 'db', 'oracle', 'postgres', 'postgresql', 'mysql', 'mongodb', 'nosql'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Programming (Oracle Database) NC III',
+      globalCert: 'Oracle Database SQL Associate • MongoDB Certified Developer',
+      providerSummary: 'e-TESDA / Oracle University / MongoDB',
+      searchKeyword: 'Database',
+    );
+  }
+
+  if (has(['python', 'data', 'analytics', 'analysis', 'pandas', 'numpy', 'bi', 'tableau', 'power bi', 'powerbi', 'machine learning', 'ai', 'statistics'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Data Analytics Essentials (e-TESDA TOP)',
+      globalCert: 'Google Data Analytics Certificate • IBM Data Science',
+      providerSummary: 'e-TESDA / Google / IBM (Coursera)',
+      searchKeyword: 'Data',
+    );
+  }
+
+  if (has(['security', 'cyber', 'infosec', 'penetration', 'ethical hacking', 'firewall', 'soc'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Cybersecurity Essentials (e-TESDA TOP)',
+      globalCert: 'CompTIA Security+ • Google Cybersecurity Professional Cert',
+      providerSummary: 'e-TESDA / CompTIA / Cisco / Google',
+      searchKeyword: 'Cybersecurity',
+    );
+  }
+
+  if (has(['java', 'spring', 'oop'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Programming (Java) NC III',
+      globalCert: 'Oracle Certified Professional: Java SE Developer',
+      providerSummary: 'e-TESDA / Informatics / Oracle University',
+      searchKeyword: 'Java',
+    );
+  }
+
+  if (has(['.net', 'c#', 'csharp', 'asp.net'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Programming (.NET Technology) NC III',
+      globalCert: 'Microsoft Certified: Azure Developer Associate',
+      providerSummary: 'MFI Polytechnic / Microsoft Learn',
+      searchKeyword: '.NET',
+    );
+  }
+
+  if (has(['network', 'hardware', 'troubleshoot', 'sysadmin', 'linux', 'server', 'support', 'helpdesk', 'service desk'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Computer Systems Servicing (CSS) NC II',
+      globalCert: 'Google IT Support Professional • CompTIA A+ / Network+',
+      providerSummary: 'TESDA Regional Training Center / Google / CompTIA',
+      searchKeyword: 'Support',
+    );
+  }
+
+  if (has(['design', 'ui', 'ux', 'figma', 'graphic', 'photoshop', 'illustrator', 'creative', 'interface'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Visual Graphic Design NC III',
+      globalCert: 'Google UX Design Professional Certificate • Interaction Design',
+      providerSummary: 'e-TESDA / Google (Coursera) / Adobe',
+      searchKeyword: 'Design',
+    );
+  }
+
+  if (has(['qa', 'test', 'testing', 'automation', 'selenium', 'cypress'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Web Development NC III (Testing Track)',
+      globalCert: 'ISTQB Certified Tester Foundation Level (CTFL)',
+      providerSummary: 'e-TESDA / ISTQB / TestAutomationU',
+      searchKeyword: 'QA',
+    );
+  }
+
+  if (has(['agile', 'scrum', 'project', 'product', 'jira', 'management', 'leadership'])) {
+    return SkillPrescription(
+      skill: skill,
+      tesdaProgram: 'TESDA Contact Center Services NC II / Project Support',
+      globalCert: 'Scrum.org Professional Scrum Master (PSM I) • Google Project Mgmt',
+      providerSummary: 'Scrum.org / Google / PMI',
+      searchKeyword: 'Management',
+    );
+  }
+
+  final cleanKeyword = skill
+      .replaceAll(RegExp(r'\blevel\s*\d+\b', caseSensitive: false), '')
+      .trim();
+  return SkillPrescription(
+    skill: skill,
+    tesdaProgram: 'TESDA Web Development NC III or CSS NC II',
+    globalCert: 'Professional Industry Certificate (Coursera / freeCodeCamp)',
+    providerSummary: 'TESDA / Coursera / freeCodeCamp / Harvard CS50',
+    searchKeyword: cleanKeyword.isNotEmpty ? cleanKeyword : 'All',
+  );
+}
+
 class RecommendationCard extends StatelessWidget {
-  const RecommendationCard({super.key, required this.recommendation});
+  const RecommendationCard({
+    super.key,
+    required this.recommendation,
+  });
 
   final String recommendation;
 
@@ -1081,6 +1601,7 @@ class RecommendationCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: tokens.primarySoftBg,

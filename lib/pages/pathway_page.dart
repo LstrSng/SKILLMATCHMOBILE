@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,6 +9,29 @@ import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/training_pathway_card.dart';
+
+final _kLevelRegex = RegExp(r'\blevel\s*\d+\b', caseSensitive: false);
+final _kTokenRegex = RegExp(r'[^a-zA-Z0-9#+]');
+
+const Map<String, List<String>> _kSkillSearchAliases = {
+  'ts': ['typescript'],
+  'typescript': ['typescript', 'ts'],
+  'js': ['javascript'],
+  'javascript': ['javascript', 'js'],
+  'py': ['python'],
+  'reactjs': ['react'],
+  'nextjs': ['next.js', 'next'],
+  'next.js': ['nextjs', 'next'],
+  'vuejs': ['vue'],
+  'nodejs': ['node.js', 'node'],
+  'k8s': ['kubernetes'],
+  'golang': ['go'],
+  'postgres': ['postgresql'],
+  'postgresql': ['postgres'],
+  'mongo': ['mongodb'],
+  'mongodb': ['mongo'],
+  'ci/cd': ['ci/cd', 'pipeline'],
+};
 
 class PathwayPage extends StatefulWidget {
   const PathwayPage({
@@ -24,6 +49,8 @@ class PathwayPage extends StatefulWidget {
 
 class _PathwayPageState extends State<PathwayPage> {
   final _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  String _debouncedQuery = '';
   bool _loading = true;
   String? _error;
   List<TrainingPathway> _pathways = [];
@@ -31,6 +58,7 @@ class _PathwayPageState extends State<PathwayPage> {
 
   static const _categories = [
     'All',
+    'TESDA Registered',
     'Free Certs',
     'Mobile',
     'Web',
@@ -50,8 +78,16 @@ class _PathwayPageState extends State<PathwayPage> {
     super.initState();
     if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
       _searchController.text = widget.initialQuery!.trim();
+      _debouncedQuery = widget.initialQuery!.trim().toLowerCase();
     }
     _load();
+  }
+
+  void _onSearchChanged(String v) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) setState(() => _debouncedQuery = v.trim().toLowerCase());
+    });
   }
 
   Future<void> _load() async {
@@ -77,6 +113,7 @@ class _PathwayPageState extends State<PathwayPage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -106,14 +143,58 @@ class _PathwayPageState extends State<PathwayPage> {
   }
 
   Widget _buildContent(BuildContext context) {
-    final q = _searchController.text.trim().toLowerCase();
+    final qLower = _debouncedQuery.trim().toLowerCase();
+    final isAllCat = _selectedCategory == 'All';
+    final cat = _selectedCategory.toLowerCase();
+
+    final searchTerms = <String>{};
+    if (qLower.isNotEmpty) {
+      final rawTerms = qLower
+          .replaceAll(_kLevelRegex, '')
+          .split(_kTokenRegex)
+          .where((t) => t.length >= 3 || {'ts', 'js', 'ui', 'ux', 'qa', 'ci', 'cd', 'ai', 'go', 'db', 'c#'}.contains(t))
+          .toList();
+
+      searchTerms.addAll(rawTerms);
+      if (_kSkillSearchAliases.containsKey(qLower)) {
+        searchTerms.addAll(_kSkillSearchAliases[qLower]!);
+      }
+      for (final t in rawTerms) {
+        if (_kSkillSearchAliases.containsKey(t)) {
+          searchTerms.addAll(_kSkillSearchAliases[t]!);
+        }
+      }
+    }
+
+    bool matchesTerm(String text, String term) {
+      final lower = text.toLowerCase();
+      if (term.length <= 2) {
+        return RegExp(r'\b' + RegExp.escape(term) + r'\b', caseSensitive: false).hasMatch(lower);
+      }
+      return lower.contains(term);
+    }
+
+    bool matchesPathway(TrainingPathway pathway, String term) {
+      return matchesTerm(pathway.name, term) ||
+          pathway.links.any((l) =>
+              matchesTerm(l.label, term) ||
+              (l.provider != null && matchesTerm(l.provider!, term)));
+    }
+
     final filtered = _pathways.where((p) {
-      if (_selectedCategory != 'All') {
-        final cat = _selectedCategory.toLowerCase();
+      if (!isAllCat) {
         final nameLower = p.name.toLowerCase();
         final fieldLower = (p.field ?? '').toLowerCase();
-        final bool matchesCategory;
-        if (cat == 'free certs') {
+        bool matchesCategory = false;
+        if (cat == 'tesda registered') {
+          matchesCategory = fieldLower == 'tesda' ||
+              nameLower.contains('tesda') ||
+              p.links.any((l) =>
+                  (l.provider?.toLowerCase().contains('tesda') ?? false) ||
+                  (l.type?.toLowerCase().contains('tesda') ?? false) ||
+                  l.label.toLowerCase().contains('tesda'),
+              );
+        } else if (cat == 'free certs') {
           matchesCategory = p.links.any(
             (l) => l.isFree || l.label.toLowerCase().contains('free'),
           );
@@ -217,9 +298,17 @@ class _PathwayPageState extends State<PathwayPage> {
         }
         if (!matchesCategory) return false;
       }
-      if (q.isEmpty) return true;
-      return p.name.toLowerCase().contains(q) ||
-          p.links.any((l) => l.label.toLowerCase().contains(q));
+      if (qLower.isEmpty) return true;
+
+      // Direct match on pathway name, link label, or link provider
+      if (matchesPathway(p, qLower)) {
+        return true;
+      }
+
+      if (searchTerms.isNotEmpty) {
+        return searchTerms.any((t) => matchesPathway(p, t));
+      }
+      return false;
     }).toList();
 
     final horizontalPadding =
@@ -271,7 +360,7 @@ class _PathwayPageState extends State<PathwayPage> {
                   child: TextField(
                     controller: _searchController,
                     style: TextStyle(color: tokens.textPrimary, fontSize: 14),
-                    onChanged: (v) => setState(() {}),
+                    onChanged: _onSearchChanged,
                     decoration: InputDecoration(
                       hintText: 'Search pathways (e.g. AWS, Cyber, Python)...',
                       hintStyle: TextStyle(
@@ -287,8 +376,9 @@ class _PathwayPageState extends State<PathwayPage> {
                           ? IconButton(
                               icon: Icon(Icons.clear, size: 18, color: tokens.textSecondary),
                               onPressed: () {
+                                _searchDebounce?.cancel();
                                 _searchController.clear();
-                                setState(() {});
+                                setState(() => _debouncedQuery = '');
                               },
                             )
                           : null,

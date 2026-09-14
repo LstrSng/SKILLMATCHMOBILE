@@ -127,56 +127,60 @@ class MatchScoreBadge extends StatelessWidget {
     bool isDark,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: border, width: 1),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.4),
-                  blurRadius: 4,
-                  spreadRadius: 0.5,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 6),
-          _AnimatedScoreText(
-            targetScore: clamped,
-            animate: animate,
-            duration: animationDuration,
-            suffix: '%',
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w800,
-              fontSize: 12.5,
-              letterSpacing: -0.2,
-            ),
-          ),
-          if (showLabel) ...[
-            const SizedBox(width: 4),
-            Text(
-              label ?? 'Match',
-              style: TextStyle(
-                color: color.withValues(alpha: isDark ? 0.9 : 0.85),
-                fontWeight: FontWeight.w600,
-                fontSize: 11.5,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.4),
+                    blurRadius: 4,
+                    spreadRadius: 0.5,
+                  ),
+                ],
               ),
             ),
+            const SizedBox(width: 5),
+            _AnimatedScoreText(
+              targetScore: clamped,
+              animate: animate,
+              duration: animationDuration,
+              suffix: '%',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 12.0,
+                letterSpacing: -0.2,
+              ),
+            ),
+            if (showLabel) ...[
+              const SizedBox(width: 4),
+              Text(
+                label ?? 'Match',
+                style: TextStyle(
+                  color: color.withValues(alpha: isDark ? 0.9 : 0.85),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11.0,
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

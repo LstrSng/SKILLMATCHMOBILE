@@ -133,11 +133,14 @@ String? _bestKeywordMatch(String roleTitle) {
   return bestPathway;
 }
 
+List<TrainingPathway>? _cachedSortedPathways;
+
 /// Resets the in-memory cached pathways so they can be reloaded.
 void resetPathwayLinksCache() {
   _pathwaysByName = null;
   _roleToPathway = null;
   _loading = null;
+  _cachedSortedPathways = null;
 }
 
 /// All bundled training/certification pathways, sorted by name. Used by
@@ -147,9 +150,11 @@ Future<List<TrainingPathway>> allTrainingPathways({bool forceReload = false}) as
   if (forceReload) {
     resetPathwayLinksCache();
   }
+  if (_cachedSortedPathways != null) return _cachedSortedPathways!;
   await _ensureLoaded();
   final list = _pathwaysByName!.values.toList();
   list.sort((a, b) => a.name.compareTo(b.name));
+  _cachedSortedPathways = list;
   return list;
 }
 

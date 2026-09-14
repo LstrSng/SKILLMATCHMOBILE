@@ -28,7 +28,7 @@ class _NavItem {
 }
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
-  late final List<Widget> _pages;
+  late final Set<int> _activatedTabs;
 
   static const _items = [
     _NavItem(
@@ -61,17 +61,30 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   @override
   void initState() {
     super.initState();
-    _pages = [
-      const DashboardPage(),
-      const JobsPage(),
-      const PathwayPage(),
-      const ApplicationsPage(),
-      const ProfilePage(),
-    ];
+    _activatedTabs = {AppNavigation.currentTab.value};
+    AppNavigation.currentTab.addListener(_onTabNavChanged);
+  }
+
+  @override
+  void dispose() {
+    AppNavigation.currentTab.removeListener(_onTabNavChanged);
+    super.dispose();
+  }
+
+  void _onTabNavChanged() {
+    final idx = AppNavigation.currentTab.value;
+    if (!_activatedTabs.contains(idx)) {
+      setState(() {
+        _activatedTabs.add(idx);
+      });
+    }
   }
 
   void _onTabSelected(int index) {
     HapticFeedback.selectionClick();
+    if (!_activatedTabs.contains(index)) {
+      setState(() => _activatedTabs.add(index));
+    }
     AppNavigation.switchToIndex(index);
   }
 
@@ -85,7 +98,23 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         return Scaffold(
           body: IndexedStack(
             index: currentIndex,
-            children: _pages,
+            children: [
+              _activatedTabs.contains(0) || currentIndex == 0
+                  ? const DashboardPage()
+                  : const SizedBox.shrink(),
+              _activatedTabs.contains(1) || currentIndex == 1
+                  ? const JobsPage()
+                  : const SizedBox.shrink(),
+              _activatedTabs.contains(2) || currentIndex == 2
+                  ? const PathwayPage()
+                  : const SizedBox.shrink(),
+              _activatedTabs.contains(3) || currentIndex == 3
+                  ? const ApplicationsPage()
+                  : const SizedBox.shrink(),
+              _activatedTabs.contains(4) || currentIndex == 4
+                  ? const ProfilePage()
+                  : const SizedBox.shrink(),
+            ],
           ),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(

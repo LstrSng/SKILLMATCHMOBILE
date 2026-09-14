@@ -21,6 +21,8 @@ class JobsPage extends StatefulWidget {
 
 class _JobsPageState extends State<JobsPage> {
   final _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  String _debouncedQuery = '';
 
   List<Job> _jobs = [];
   bool _loading = true;
@@ -32,10 +34,52 @@ class _JobsPageState extends State<JobsPage> {
   // Selected quick filter pill
   String _selectedQuickFilter = 'All';
 
+  void _onSearchChanged(String val) {
+    _searchDebounce?.cancel();
+    if (val.trim().isEmpty) {
+      setState(() => _debouncedQuery = '');
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) setState(() => _debouncedQuery = val.trim().toLowerCase());
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadJobs();
+    _initFromCacheAndLoad();
+  }
+
+  Future<void> _initFromCacheAndLoad() async {
+    final cached = await getCachedJobsRaw();
+    if (!mounted) return;
+    if (cached.isNotEmpty) {
+      final cachedApps =
+          memoryCachedApplications ?? await getCachedMyApplications();
+      final activeApplications = cachedApps.where((a) {
+        final status =
+            (a['status'] as Object?)?.toString().trim().toLowerCase() ?? '';
+        return status != 'withdrawn' && status != 'rejected';
+      });
+      final appliedJobIds = activeApplications
+          .map((a) => (a['jobId'] as Object?)?.toString().trim() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      final allJobs = cached.map(Job.fromJson).toList();
+      final list = applyOwnSkillMatch(
+        jobs: allJobs.where((j) => !appliedJobIds.contains(j.id)).toList(),
+        mySkillKeys: readMySkillKeys(SessionStore.user),
+      );
+      if (mounted) {
+        setState(() {
+          _jobs = list;
+          _hasAppliedToAllJobs = allJobs.isNotEmpty && list.isEmpty;
+          _loading = false;
+        });
+      }
+    }
+    await _loadJobs(silent: _jobs.isNotEmpty);
   }
 
   Future<void> _loadJobs({bool silent = false}) async {
@@ -48,21 +92,22 @@ class _JobsPageState extends State<JobsPage> {
     try {
       final results = await Future.wait([
         fetchJobsRaw(),
-        fetchMyApplications().catchError(
-          (_) => <Map<String, dynamic>>[],
-        ),
+        fetchMyApplications().catchError((_) => <Map<String, dynamic>>[]),
       ]);
       final raw = results[0];
       final applications = results[1];
-      final appliedJobIds = applications
+      final activeApplications = applications.where((a) {
+        final status =
+            (a['status'] as Object?)?.toString().trim().toLowerCase() ?? '';
+        return status != 'withdrawn' && status != 'rejected';
+      });
+      final appliedJobIds = activeApplications
           .map((a) => (a['jobId'] as Object?)?.toString().trim() ?? '')
           .where((id) => id.isNotEmpty)
           .toSet();
       final allJobs = raw.map(Job.fromJson).toList();
       final list = applyOwnSkillMatch(
-        jobs: allJobs
-            .where((j) => !appliedJobIds.contains(j.id))
-            .toList(),
+        jobs: allJobs.where((j) => !appliedJobIds.contains(j.id)).toList(),
         mySkillKeys: readMySkillKeys(SessionStore.user),
       );
       if (!mounted) return;
@@ -84,16 +129,19 @@ class _JobsPageState extends State<JobsPage> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        if (_jobs.isEmpty) {
+          _error = e.toString();
+        }
       });
     }
   }
 
   List<Job> get _visibleJobs {
-    final q = _searchController.text.trim().toLowerCase();
+    final q = _debouncedQuery;
     bool matches(Job j) {
       // Quick filter
-      if (_selectedQuickFilter == 'High Match (80%+)' && j.matchPercentage < 80) {
+      if (_selectedQuickFilter == 'High Match (80%+)' &&
+          j.matchPercentage < 80) {
         return false;
       }
       if (_selectedQuickFilter == 'Full-time' &&
@@ -141,11 +189,13 @@ class _JobsPageState extends State<JobsPage> {
       _jobTypeFilter != null || _minMatch > 0 || _selectedQuickFilter != 'All';
 
   void _clearFilters() {
+    _searchDebounce?.cancel();
     setState(() {
       _jobTypeFilter = null;
       _minMatch = 0;
       _selectedQuickFilter = 'All';
       _searchController.clear();
+      _debouncedQuery = '';
     });
   }
 
@@ -191,7 +241,11 @@ class _JobsPageState extends State<JobsPage> {
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.close, size: 20, color: tokens.textSecondary),
+                        icon: Icon(
+                          Icons.close,
+                          size: 20,
+                          color: tokens.textSecondary,
+                        ),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
@@ -302,6 +356,7 @@ class _JobsPageState extends State<JobsPage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -350,247 +405,330 @@ class _JobsPageState extends State<JobsPage> {
           : RefreshIndicator(
               onRefresh: () => _loadJobs(silent: true),
               color: tokens.primary,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.symmetric(
-                  horizontal: MediaQuery.of(context).size.width > 600 ? 32 : 16,
-                  vertical: 16,
-                ),
-                child: CenteredFormWidth(
-                  maxWidth: 700,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header & Search Bar
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: tokens.cardBackground,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: tokens.cardBorderSoft),
-                                boxShadow: tokens.cardShadows,
-                              ),
-                              child: TextField(
-                                controller: _searchController,
-                                style: TextStyle(color: tokens.textPrimary, fontSize: 14),
-                                onChanged: (_) => setState(() {}),
-                                decoration: InputDecoration(
-                                  hintText: 'Search roles, skills, companies...',
-                                  hintStyle: TextStyle(
-                                    color: tokens.textFaint,
-                                    fontSize: 14,
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.search_rounded,
-                                    color: tokens.textSecondary,
-                                    size: 20,
-                                  ),
-                                  suffixIcon: _searchController.text.isNotEmpty
-                                      ? IconButton(
-                                          icon: Icon(Icons.clear, size: 18, color: tokens.textSecondary),
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            setState(() {});
-                                          },
-                                        )
-                                      : null,
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Material(
-                            color: tokens.cardBackground,
-                            borderRadius: BorderRadius.circular(12),
-                            child: InkWell(
-                              onTap: _openFilterSheet,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: (_jobTypeFilter != null || _minMatch > 0)
-                                        ? tokens.primary
-                                        : tokens.cardBorderSoft,
-                                  ),
-                                  boxShadow: tokens.cardShadows,
-                                ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.tune_rounded,
-                                      color: (_jobTypeFilter != null || _minMatch > 0)
-                                          ? tokens.primary
-                                          : tokens.textSecondary,
-                                      size: 22,
-                                    ),
-                                    if (_jobTypeFilter != null || _minMatch > 0)
-                                      Positioned(
-                                        top: 10,
-                                        right: 10,
-                                        child: Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: tokens.primary,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+              child: CenteredFormWidth(
+                maxWidth: 700,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        MediaQuery.of(context).size.width > 600 ? 32 : 16,
+                        16,
+                        MediaQuery.of(context).size.width > 600 ? 32 : 16,
+                        0,
                       ),
-                      const SizedBox(height: 14),
-
-                      // Quick-Filter Horizontal Chips
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _QuickFilterChip(
-                              label: 'All',
-                              selected: _selectedQuickFilter == 'All',
-                              onTap: () => setState(() => _selectedQuickFilter = 'All'),
+                            // Header & Search Bar
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: tokens.cardBackground,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: tokens.cardBorderSoft,
+                                      ),
+                                      boxShadow: tokens.cardShadows,
+                                    ),
+                                    child: TextField(
+                                      controller: _searchController,
+                                      style: TextStyle(
+                                        color: tokens.textPrimary,
+                                        fontSize: 14,
+                                      ),
+                                      onChanged: _onSearchChanged,
+                                      decoration: InputDecoration(
+                                        hintText:
+                                            'Search roles, skills, companies...',
+                                        hintStyle: TextStyle(
+                                          color: tokens.textFaint,
+                                          fontSize: 14,
+                                        ),
+                                        prefixIcon: Icon(
+                                          Icons.search_rounded,
+                                          color: tokens.textSecondary,
+                                          size: 20,
+                                        ),
+                                        suffixIcon:
+                                            ValueListenableBuilder<
+                                              TextEditingValue
+                                            >(
+                                              valueListenable:
+                                                  _searchController,
+                                              builder: (context, value, _) {
+                                                if (value.text.isEmpty) {
+                                                  return const SizedBox.shrink();
+                                                }
+                                                return IconButton(
+                                                  icon: Icon(
+                                                    Icons.clear,
+                                                    size: 18,
+                                                    color: tokens.textSecondary,
+                                                  ),
+                                                  onPressed: () {
+                                                    _searchDebounce?.cancel();
+                                                    _searchController.clear();
+                                                    setState(
+                                                      () =>
+                                                          _debouncedQuery = '',
+                                                    );
+                                                  },
+                                                );
+                                              },
+                                            ),
+                                        border: InputBorder.none,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 14,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Material(
+                                  color: tokens.cardBackground,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: InkWell(
+                                    onTap: _openFilterSheet,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color:
+                                              (_jobTypeFilter != null ||
+                                                  _minMatch > 0)
+                                              ? tokens.primary
+                                              : tokens.cardBorderSoft,
+                                        ),
+                                        boxShadow: tokens.cardShadows,
+                                      ),
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.tune_rounded,
+                                            color:
+                                                (_jobTypeFilter != null ||
+                                                    _minMatch > 0)
+                                                ? tokens.primary
+                                                : tokens.textSecondary,
+                                            size: 22,
+                                          ),
+                                          if (_jobTypeFilter != null ||
+                                              _minMatch > 0)
+                                            Positioned(
+                                              top: 10,
+                                              right: 10,
+                                              child: Container(
+                                                width: 8,
+                                                height: 8,
+                                                decoration: BoxDecoration(
+                                                  color: tokens.primary,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            _QuickFilterChip(
-                              label: '⚡ High Match (80%+)',
-                              selected: _selectedQuickFilter == 'High Match (80%+)',
-                              onTap: () => setState(() => _selectedQuickFilter = 'High Match (80%+)'),
+                            const SizedBox(height: 14),
+
+                            // Quick-Filter Horizontal Chips
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _QuickFilterChip(
+                                    label: 'All',
+                                    selected: _selectedQuickFilter == 'All',
+                                    onTap: () => setState(
+                                      () => _selectedQuickFilter = 'All',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _QuickFilterChip(
+                                    label: '⚡ High Match (80%+)',
+                                    selected:
+                                        _selectedQuickFilter ==
+                                        'High Match (80%+)',
+                                    onTap: () => setState(
+                                      () => _selectedQuickFilter =
+                                          'High Match (80%+)',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _QuickFilterChip(
+                                    label: 'Full-time',
+                                    selected:
+                                        _selectedQuickFilter == 'Full-time',
+                                    onTap: () => setState(
+                                      () => _selectedQuickFilter = 'Full-time',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _QuickFilterChip(
+                                    label: 'Remote',
+                                    selected: _selectedQuickFilter == 'Remote',
+                                    onTap: () => setState(
+                                      () => _selectedQuickFilter = 'Remote',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _QuickFilterChip(
+                                    label: 'Internship',
+                                    selected:
+                                        _selectedQuickFilter == 'Internship',
+                                    onTap: () => setState(
+                                      () => _selectedQuickFilter = 'Internship',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _QuickFilterChip(
+                                    label: 'Hybrid',
+                                    selected: _selectedQuickFilter == 'Hybrid',
+                                    onTap: () => setState(
+                                      () => _selectedQuickFilter = 'Hybrid',
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(width: 8),
-                            _QuickFilterChip(
-                              label: 'Full-time',
-                              selected: _selectedQuickFilter == 'Full-time',
-                              onTap: () => setState(() => _selectedQuickFilter = 'Full-time'),
+                            const SizedBox(height: 18),
+
+                            // Job count bar
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${visibleJobs.length} ${visibleJobs.length == 1 ? "Job" : "Jobs"} Available',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: tokens.textSecondary,
+                                  ),
+                                ),
+                                if (_hasActiveFilters)
+                                  TextButton(
+                                    onPressed: _clearFilters,
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    child: Text(
+                                      'Clear filters',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: tokens.primary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            _QuickFilterChip(
-                              label: 'Remote',
-                              selected: _selectedQuickFilter == 'Remote',
-                              onTap: () => setState(() => _selectedQuickFilter = 'Remote'),
-                            ),
-                            const SizedBox(width: 8),
-                            _QuickFilterChip(
-                              label: 'Internship',
-                              selected: _selectedQuickFilter == 'Internship',
-                              onTap: () => setState(() => _selectedQuickFilter = 'Internship'),
-                            ),
-                            const SizedBox(width: 8),
-                            _QuickFilterChip(
-                              label: 'Hybrid',
-                              selected: _selectedQuickFilter == 'Hybrid',
-                              onTap: () => setState(() => _selectedQuickFilter = 'Hybrid'),
-                            ),
+                            const SizedBox(height: 12),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 18),
+                    ),
 
-                      // Job count bar
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${visibleJobs.length} ${visibleJobs.length == 1 ? "Job" : "Jobs"} Available',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: tokens.textSecondary,
-                            ),
-                          ),
-                          if (_hasActiveFilters)
-                            TextButton(
-                              onPressed: _clearFilters,
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: Text(
-                                'Clear filters',
-                                style: TextStyle(fontSize: 12, color: tokens.primary, fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Job Cards List
-                      if (visibleJobs.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 48),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 64,
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    color: tokens.surfaceMuted,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Icon(Icons.search_off_rounded, size: 32, color: tokens.textFaint),
-                                ),
-                                const SizedBox(height: 14),
-                                Text(
-                                  _hasAppliedToAllJobs
-                                      ? "You've applied to all available jobs!"
-                                      : _jobs.isEmpty
-                                      ? 'No job postings yet. Check back soon!'
-                                      : 'No jobs match your search/filter.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: tokens.textPrimary,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Try searching for different keywords or resetting filters.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: tokens.textSecondary, fontSize: 13),
-                                ),
-                                if (_hasActiveFilters) ...[
-                                  const SizedBox(height: 16),
-                                  FilledButton.tonal(
-                                    onPressed: _clearFilters,
-                                    child: const Text('Reset Filters'),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        Column(
-                          children: visibleJobs
-                              .map(
-                                (job) => _JobCard(
-                                  job: job,
-                                  onReturn: () => _loadJobs(silent: true),
-                                ),
-                              )
-                              .toList(),
+                    // Job Cards List
+                    if (visibleJobs.isEmpty)
+                      SliverPadding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: MediaQuery.of(context).size.width > 600
+                              ? 32
+                              : 16,
                         ),
-                      const SizedBox(height: 80),
-                    ],
-                  ),
+                        sliver: SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 48),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 64,
+                                    height: 64,
+                                    decoration: BoxDecoration(
+                                      color: tokens.surfaceMuted,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Icon(
+                                      Icons.search_off_rounded,
+                                      size: 32,
+                                      color: tokens.textFaint,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    _hasAppliedToAllJobs
+                                        ? "You've applied to all available jobs!"
+                                        : _jobs.isEmpty
+                                        ? 'No job postings yet. Check back soon!'
+                                        : 'No jobs match your search/filter.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: tokens.textPrimary,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Try searching for different keywords or resetting filters.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: tokens.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  if (_hasActiveFilters) ...[
+                                    const SizedBox(height: 16),
+                                    FilledButton.tonal(
+                                      onPressed: _clearFilters,
+                                      child: const Text('Reset Filters'),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: MediaQuery.of(context).size.width > 600
+                              ? 32
+                              : 16,
+                        ),
+                        sliver: SliverList.builder(
+                          itemCount: visibleJobs.length,
+                          itemBuilder: (context, index) => _JobCard(
+                            job: visibleJobs[index],
+                            onReturn: () => _loadJobs(silent: true),
+                          ),
+                        ),
+                      ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                  ],
                 ),
               ),
             ),
@@ -660,8 +798,8 @@ class _JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    final applicantId =
-        (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString();
+    final applicantId = (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
+        ?.toString();
     final matchColor = AppColors.matchColor(job.matchPercentage);
 
     return AppCard(
@@ -785,10 +923,7 @@ class _JobCard extends StatelessWidget {
                     label: job.salary,
                   ),
                 if (job.jobType.isNotEmpty)
-                  _MetaPill(
-                    icon: Icons.schedule_rounded,
-                    label: job.jobType,
-                  ),
+                  _MetaPill(icon: Icons.schedule_rounded, label: job.jobType),
               ],
             ),
             const SizedBox(height: 12),
@@ -835,16 +970,21 @@ class _JobCard extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-                ...job.matchedSkills.take(3).map(
-                  (skill) => SkillChip(
-                    label: skill,
-                    status: SkillChipStatus.matched,
-                    size: SkillChipSize.small,
-                  ),
-                ),
+                ...job.matchedSkills
+                    .take(3)
+                    .map(
+                      (skill) => SkillChip(
+                        label: skill,
+                        status: SkillChipStatus.matched,
+                        size: SkillChipSize.small,
+                      ),
+                    ),
                 if (job.matchedSkills.length > 3)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: tokens.surfaceMuted,
                       borderRadius: BorderRadius.circular(12),
@@ -902,4 +1042,3 @@ class _MetaPill extends StatelessWidget {
     );
   }
 }
-

@@ -47,6 +47,11 @@ void main() {
         (p) => p.name == 'General Web / CMS',
       );
       expect(generalWebPathway.links.length, greaterThanOrEqualTo(3));
+
+      final typeScriptPathway = pathways.firstWhere(
+        (p) => p.name == 'TypeScript Development',
+      );
+      expect(typeScriptPathway.links.length, greaterThanOrEqualTo(4));
     });
 
     test('all links have valid HTTPS URLs and descriptive labels', () async {
@@ -95,6 +100,10 @@ void main() {
       final fullStackRole = await trainingPathwayForRole('Full Stack Developer');
       expect(fullStackRole, isNotNull);
       expect(fullStackRole!.name, equals('Full-Stack & General Development'));
+
+      final typeScriptRole = await trainingPathwayForRole('TypeScript Developer');
+      expect(typeScriptRole, isNotNull);
+      expect(typeScriptRole!.name, equals('TypeScript Development'));
     });
 
     test('pathways offer extensive free certification paths across tech domains', () async {
@@ -199,6 +208,40 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));
       expect(find.text('Full-Stack & General Development'), findsOneWidget);
+    });
+
+    testWidgets('PathwayPage searches and filters TypeScript pathways correctly', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: PathwayPage(initialQuery: 'TypeScript'),
+        ),
+      );
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('TypeScript Development'), findsOneWidget);
+      expect(find.text('JavaScript & Front-End'), findsOneWidget);
+      expect(find.text('FREE OPTIONS'), findsWidgets);
+    });
+
+    testWidgets('PathwayPage resolves TS abbreviation via alias search', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: PathwayPage(initialQuery: 'TS'),
+        ),
+      );
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('TypeScript Development'), findsOneWidget);
     });
   });
 }

@@ -9,7 +9,7 @@ import 'authed_http.dart';
 Uri _companyUri(String jobId) =>
     Uri.parse('$kApiBaseUrl/api/jobs/$jobId/company');
 
-const _kTimeout = Duration(seconds: 10);
+const _kTimeout = Duration(seconds: 20);
 
 Future<Map<String, dynamic>> fetchCompanyDetails(String jobId) async {
   try {

@@ -3,30 +3,41 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../models/skill_assessment.dart';
 
 List<AssessmentCategory>? _cachedPsfAssessments;
+Future<List<AssessmentCategory>>? _loadingPsfAssessments;
+
+/// Clears in-memory cached PSF assessments.
+void resetPsfAssessmentBankCache() {
+  _cachedPsfAssessments = null;
+  _loadingPsfAssessments = null;
+}
 
 /// Loads all 64 Philippine Skills Framework (PSF-SDS) assessments and competency questions
 /// directly from the bundled database asset `assets/data/psf_assessments.json`.
-Future<List<AssessmentCategory>> loadPsfAssessmentBank() async {
+Future<List<AssessmentCategory>> loadPsfAssessmentBank() {
   if (_cachedPsfAssessments != null && _cachedPsfAssessments!.isNotEmpty) {
-    return _cachedPsfAssessments!;
+    return Future.value(_cachedPsfAssessments!);
   }
-  try {
-    final rawString = await rootBundle.loadString('assets/data/psf_assessments.json');
-    final decoded = jsonDecode(rawString);
-    if (decoded is List) {
-      final list = decoded
-          .whereType<Map>()
-          .map((m) => AssessmentCategory.fromJson(m))
-          .toList();
-      if (list.isNotEmpty) {
-        _cachedPsfAssessments = list;
-        return list;
+  return _loadingPsfAssessments ??= () async {
+    try {
+      final rawString = await rootBundle.loadString('assets/data/psf_assessments.json');
+      final decoded = jsonDecode(rawString);
+      if (decoded is List) {
+        final list = decoded
+            .whereType<Map>()
+            .map((m) => AssessmentCategory.fromJson(m))
+            .toList();
+        if (list.isNotEmpty) {
+          _cachedPsfAssessments = list;
+          return list;
+        }
       }
+    } catch (e) {
+      // Fallback to static in case of bundle error
+    } finally {
+      _loadingPsfAssessments = null;
     }
-  } catch (e) {
-    // Fallback to static in case of bundle error
-  }
-  return kAssessmentCategories;
+    return kAssessmentCategories;
+  }();
 }
 
 final List<AssessmentCategory> kAssessmentCategories = [

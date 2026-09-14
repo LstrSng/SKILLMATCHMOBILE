@@ -25,7 +25,7 @@ Uri _assessmentsUri({String? track, String? search, String? roleId}) {
 Uri _assessmentByIdUri(String id) => Uri.parse('$kApiBaseUrl/api/assessments/$id');
 Uri _submitAssessmentUri(String id) => Uri.parse('$kApiBaseUrl/api/assessments/$id/submit');
 
-const _kTimeout = Duration(seconds: 12);
+const _kTimeout = Duration(seconds: 20);
 
 Future<T> _withNetworkErrors<T>(Future<T> Function() run) async {
   try {

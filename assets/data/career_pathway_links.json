@@ -1,6 +1,83 @@
 {
   "pathways": [
     {
+      "name": "TESDA-Registered IT Programs & Providers",
+      "links": [
+        {
+          "label": "TESDA Web Development NC III (Full-Stack, JavaScript, PHP & MySQL)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "e-TESDA / TESDA Accredited Centers",
+          "type": "National Certificate (NC III)"
+        },
+        {
+          "label": "TESDA Computer Systems Servicing (CSS) NC II (Hardware, Network & Server Setup)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "TESDA Regional Training Center (RTC)",
+          "type": "National Certificate (NC II)"
+        },
+        {
+          "label": "TESDA Programming (Java) NC III (Core Java, OOP & Database Systems)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "e-TESDA / Informatics College TVET",
+          "type": "National Certificate (NC III)"
+        },
+        {
+          "label": "TESDA Programming (.NET Technology) NC III (C#, .NET Core & SQL Server)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "MFI Polytechnic Institute / TESDA",
+          "type": "National Certificate (NC III)"
+        },
+        {
+          "label": "TESDA Programming (Oracle Database) NC III (SQL, PL/SQL & Database Admin)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "e-TESDA / Oracle-Accredited TVET",
+          "type": "National Certificate (NC III)"
+        },
+        {
+          "label": "TESDA Animation (2D/3D Digital) NC III (Digital VFX, Asset Modeling & Rendering)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "TESDA Provincial Training Center / STI TVET",
+          "type": "National Certificate (NC III)"
+        },
+        {
+          "label": "TESDA Visual Graphic Design NC III (UI/UX Layouts, Adobe Photoshop & Illustrator)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "e-TESDA / Accredited Creative TVET",
+          "type": "National Certificate (NC III)"
+        },
+        {
+          "label": "TESDA Cybersecurity Essentials (Network Defense & Threat Analysis)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Online Certificate"
+        },
+        {
+          "label": "TESDA Data Analytics Essentials (Spreadsheet Modeling & Business Intelligence)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Online Certificate"
+        },
+        {
+          "label": "TESDA Contact Center Services NC II (Technical Support & Help Desk Operations)",
+          "url": "https://e-tesda.gov.ph",
+          "isFree": true,
+          "provider": "TESDA Regional Training Center / Industry TVET",
+          "type": "National Certificate (NC II)"
+        }
+      ],
+      "note": "Official qualifications registered under the Technical Education and Skills Development Authority (TESDA) and delivered via e-TESDA Online or accredited TVET training centers.",
+      "field": "TESDA"
+    },
+    {
       "name": "Full-Stack & General Development",
       "links": [
         {
@@ -228,6 +305,27 @@
           "type": "Certificate"
         },
         {
+          "label": "Microsoft Learn — Build JavaScript Applications with TypeScript (Free)",
+          "url": "https://learn.microsoft.com/en-us/training/paths/build-javascript-applications-typescript/",
+          "isFree": true,
+          "provider": "Microsoft",
+          "type": "Course"
+        },
+        {
+          "label": "freeCodeCamp — TypeScript for Beginners Certification Course (Free)",
+          "url": "https://www.freecodecamp.org/news/learn-typescript-beginners-guide/",
+          "isFree": true,
+          "provider": "freeCodeCamp",
+          "type": "Certification"
+        },
+        {
+          "label": "TypeScript Official Handbook & Language Guide (Free)",
+          "url": "https://www.typescriptlang.org/docs/handbook/intro.html",
+          "isFree": true,
+          "provider": "Microsoft",
+          "type": "Guide"
+        },
+        {
           "label": "OpenJS Foundation — Node.js Application Developer (JSNAD)",
           "url": "https://training.linuxfoundation.org/certification/jsnad/",
           "isFree": false,
@@ -236,6 +334,48 @@
         }
       ],
       "note": "",
+      "field": "Web"
+    },
+    {
+      "name": "TypeScript Development",
+      "links": [
+        {
+          "label": "Microsoft Learn — Build JavaScript Applications with TypeScript (Free)",
+          "url": "https://learn.microsoft.com/en-us/training/paths/build-javascript-applications-typescript/",
+          "isFree": true,
+          "provider": "Microsoft",
+          "type": "Course"
+        },
+        {
+          "label": "freeCodeCamp — TypeScript for Beginners Certification Course (Free)",
+          "url": "https://www.freecodecamp.org/news/learn-typescript-beginners-guide/",
+          "isFree": true,
+          "provider": "freeCodeCamp",
+          "type": "Certification"
+        },
+        {
+          "label": "TypeScript Official Documentation & Language Guide (Free)",
+          "url": "https://www.typescriptlang.org/docs/handbook/intro.html",
+          "isFree": true,
+          "provider": "Microsoft",
+          "type": "Guide"
+        },
+        {
+          "label": "Meta — Advanced Front-End Development & React (Coursera)",
+          "url": "https://www.coursera.org/professional-certificates/meta-front-end-developer",
+          "isFree": false,
+          "provider": "Meta",
+          "type": "Certificate"
+        },
+        {
+          "label": "Total TypeScript — Professional TypeScript Essentials (Free Tutorials)",
+          "url": "https://www.totaltypescript.com/tutorials",
+          "isFree": true,
+          "provider": "Total TypeScript",
+          "type": "Course"
+        }
+      ],
+      "note": "TypeScript extends JavaScript with static type checking, essential for robust modern frontend, full-stack, and backend application development.",
       "field": "Web"
     },
     {
@@ -1741,6 +1881,10 @@
     "manager net": ".NET / C# Development",
     "php developer": "PHP Development",
     "manager php": "PHP Development",
+    "typescript developer": "TypeScript Development",
+    "typescript engineer": "TypeScript Development",
+    "typescript programmer": "TypeScript Development",
+    "ts developer": "TypeScript Development",
     "javascript developer": "JavaScript & Front-End",
     "react developer": "JavaScript & Front-End",
     "front-end designer": "JavaScript & Front-End",

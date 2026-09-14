@@ -6,6 +6,16 @@ const String _csvAssetPath = 'assets/data/IT_Job_Roles_Skills.csv';
 
 List<JobRoleSkills>? _cache;
 Future<List<JobRoleSkills>>? _loading;
+List<String>? _cachedSkillOptions;
+Future<List<String>>? _loadingSkillOptions;
+
+/// Clears cached job roles and derived skill options.
+void resetJobRolesCache() {
+  _cache = null;
+  _loading = null;
+  _cachedSkillOptions = null;
+  _loadingSkillOptions = null;
+}
 
 /// Loads and parses the bundled IT job-role/skills dataset. When the same
 /// job title (case-insensitively) appears on more than one CSV row, only
@@ -228,24 +238,29 @@ const List<String> _kCommonTechSkills = [
 /// vocabulary job postings are matched against. Deduplicated
 /// case-insensitively, keeping the curated list's casing on overlaps
 /// (e.g. "Communication" appears in both).
-Future<List<String>> loadSkillOptions() async {
-  final roles = await loadJobRoles();
-  final seen = <String>{};
-  final out = <String>[];
+Future<List<String>> loadSkillOptions() {
+  if (_cachedSkillOptions != null) return Future.value(_cachedSkillOptions);
+  return _loadingSkillOptions ??= () async {
+    final roles = await loadJobRoles();
+    final seen = <String>{};
+    final out = <String>[];
 
-  for (final skill in _kCommonTechSkills) {
-    if (seen.add(skill.toLowerCase())) out.add(skill);
-  }
-  for (final role in roles) {
-    for (final skill in role.skills) {
-      final base = _stripLevelSuffix(skill);
-      if (base.isEmpty) continue;
-      if (seen.add(base.toLowerCase())) out.add(base);
+    for (final skill in _kCommonTechSkills) {
+      if (seen.add(skill.toLowerCase())) out.add(skill);
     }
-  }
+    for (final role in roles) {
+      for (final skill in role.skills) {
+        final base = _stripLevelSuffix(skill);
+        if (base.isEmpty) continue;
+        if (seen.add(base.toLowerCase())) out.add(base);
+      }
+    }
 
-  out.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-  return out;
+    out.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    _cachedSkillOptions = out;
+    _loadingSkillOptions = null;
+    return out;
+  }();
 }
 
 /// Splits [skills] into (matched, unmatched) based on whether each skill
@@ -257,7 +272,10 @@ Future<List<String>> loadSkillOptions() async {
   final matched = <String>[];
   final unmatched = <String>[];
   for (final s in skills) {
-    if (mySkillKeys.contains(s.trim().toLowerCase())) {
+    final rawLower = s.trim().toLowerCase();
+    final baseLower = _stripLevelSuffix(s).toLowerCase();
+    if (mySkillKeys.contains(rawLower) ||
+        (baseLower.isNotEmpty && mySkillKeys.contains(baseLower))) {
       matched.add(s);
     } else {
       unmatched.add(s);

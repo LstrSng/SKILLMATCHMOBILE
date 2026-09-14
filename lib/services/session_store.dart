@@ -2,6 +2,10 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'applications_api.dart';
+import 'jobs_api.dart';
+import 'profile_api.dart';
+
 class SessionStore {
   static const _kTokenKey = 'auth.token';
   static const _kUserKey = 'auth.user';
@@ -55,6 +59,36 @@ class SessionStore {
     await prefs.setString(_kDeviceTokenKey, deviceToken);
   }
 
+  static Map<String, dynamic> _sanitizeUserForStorage(Map<String, dynamic> user) {
+    try {
+      final copy = Map<String, dynamic>.from(user);
+      if (copy['profile'] is Map) {
+        final profile = Map<String, dynamic>.from(copy['profile'] as Map);
+        if (profile['resume'] is Map) {
+          final resume = Map<String, dynamic>.from(profile['resume'] as Map);
+          if (resume.containsKey('data')) {
+            resume.remove('data');
+            profile['resume'] = resume;
+          }
+        }
+        if (profile['certifications'] is List) {
+          profile['certifications'] = (profile['certifications'] as List).map((c) {
+            if (c is Map && c.containsKey('data')) {
+              final cert = Map<String, dynamic>.from(c);
+              cert.remove('data');
+              return cert;
+            }
+            return c;
+          }).toList();
+        }
+        copy['profile'] = profile;
+      }
+      return copy;
+    } catch (_) {
+      return user;
+    }
+  }
+
   static Future<void> save({
     required String token,
     required Map<String, dynamic> user,
@@ -70,7 +104,7 @@ class SessionStore {
       return;
     }
     await prefs.setString(_kTokenKey, token);
-    await prefs.setString(_kUserKey, jsonEncode(user));
+    await prefs.setString(_kUserKey, jsonEncode(_sanitizeUserForStorage(user)));
     await prefs.setString(
       _kExpiresAtKey,
       DateTime.now().add(_kRememberDuration).toIso8601String(),
@@ -83,16 +117,23 @@ class SessionStore {
     // Only touch disk if this session was persisted in the first place —
     // otherwise a "don't remember me" session would get silently persisted.
     if (prefs.containsKey(_kTokenKey)) {
-      await prefs.setString(_kUserKey, jsonEncode(user));
+      await prefs.setString(_kUserKey, jsonEncode(_sanitizeUserForStorage(user)));
     }
   }
 
-  static Future<void> clear() async {
+  static Future<void> clear({bool clearDeviceToken = false}) async {
     _token = null;
     _user = null;
+    clearApplicationsCache();
+    clearJobsCache();
+    clearProfileCache();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kTokenKey);
     await prefs.remove(_kUserKey);
     await prefs.remove(_kExpiresAtKey);
+    if (clearDeviceToken) {
+      _deviceToken = null;
+      await prefs.remove(_kDeviceTokenKey);
+    }
   }
 }
