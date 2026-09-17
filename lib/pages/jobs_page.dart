@@ -787,7 +787,7 @@ class _QuickFilterChip extends StatelessWidget {
         onTap();
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: const Duration(milliseconds: 80),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? tokens.primary : tokens.cardBackground,
@@ -849,6 +849,7 @@ class _JobCard extends StatelessWidget {
     return AppCard(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
+      animateScaleOnTap: false,
       child: InkWell(
         onTap: () async {
           HapticFeedback.lightImpact();
@@ -880,30 +881,27 @@ class _JobCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Hero(
-                  tag: 'job-avatar-${job.id}',
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: job.initialColor,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x1A000000),
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        job.initial,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: job.initialColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1A000000),
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      job.initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
@@ -913,18 +911,12 @@ class _JobCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Hero(
-                        tag: 'job-title-${job.id}',
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Text(
-                            job.title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                              color: tokens.textPrimary,
-                            ),
-                          ),
+                      Text(
+                        job.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -939,13 +931,11 @@ class _JobCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Hero(
-                  tag: 'job-match-${job.id}',
-                  child: MatchScoreBadge(
-                    score: job.matchPercentage,
-                    variant: MatchScoreBadgeVariant.pill,
-                    showLabel: false,
-                  ),
+                MatchScoreBadge(
+                  score: job.matchPercentage,
+                  variant: MatchScoreBadgeVariant.pill,
+                  showLabel: false,
+                  animate: false,
                 ),
               ],
             ),
@@ -1021,6 +1011,7 @@ class _JobCard extends StatelessWidget {
                         label: skill,
                         status: SkillChipStatus.matched,
                         size: SkillChipSize.small,
+                        animateOnTap: false,
                       ),
                     ),
                 if (job.matchedSkills.length > 3)

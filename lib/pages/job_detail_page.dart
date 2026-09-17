@@ -503,7 +503,7 @@ class _CollapsibleJobDescriptionState extends State<CollapsibleJobDescription> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AnimatedSize(
-                    duration: const Duration(milliseconds: 200),
+                    duration: const Duration(milliseconds: 100),
                     curve: Curves.easeInOut,
                     alignment: Alignment.topLeft,
                     child: Text(
@@ -603,37 +603,34 @@ class JobHeaderCard extends StatelessWidget {
         : 'J';
 
     return AppCard(
+      animateScaleOnTap: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hero Company Avatar
-              Hero(
-                tag: 'job-avatar-$jobId',
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: tokens.primaryGradient,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: tokens.primary.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      initial,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: tokens.primaryGradient,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: tokens.primary.withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -643,19 +640,13 @@ class JobHeaderCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Hero(
-                      tag: 'job-title-$jobId',
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                            color: tokens.textPrimary,
-                          ),
-                        ),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        color: tokens.textPrimary,
                       ),
                     ),
                     if (company.trim().isNotEmpty) ...[
@@ -696,13 +687,11 @@ class JobHeaderCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Hero(
-                tag: 'job-match-$jobId',
-                child: MatchScoreBadge(
-                  score: matchScore,
-                  variant: MatchScoreBadgeVariant.circular,
-                  size: 54,
-                ),
+              MatchScoreBadge(
+                score: matchScore,
+                variant: MatchScoreBadgeVariant.circular,
+                size: 54,
+                animate: false,
               ),
             ],
           ),
@@ -763,6 +752,7 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
         : <String>[];
 
     return AppCard(
+      animateScaleOnTap: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -928,7 +918,7 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
         },
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
+          duration: const Duration(milliseconds: 80),
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
             color: isSelected
