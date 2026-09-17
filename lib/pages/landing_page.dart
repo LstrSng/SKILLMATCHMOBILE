@@ -101,21 +101,6 @@ class _LandingPageState extends State<LandingPage> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: tokens.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RegisterPage()),
-              );
-            },
-            child: const Text('Get Started'),
-          ),
           const SizedBox(width: 16),
         ],
       ),
