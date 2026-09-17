@@ -261,6 +261,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
 
     final engine = AssessmentEngine(
       fullCategory,
+      isAdaptive: true,
       sessionLength: fullCategory.questions.isNotEmpty
           ? fullCategory.questions.length
           : kAssessmentSessionLength,
@@ -368,6 +369,30 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
         _profileData = updatedProfile;
         _results = readAssessmentResults(updatedProfile);
       });
+
+      if (result.passed) {
+        final skillName = (result.roleTitle ?? _activeCategory?.label ?? result.categoryKey).trim();
+        if (skillName.isNotEmpty) {
+          final currentSkills =
+              (SessionStore.user?['skills'] as List?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
+          final alreadyHas = currentSkills.any(
+            (s) => s.toLowerCase().trim() == skillName.toLowerCase(),
+          );
+          if (!alreadyHas) {
+            try {
+              await updateMyProfile({
+                'skills': [...currentSkills, skillName],
+              });
+            } catch (e) {
+              // Non-critical: skill sync failed but assessment is saved
+              debugPrint('Could not sync skill to profile: $e');
+            }
+          }
+        }
+      }
     } catch (e) {
       debugPrint('Auto-save assessment error: $e');
     }

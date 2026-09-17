@@ -101,12 +101,15 @@ class SkillChip extends StatefulWidget {
   State<SkillChip> createState() => _SkillChipState();
 }
 
-class _SkillChipState extends State<SkillChip> with SingleTickerProviderStateMixin {
+class _SkillChipState extends State<SkillChip>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _pressController;
   late final Animation<double> _scaleAnimation;
 
   bool get _isInteractive =>
-      widget.onTap != null || widget.onSelected != null || widget.onDeleted != null;
+      widget.onTap != null ||
+      widget.onSelected != null ||
+      widget.onDeleted != null;
 
   @override
   void initState() {
@@ -187,13 +190,16 @@ class _SkillChipState extends State<SkillChip> with SingleTickerProviderStateMix
     Color border;
     IconData? defaultIcon;
 
-    final effectiveStatus = (widget.status == SkillChipStatus.neutral && widget.isVerified)
+    final effectiveStatus =
+        (widget.status == SkillChipStatus.neutral && widget.isVerified)
         ? SkillChipStatus.verified
         : widget.status;
 
     switch (effectiveStatus) {
       case SkillChipStatus.matched:
-        bg = isDark ? AppColors.badgeHighMatchDarkBg : AppColors.badgeHighMatchBg;
+        bg = isDark
+            ? AppColors.badgeHighMatchDarkBg
+            : AppColors.badgeHighMatchBg;
         fg = isDark ? AppColors.badgeHighMatchDark : const Color(0xFF065F46);
         border = isDark ? const Color(0xFF065F46) : const Color(0xFF6EE7B7);
         defaultIcon = Icons.check_circle_rounded;
@@ -253,7 +259,9 @@ class _SkillChipState extends State<SkillChip> with SingleTickerProviderStateMix
         boxShadow: widget.isMissingAlert
             ? [
                 BoxShadow(
-                  color: AppColors.danger.withValues(alpha: isDark ? 0.25 : 0.12),
+                  color: AppColors.danger.withValues(
+                    alpha: isDark ? 0.25 : 0.12,
+                  ),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -285,7 +293,8 @@ class _SkillChipState extends State<SkillChip> with SingleTickerProviderStateMix
               ),
             ),
           ),
-          if (widget.isVerified && effectiveStatus != SkillChipStatus.verified) ...[
+          if (widget.isVerified &&
+              effectiveStatus != SkillChipStatus.verified) ...[
             const SizedBox(width: 4),
             Icon(
               Icons.verified_rounded,
@@ -306,15 +315,20 @@ class _SkillChipState extends State<SkillChip> with SingleTickerProviderStateMix
           ],
           if (widget.onDeleted != null) ...[
             const SizedBox(width: 4),
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                widget.onDeleted!();
-              },
-              child: Icon(
-                Icons.close_rounded,
-                color: fg.withValues(alpha: 0.7),
-                size: iconSize + 1,
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  widget.onDeleted!();
+                },
+                child: Icon(
+                  Icons.close_rounded,
+                  color: fg.withValues(alpha: 0.7),
+                  size: iconSize + 1,
+                ),
               ),
             ),
           ],
@@ -343,19 +357,14 @@ class _SkillChipState extends State<SkillChip> with SingleTickerProviderStateMix
     if (_isInteractive && widget.animateOnTap) {
       chipContent = AnimatedBuilder(
         animation: _scaleAnimation,
-        builder: (context, child) => Transform.scale(
-          scale: _scaleAnimation.value,
-          child: child,
-        ),
+        builder: (context, child) =>
+            Transform.scale(scale: _scaleAnimation.value, child: child),
         child: chipContent,
       );
     }
 
     if (widget.tooltip != null) {
-      chipContent = Tooltip(
-        message: widget.tooltip!,
-        child: chipContent,
-      );
+      chipContent = Tooltip(message: widget.tooltip!, child: chipContent);
     }
 
     return chipContent;

@@ -50,7 +50,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final updated = await NotificationStore.load();
     if (!mounted) return;
     setState(() => _notifications = updated);
-    showAppToast(context, 'All notifications marked as read.', type: AppToastType.success);
+    showAppToast(
+      context,
+      'All notifications marked as read.',
+      type: AppToastType.success,
+    );
   }
 
   Future<void> _clearAll() async {
@@ -59,7 +63,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Clear all notifications?'),
-          content: const Text('This will remove all notification history on this device.'),
+          content: const Text(
+            'This will remove all notification history on this device.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -90,7 +96,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     if (!mounted) return;
 
-    if (notification.type == 'application' || notification.type == 'weekly_digest') {
+    if (notification.type == 'application' ||
+        notification.type == 'weekly_digest') {
       Navigator.pop(context);
       AppNavigation.switchTab(AppTab.applied);
       return;
@@ -102,11 +109,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
         try {
           final jobs = await fetchJobsRaw();
           final target = jobs.firstWhere(
-            (j) => (j['id'] as Object?)?.toString().trim() == notification.targetId!.trim(),
+            (j) =>
+                (j['id'] as Object?)?.toString().trim() ==
+                notification.targetId!.trim(),
             orElse: () => <String, dynamic>{},
           );
           if (target.isNotEmpty && mounted) {
-            final applicantId = (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString();
+            final applicantId =
+                (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
+                    ?.toString();
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -121,10 +132,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   postedDate: target['postedDate']?.toString() ?? '',
                   matchPercentage: target['matchPercentage'] is num
                       ? (target['matchPercentage'] as num).toInt()
-                      : (int.tryParse(target['matchPercentage']?.toString() ?? '') ?? 0),
+                      : (int.tryParse(
+                              target['matchPercentage']?.toString() ?? '',
+                            ) ??
+                            0),
                   description: target['description']?.toString() ?? '',
-                  matchedSkills: (target['matchedSkills'] as List?)?.map((e) => e.toString()).toList() ?? [],
-                  unmatchedSkills: (target['unmatchedSkills'] as List?)?.map((e) => e.toString()).toList() ?? [],
+                  matchedSkills:
+                      (target['matchedSkills'] as List?)
+                          ?.map((e) => e.toString())
+                          .toList() ??
+                      [],
+                  unmatchedSkills:
+                      (target['unmatchedSkills'] as List?)
+                          ?.map((e) => e.toString())
+                          .toList() ??
+                      [],
                 ),
               ),
             );
@@ -149,8 +171,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (diff.inDays < 7) return '${diff.inDays}d ago';
 
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year}';
   }
@@ -160,7 +192,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
       case _NotificationCategory.all:
         return _notifications;
       case _NotificationCategory.applications:
-        return _notifications.where((n) => n.type == 'application' || n.type == 'weekly_digest').toList();
+        return _notifications
+            .where((n) => n.type == 'application' || n.type == 'weekly_digest')
+            .toList();
       case _NotificationCategory.jobMatches:
         return _notifications.where((n) => n.type == 'job_match').toList();
       case _NotificationCategory.system:
@@ -195,12 +229,20 @@ class _NotificationsPageState extends State<NotificationsPage> {
         actions: [
           if (_notifications.isNotEmpty) ...[
             IconButton(
-              icon: Icon(Icons.done_all_rounded, color: tokens.primary, size: 20),
+              icon: Icon(
+                Icons.done_all_rounded,
+                color: tokens.primary,
+                size: 20,
+              ),
               tooltip: 'Mark all as read',
               onPressed: _markAllAsRead,
             ),
             IconButton(
-              icon: Icon(Icons.delete_outline_rounded, color: tokens.textSecondary, size: 20),
+              icon: Icon(
+                Icons.delete_outline_rounded,
+                color: tokens.textSecondary,
+                size: 20,
+              ),
               tooltip: 'Clear all',
               onPressed: _clearAll,
             ),
@@ -278,7 +320,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    _selectedCategory == _NotificationCategory.all
+                                    _selectedCategory ==
+                                            _NotificationCategory.all
                                         ? 'No notifications yet.'
                                         : 'No notifications in this category.',
                                     textAlign: TextAlign.center,
@@ -308,15 +351,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
                               child: _NotificationCard(
                                 notification: notification,
                                 timeAgo: _timeAgo(notification.createdAt),
-                                onAction: () => _handleNotificationAction(notification),
+                                onAction: () =>
+                                    _handleNotificationAction(notification),
                                 onDismiss: () async {
-                                  await NotificationStore.delete(notification.id);
+                                  await NotificationStore.delete(
+                                    notification.id,
+                                  );
                                   _load();
                                 },
                               ),
                             ),
                           ),
-                        const SizedBox(height: 100),
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
@@ -525,7 +571,10 @@ class _NotificationCard extends StatelessWidget {
               TextButton.icon(
                 style: TextButton.styleFrom(
                   foregroundColor: tokens.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -533,11 +582,18 @@ class _NotificationCard extends StatelessWidget {
                 icon: const Icon(Icons.arrow_forward_rounded, size: 15),
                 label: Text(
                   actionLabel,
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.close_rounded, size: 16, color: tokens.textSecondary),
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: 16,
+                  color: tokens.textSecondary,
+                ),
                 tooltip: 'Dismiss',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),

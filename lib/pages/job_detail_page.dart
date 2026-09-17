@@ -155,27 +155,42 @@ class _JobDetailPageState extends State<JobDetailPage> {
     List<String> missing, {
     String jobTitle = '',
   }) {
-    if (score >= 80) {
+    if (score >= 85) {
       if (missing.isEmpty) {
         return 'Outstanding match ($score%)! You meet all required skills for this position. Ready to apply!';
       }
-      final targetSkill =
-          _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
+      final targetSkill = _selectPrimaryPrescriptionSkill(
+        missing,
+        jobTitle: jobTitle,
+      );
       final rx = resolveSkillPrescription(targetSkill);
-      return 'Strong fit ($score%). You match most requirements. Consider closing minor gaps in ${missing.take(2).join(', ')} with ${rx.tesdaProgram} or ${rx.globalCert} to maximize readiness.';
+      return 'Great fit ($score%). You match most requirements. Consider closing minor gaps in ${missing.take(2).join(', ')} with ${rx.tesdaProgram} or ${rx.globalCert} to maximize readiness.';
     }
-    if (score >= 50) {
-      final targetSkill =
-          _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
+    if (score >= 70) {
+      final targetSkill = _selectPrimaryPrescriptionSkill(
+        missing,
+        jobTitle: jobTitle,
+      );
       final rx = resolveSkillPrescription(targetSkill);
       return 'Good fit ($score%). Recommended upskilling: ${rx.tesdaProgram} (via e-TESDA/accredited TVET) or industry certs (${rx.globalCert}) to close gaps in ${missing.take(3).join(', ')}.';
     }
-    if (missing.isNotEmpty) {
-      final targetSkill =
-          _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
+    if (score >= 50) {
+      final targetSkill = _selectPrimaryPrescriptionSkill(
+        missing,
+        jobTitle: jobTitle,
+      );
       final rx = resolveSkillPrescription(targetSkill);
-      final roleDesc =
-          jobTitle.trim().isNotEmpty ? 'this $jobTitle role' : 'this position';
+      return 'Moderate fit ($score%). Focus on building ${missing.take(2).join(' and ')} skills through ${rx.tesdaProgram} or ${rx.globalCert} to strengthen your candidacy.';
+    }
+    if (missing.isNotEmpty) {
+      final targetSkill = _selectPrimaryPrescriptionSkill(
+        missing,
+        jobTitle: jobTitle,
+      );
+      final rx = resolveSkillPrescription(targetSkill);
+      final roleDesc = jobTitle.trim().isNotEmpty
+          ? 'this $jobTitle role'
+          : 'this position';
       final cleanGaps = missing.take(3).join(', ');
       if (missing.length == 1 ||
           targetSkill.toLowerCase() == missing.first.toLowerCase()) {
@@ -188,7 +203,8 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
   Future<void> _applyNow() async {
     if (_applying) return;
-    final totalSkills = (_matchResult?.matchedSkills.length ?? widget.matchedSkills.length) +
+    final totalSkills =
+        (_matchResult?.matchedSkills.length ?? widget.matchedSkills.length) +
         (_matchResult?.missingSkills.length ?? widget.unmatchedSkills.length);
     if (totalSkills > 0 && _displayScore <= 0) {
       showAppToast(
@@ -224,11 +240,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      showAppToast(
-        context,
-        e.toString(),
-        type: AppToastType.error,
-      );
+      showAppToast(context, e.toString(), type: AppToastType.error);
     } finally {
       if (mounted) setState(() => _applying = false);
     }
@@ -255,9 +267,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
     HapticFeedback.selectionClick();
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => PathwayPage(initialQuery: skill),
-      ),
+      MaterialPageRoute(builder: (context) => PathwayPage(initialQuery: skill)),
     );
   }
 
@@ -333,7 +343,8 @@ class _JobDetailPageState extends State<JobDetailPage> {
         ],
       ),
       body: _buildBody(context),
-      bottomNavigationBar: _loading || _matchResult == null || !widget.allowApply
+      bottomNavigationBar:
+          _loading || _matchResult == null || !widget.allowApply
           ? null
           : _JobDetailBottomBar(
               matchScore: _displayScore,
@@ -397,7 +408,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
               jobType: widget.jobType,
               postedDate: widget.postedDate,
               matchScore: result.matchScore,
-              onCompanyTap: widget.jobId.trim().isEmpty ? null : _openCompanyDetails,
+              onCompanyTap: widget.jobId.trim().isEmpty
+                  ? null
+                  : _openCompanyDetails,
             ),
 
             // Description Section
@@ -418,9 +431,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
             const SizedBox(height: 16),
 
             // Recommendation Summary Card
-            RecommendationCard(
-              recommendation: result.recommendation,
-            ),
+            RecommendationCard(recommendation: result.recommendation),
           ],
         ),
       ),
@@ -458,11 +469,7 @@ class _CollapsibleJobDescriptionState extends State<CollapsibleJobDescription> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.description_outlined,
-                size: 18,
-                color: tokens.primary,
-              ),
+              Icon(Icons.description_outlined, size: 18, color: tokens.primary),
               const SizedBox(width: 8),
               Text(
                 'Job Description',
@@ -483,10 +490,7 @@ class _CollapsibleJobDescriptionState extends State<CollapsibleJobDescription> {
                 color: tokens.textSecondary,
                 height: 1.55,
               );
-              final span = TextSpan(
-                text: widget.description,
-                style: textStyle,
-              );
+              final span = TextSpan(text: widget.description, style: textStyle);
               final tp = TextPainter(
                 text: span,
                 maxLines: widget.trimLines,
@@ -594,7 +598,9 @@ class JobHeaderCard extends StatelessWidget {
         _MetaPill(icon: Icons.calendar_today_outlined, label: postedDate),
     ];
 
-    final initial = company.trim().isNotEmpty ? company.trim()[0].toUpperCase() : 'J';
+    final initial = company.trim().isNotEmpty
+        ? company.trim()[0].toUpperCase()
+        : 'J';
 
     return AppCard(
       child: Column(
@@ -732,7 +738,8 @@ class SkillCompatibilityMatrix extends StatefulWidget {
   final ValueChanged<String>? onTakeQuiz;
 
   @override
-  State<SkillCompatibilityMatrix> createState() => _SkillCompatibilityMatrixState();
+  State<SkillCompatibilityMatrix> createState() =>
+      _SkillCompatibilityMatrixState();
 }
 
 class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
@@ -741,12 +748,17 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    final totalSkills = widget.matchedSkills.length + widget.missingSkills.length;
+    final totalSkills =
+        widget.matchedSkills.length + widget.missingSkills.length;
 
-    final displayedMatched = (_filter == _SkillMatrixFilter.all || _filter == _SkillMatrixFilter.matched)
+    final displayedMatched =
+        (_filter == _SkillMatrixFilter.all ||
+            _filter == _SkillMatrixFilter.matched)
         ? widget.matchedSkills
         : <String>[];
-    final displayedMissing = (_filter == _SkillMatrixFilter.all || _filter == _SkillMatrixFilter.missing)
+    final displayedMissing =
+        (_filter == _SkillMatrixFilter.all ||
+            _filter == _SkillMatrixFilter.missing)
         ? widget.missingSkills
         : <String>[];
 
@@ -757,11 +769,7 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
           // Section Title Row
           Row(
             children: [
-              Icon(
-                Icons.analytics_outlined,
-                size: 20,
-                color: tokens.primary,
-              ),
+              Icon(Icons.analytics_outlined, size: 20, color: tokens.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -854,7 +862,8 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
             children: [
               _buildFilterTab(
                 context,
-                label: 'All (${widget.matchedSkills.length + widget.missingSkills.length})',
+                label:
+                    'All (${widget.matchedSkills.length + widget.missingSkills.length})',
                 filter: _SkillMatrixFilter.all,
               ),
               const SizedBox(width: 8),
@@ -887,9 +896,7 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
               ),
             )
           else ...[
-            ...displayedMatched.map(
-              (skill) => _MatchedSkillRow(skill: skill),
-            ),
+            ...displayedMatched.map((skill) => _MatchedSkillRow(skill: skill)),
             ...displayedMissing.map(
               (skill) => _MissingSkillRow(
                 skill: skill,
@@ -988,12 +995,18 @@ class _MatchedSkillRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.matchBgColor(100, isDark: isDark),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColors.matchBorderColor(100, isDark: isDark)),
+              border: Border.all(
+                color: AppColors.matchBorderColor(100, isDark: isDark),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.check_circle_rounded, size: 12, color: tokens.success),
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 12,
+                  color: tokens.success,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Matched',
@@ -1013,10 +1026,7 @@ class _MatchedSkillRow extends StatelessWidget {
 }
 
 class _MissingSkillRow extends StatelessWidget {
-  const _MissingSkillRow({
-    required this.skill,
-    this.onLearn,
-  });
+  const _MissingSkillRow({required this.skill, this.onLearn});
 
   final String skill;
   final VoidCallback? onLearn;
@@ -1053,12 +1063,18 @@ class _MissingSkillRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.matchBgColor(0, isDark: isDark),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColors.matchBorderColor(0, isDark: isDark)),
+              border: Border.all(
+                color: AppColors.matchBorderColor(0, isDark: isDark),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.warning_amber_rounded, size: 12, color: tokens.danger),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  size: 12,
+                  color: tokens.danger,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Skill Gap',
@@ -1084,12 +1100,18 @@ class _MissingSkillRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: tokens.primarySoftBg,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: tokens.primary.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: tokens.primary.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.explore_outlined, size: 13, color: tokens.primary),
+                    Icon(
+                      Icons.explore_outlined,
+                      size: 13,
+                      color: tokens.primary,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Learn',
@@ -1100,7 +1122,11 @@ class _MissingSkillRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 2),
-                    Icon(Icons.chevron_right_rounded, size: 13, color: tokens.primary),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 13,
+                      color: tokens.primary,
+                    ),
                   ],
                 ),
               ),
@@ -1168,7 +1194,9 @@ class _JobDetailBottomBar extends StatelessWidget {
                 ),
               ),
               child: Icon(
-                isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                isBookmarked
+                    ? Icons.bookmark_rounded
+                    : Icons.bookmark_border_rounded,
                 color: isBookmarked ? tokens.primary : tokens.textSecondary,
                 size: 22,
               ),
@@ -1182,8 +1210,9 @@ class _JobDetailBottomBar extends StatelessWidget {
               height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isApplied ? tokens.success : AppColors.primary,
+                  backgroundColor: isApplied
+                      ? tokens.success
+                      : AppColors.primary,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: isApplied
                       ? tokens.success.withValues(alpha: 0.8)
@@ -1211,8 +1240,8 @@ class _JobDetailBottomBar extends StatelessWidget {
                             isApplied
                                 ? 'Applied'
                                 : (matchScore <= 0
-                                    ? 'Boost Match to Apply'
-                                    : 'Apply Now'),
+                                      ? 'Boost Match to Apply'
+                                      : 'Apply Now'),
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
@@ -1223,8 +1252,8 @@ class _JobDetailBottomBar extends StatelessWidget {
                             isApplied
                                 ? Icons.check_circle_rounded
                                 : (matchScore <= 0
-                                    ? Icons.lock_outline_rounded
-                                    : Icons.arrow_forward_rounded),
+                                      ? Icons.lock_outline_rounded
+                                      : Icons.arrow_forward_rounded),
                             size: 18,
                           ),
                         ],
@@ -1258,8 +1287,10 @@ bool _hasSkillKeyword(String text, String keyword) {
   final lower = text.toLowerCase();
   final k = keyword.toLowerCase();
   if (k.length <= 2 && RegExp(r'^[a-z0-9]+$').hasMatch(k)) {
-    return RegExp(r'\b' + RegExp.escape(k) + r'\b', caseSensitive: false)
-        .hasMatch(lower);
+    return RegExp(
+      r'\b' + RegExp.escape(k) + r'\b',
+      caseSensitive: false,
+    ).hasMatch(lower);
   }
   return lower.contains(k);
 }
@@ -1273,7 +1304,8 @@ String _selectPrimaryPrescriptionSkill(
 
   final titleLower = jobTitle.toLowerCase();
 
-  final isUiDesign = titleLower.contains('ui') ||
+  final isUiDesign =
+      titleLower.contains('ui') ||
       titleLower.contains('ux') ||
       titleLower.contains('interface') ||
       titleLower.contains('design') ||
@@ -1281,27 +1313,31 @@ String _selectPrimaryPrescriptionSkill(
       titleLower.contains('front-end') ||
       titleLower.contains('web');
 
-  final isMobile = titleLower.contains('mobile') ||
+  final isMobile =
+      titleLower.contains('mobile') ||
       titleLower.contains('android') ||
       titleLower.contains('ios') ||
       titleLower.contains('flutter');
 
-  final isDataAi = titleLower.contains('data') ||
+  final isDataAi =
+      titleLower.contains('data') ||
       titleLower.contains('analytics') ||
       titleLower.contains('machine learning') ||
       titleLower.contains('ai');
 
-  final isDevOps = titleLower.contains('devops') ||
+  final isDevOps =
+      titleLower.contains('devops') ||
       titleLower.contains('cloud') ||
       titleLower.contains('sysadmin') ||
       titleLower.contains('infrastructure');
 
-  final isQa = titleLower.contains('qa') ||
+  final isQa =
+      titleLower.contains('qa') ||
       titleLower.contains('test') ||
       titleLower.contains('quality');
 
-  final isCyber = titleLower.contains('security') ||
-      titleLower.contains('cyber');
+  final isCyber =
+      titleLower.contains('security') || titleLower.contains('cyber');
 
   for (final skill in missing) {
     final sLower = skill.toLowerCase();
@@ -1375,8 +1411,7 @@ String _selectPrimaryPrescriptionSkill(
 String selectPrimaryPrescriptionSkill(
   List<String> missing, {
   String jobTitle = '',
-}) =>
-    _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
+}) => _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
 
 @visibleForTesting
 String buildJobRecommendation(
@@ -1392,7 +1427,17 @@ SkillPrescription resolveSkillPrescription(String skill) {
   bool has(List<String> keywords) =>
       keywords.any((k) => _hasSkillKeyword(lower, k));
 
-  if (has(['docker', 'kubernetes', 'k8s', 'container', 'ci/cd', 'devops', 'jenkins', 'ansible', 'terraform'])) {
+  if (has([
+    'docker',
+    'kubernetes',
+    'k8s',
+    'container',
+    'ci/cd',
+    'devops',
+    'jenkins',
+    'ansible',
+    'terraform',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Computer Systems Servicing (CSS) NC II',
@@ -1412,7 +1457,20 @@ SkillPrescription resolveSkillPrescription(String skill) {
     );
   }
 
-  if (has(['react', 'vue', 'angular', 'frontend', 'front-end', 'html', 'css', 'javascript', 'js', 'web', 'tailwind', 'bootstrap'])) {
+  if (has([
+    'react',
+    'vue',
+    'angular',
+    'frontend',
+    'front-end',
+    'html',
+    'css',
+    'javascript',
+    'js',
+    'web',
+    'tailwind',
+    'bootstrap',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Web Development NC III',
@@ -1422,7 +1480,18 @@ SkillPrescription resolveSkillPrescription(String skill) {
     );
   }
 
-  if (has(['node', 'backend', 'back-end', 'express', 'django', 'fastapi', 'flask', 'api', 'rest', 'graphql'])) {
+  if (has([
+    'node',
+    'backend',
+    'back-end',
+    'express',
+    'django',
+    'fastapi',
+    'flask',
+    'api',
+    'rest',
+    'graphql',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Web Development NC III',
@@ -1432,7 +1501,16 @@ SkillPrescription resolveSkillPrescription(String skill) {
     );
   }
 
-  if (has(['flutter', 'dart', 'android', 'ios', 'swift', 'kotlin', 'mobile', 'react native'])) {
+  if (has([
+    'flutter',
+    'dart',
+    'android',
+    'ios',
+    'swift',
+    'kotlin',
+    'mobile',
+    'react native',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Web Development NC III (Mobile & Web)',
@@ -1446,13 +1524,24 @@ SkillPrescription resolveSkillPrescription(String skill) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Computer Systems Servicing (CSS) NC II',
-      globalCert: 'AWS Certified Cloud Practitioner • Azure Fundamentals (AZ-900)',
+      globalCert:
+          'AWS Certified Cloud Practitioner • Azure Fundamentals (AZ-900)',
       providerSummary: 'Amazon Web Services / Microsoft Learn',
       searchKeyword: 'Cloud',
     );
   }
 
-  if (has(['sql', 'database', 'db', 'oracle', 'postgres', 'postgresql', 'mysql', 'mongodb', 'nosql'])) {
+  if (has([
+    'sql',
+    'database',
+    'db',
+    'oracle',
+    'postgres',
+    'postgresql',
+    'mysql',
+    'mongodb',
+    'nosql',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Programming (Oracle Database) NC III',
@@ -1462,7 +1551,21 @@ SkillPrescription resolveSkillPrescription(String skill) {
     );
   }
 
-  if (has(['python', 'data', 'analytics', 'analysis', 'pandas', 'numpy', 'bi', 'tableau', 'power bi', 'powerbi', 'machine learning', 'ai', 'statistics'])) {
+  if (has([
+    'python',
+    'data',
+    'analytics',
+    'analysis',
+    'pandas',
+    'numpy',
+    'bi',
+    'tableau',
+    'power bi',
+    'powerbi',
+    'machine learning',
+    'ai',
+    'statistics',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Data Analytics Essentials (e-TESDA TOP)',
@@ -1472,7 +1575,15 @@ SkillPrescription resolveSkillPrescription(String skill) {
     );
   }
 
-  if (has(['security', 'cyber', 'infosec', 'penetration', 'ethical hacking', 'firewall', 'soc'])) {
+  if (has([
+    'security',
+    'cyber',
+    'infosec',
+    'penetration',
+    'ethical hacking',
+    'firewall',
+    'soc',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Cybersecurity Essentials (e-TESDA TOP)',
@@ -1502,7 +1613,17 @@ SkillPrescription resolveSkillPrescription(String skill) {
     );
   }
 
-  if (has(['network', 'hardware', 'troubleshoot', 'sysadmin', 'linux', 'server', 'support', 'helpdesk', 'service desk'])) {
+  if (has([
+    'network',
+    'hardware',
+    'troubleshoot',
+    'sysadmin',
+    'linux',
+    'server',
+    'support',
+    'helpdesk',
+    'service desk',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Computer Systems Servicing (CSS) NC II',
@@ -1512,11 +1633,22 @@ SkillPrescription resolveSkillPrescription(String skill) {
     );
   }
 
-  if (has(['design', 'ui', 'ux', 'figma', 'graphic', 'photoshop', 'illustrator', 'creative', 'interface'])) {
+  if (has([
+    'design',
+    'ui',
+    'ux',
+    'figma',
+    'graphic',
+    'photoshop',
+    'illustrator',
+    'creative',
+    'interface',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Visual Graphic Design NC III',
-      globalCert: 'Google UX Design Professional Certificate • Interaction Design',
+      globalCert:
+          'Google UX Design Professional Certificate • Interaction Design',
       providerSummary: 'e-TESDA / Google (Coursera) / Adobe',
       searchKeyword: 'Design',
     );
@@ -1532,11 +1664,20 @@ SkillPrescription resolveSkillPrescription(String skill) {
     );
   }
 
-  if (has(['agile', 'scrum', 'project', 'product', 'jira', 'management', 'leadership'])) {
+  if (has([
+    'agile',
+    'scrum',
+    'project',
+    'product',
+    'jira',
+    'management',
+    'leadership',
+  ])) {
     return SkillPrescription(
       skill: skill,
       tesdaProgram: 'TESDA Contact Center Services NC II / Project Support',
-      globalCert: 'Scrum.org Professional Scrum Master (PSM I) • Google Project Mgmt',
+      globalCert:
+          'Scrum.org Professional Scrum Master (PSM I) • Google Project Mgmt',
       providerSummary: 'Scrum.org / Google / PMI',
       searchKeyword: 'Management',
     );
@@ -1555,10 +1696,7 @@ SkillPrescription resolveSkillPrescription(String skill) {
 }
 
 class RecommendationCard extends StatelessWidget {
-  const RecommendationCard({
-    super.key,
-    required this.recommendation,
-  });
+  const RecommendationCard({super.key, required this.recommendation});
 
   final String recommendation;
 
@@ -1582,14 +1720,10 @@ class RecommendationCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.auto_awesome_rounded,
-                size: 18,
-                color: tokens.primary,
-              ),
+              Icon(Icons.auto_awesome_rounded, size: 18, color: tokens.primary),
               const SizedBox(width: 8),
               Text(
-                'AI Match Recommendation',
+                'Smart Match Recommendation',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -1698,10 +1832,7 @@ class _StatusCard extends StatelessWidget {
             style: TextStyle(fontSize: 13, color: tokens.textSecondary),
           ),
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: onPressed,
-            child: Text(actionLabel),
-          ),
+          FilledButton(onPressed: onPressed, child: Text(actionLabel)),
         ],
       ),
     );

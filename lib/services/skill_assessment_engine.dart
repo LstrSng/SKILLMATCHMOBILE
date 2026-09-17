@@ -35,11 +35,12 @@ class AssessmentEngine {
     Random? random,
     int? sessionLength,
     this.isAdaptive = false,
-  })  : _random = random ?? Random(),
-        sessionLength = sessionLength ??
-            (category.questions.isNotEmpty
-                ? min(category.questions.length, kAssessmentSessionLength)
-                : kAssessmentSessionLength);
+  }) : _random = random ?? Random(),
+       sessionLength =
+           sessionLength ??
+           (category.questions.isNotEmpty
+               ? min(category.questions.length, kAssessmentSessionLength)
+               : kAssessmentSessionLength);
 
   final AssessmentCategory category;
   final Random _random;
@@ -60,7 +61,8 @@ class AssessmentEngine {
   bool get isComplete =>
       _askedCount >= sessionLength || _askedCount >= category.questions.length;
   PresentedQuestion? get current => _current;
-  List<RecordedAnswer> get recordedAnswers => List.unmodifiable(_recordedAnswers);
+  List<RecordedAnswer> get recordedAnswers =>
+      List.unmodifiable(_recordedAnswers);
 
   PresentedQuestion? nextQuestion() {
     if (isComplete) {
@@ -95,8 +97,9 @@ class AssessmentEngine {
   }
 
   AssessmentQuestion? _pickQuestionAdaptive({required int preferredTier}) {
-    final unused =
-        category.questions.where((q) => !_askedIds.contains(q.id)).toList();
+    final unused = category.questions
+        .where((q) => !_askedIds.contains(q.id))
+        .toList();
     if (unused.isEmpty) return null;
 
     for (final distance in [0, 1, 2]) {
@@ -145,26 +148,29 @@ class AssessmentEngine {
       _ability = max(_kMinAbility, _ability - _kAbilityStep);
     }
 
-    _recordedAnswers.add(RecordedAnswer(
-      question: q,
-      selectedIndex: selectedIndex,
-      isCorrect: isCorrect,
-    ));
+    _recordedAnswers.add(
+      RecordedAnswer(
+        question: q,
+        selectedIndex: selectedIndex,
+        isCorrect: isCorrect,
+      ),
+    );
 
     return isCorrect;
   }
 
   AssessmentResult buildResult() {
-    final percentage =
-        _askedCount > 0 ? ((_correctCount / _askedCount) * 100).round() : 0;
+    final percentage = _askedCount > 0
+        ? ((_correctCount / _askedCount) * 100).round()
+        : 0;
     final passed = percentage >= category.passingScorePercentage;
 
     String level;
-    if (percentage >= 85) {
+    if (_ability >= 3.4) {
       level = 'Job-ready';
-    } else if (percentage >= 70) {
+    } else if (_ability >= 2.6) {
       level = 'Advanced';
-    } else if (percentage >= 50) {
+    } else if (_ability >= 1.8) {
       level = 'Intermediate';
     } else {
       level = 'Beginner';
@@ -206,16 +212,15 @@ Map<String, AssessmentResult> readAssessmentResults(
 
 /// Reads the historical log of assessment attempts from the user's
 /// `profile.assessmentRecords` bucket. Returns results sorted with newest first.
-List<AssessmentResult> readAssessmentHistory(
-  Map<String, dynamic> profileData,
-) {
+List<AssessmentResult> readAssessmentHistory(Map<String, dynamic> profileData) {
   final raw = profileData['assessmentRecords'];
   final list = <AssessmentResult>[];
 
   if (raw is List) {
     for (final item in raw) {
       if (item is! Map) continue;
-      final categoryKey = (item['categoryKey'] ?? item['roleId'] ?? '').toString();
+      final categoryKey = (item['categoryKey'] ?? item['roleId'] ?? '')
+          .toString();
       final parsed = AssessmentResult.fromJson(categoryKey, item);
       if (parsed != null) {
         list.add(parsed);
@@ -251,7 +256,9 @@ Map<String, dynamic> mergeAssessmentResult(
   final existingHistory = profile['assessmentRecords'];
   final history = existingHistory is List
       ? List<Map<String, dynamic>>.from(
-          existingHistory.whereType<Map>().map((m) => m.map((k, v) => MapEntry(k.toString(), v))),
+          existingHistory.whereType<Map>().map(
+            (m) => m.map((k, v) => MapEntry(k.toString(), v)),
+          ),
         )
       : <Map<String, dynamic>>[];
 

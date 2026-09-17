@@ -66,6 +66,7 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
         ),
         contentPadding: widget.contentPadding,
         suffixIcon: IconButton(
+          tooltip: _obscure ? 'Show password' : 'Hide password',
           icon: Icon(
             _obscure ? Icons.visibility_off : Icons.visibility,
             color: tokens.textSecondary,

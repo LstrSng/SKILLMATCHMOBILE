@@ -35,10 +35,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       titleSpacing: 16,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
-        child: Container(
-          height: 1,
-          color: tokens.cardBorderSoft,
-        ),
+        child: Container(height: 1, color: tokens.cardBorderSoft),
       ),
       title: Row(
         mainAxisSize: MainAxisSize.min,
@@ -83,6 +80,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: IconButton(
+              tooltip: 'Settings',
               icon: Container(
                 width: 36,
                 height: 36,

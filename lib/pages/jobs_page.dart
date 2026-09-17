@@ -9,6 +9,7 @@ import '../services/job_skill_matcher.dart';
 import '../services/jobs_api.dart';
 import '../services/notification_store.dart';
 import '../services/session_store.dart';
+import '../services/saved_jobs_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/widgets.dart';
 
@@ -33,6 +34,7 @@ class _JobsPageState extends State<JobsPage> {
 
   // Selected quick filter pill
   String _selectedQuickFilter = 'All';
+  Set<String> _savedJobIds = {};
 
   void _onSearchChanged(String val) {
     _searchDebounce?.cancel();
@@ -110,9 +112,11 @@ class _JobsPageState extends State<JobsPage> {
         jobs: allJobs.where((j) => !appliedJobIds.contains(j.id)).toList(),
         mySkillKeys: readMySkillKeys(SessionStore.user),
       );
+      final savedIds = await SavedJobsStore.loadIds();
       if (!mounted) return;
       setState(() {
         _jobs = list;
+        _savedJobIds = savedIds;
         _hasAppliedToAllJobs = allJobs.isNotEmpty && list.isEmpty;
         _loading = false;
         _error = null;
@@ -140,6 +144,9 @@ class _JobsPageState extends State<JobsPage> {
     final q = _debouncedQuery;
     bool matches(Job j) {
       // Quick filter
+      if (_selectedQuickFilter == 'Saved' && !_savedJobIds.contains(j.id)) {
+        return false;
+      }
       if (_selectedQuickFilter == 'High Match (80%+)' &&
           j.matchPercentage < 80) {
         return false;
@@ -560,6 +567,22 @@ class _JobsPageState extends State<JobsPage> {
                                   ),
                                   const SizedBox(width: 8),
                                   _QuickFilterChip(
+                                    label: 'Saved',
+                                    icon: Icons.bookmark_rounded,
+                                    selected: _selectedQuickFilter == 'Saved',
+                                    onTap: () async {
+                                      final ids =
+                                          await SavedJobsStore.loadIds();
+                                      if (mounted) {
+                                        setState(() {
+                                          _savedJobIds = ids;
+                                          _selectedQuickFilter = 'Saved';
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _QuickFilterChip(
                                     label: '⚡ High Match (80%+)',
                                     selected:
                                         _selectedQuickFilter ==
@@ -679,9 +702,11 @@ class _JobsPageState extends State<JobsPage> {
                                   const SizedBox(height: 14),
                                   Text(
                                     _hasAppliedToAllJobs
-                                        ? "You've applied to all available jobs!"
+                                        ? "No more jobs available at the moment."
+                                        : _selectedQuickFilter == 'Saved'
+                                        ? "No saved jobs yet"
                                         : _jobs.isEmpty
-                                        ? 'No job postings yet. Check back soon!'
+                                        ? 'No jobs match your filters'
                                         : 'No jobs match your search/filter.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
@@ -692,7 +717,11 @@ class _JobsPageState extends State<JobsPage> {
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    'Try searching for different keywords or resetting filters.',
+                                    _hasAppliedToAllJobs
+                                        ? 'Check back later for new opportunities.'
+                                        : _selectedQuickFilter == 'Saved'
+                                        ? 'Tap the bookmark icon on any job to save it for later.'
+                                        : 'Try adjusting your search criteria or explore all available positions.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: tokens.textSecondary,
@@ -740,11 +769,13 @@ class _QuickFilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final IconData? icon;
 
   const _QuickFilterChip({
     required this.label,
     required this.selected,
     required this.onTap,
+    this.icon,
   });
 
   @override
@@ -774,13 +805,26 @@ class _QuickFilterChip extends StatelessWidget {
                 ]
               : tokens.cardShadows,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-            color: selected ? Colors.white : tokens.textSecondary,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 14,
+                color: selected ? Colors.white : tokens.textSecondary,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected ? Colors.white : tokens.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );

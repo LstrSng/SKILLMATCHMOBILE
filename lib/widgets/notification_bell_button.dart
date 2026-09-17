@@ -42,14 +42,14 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
       valueListenable: NotificationStore.unreadCountNotifier,
       builder: (context, unreadCount, _) {
         return IconButton(
+          tooltip: unreadCount > 0
+              ? 'Notifications, $unreadCount unread'
+              : 'Notifications',
           onPressed: _openNotifications,
           icon: Stack(
             clipBehavior: Clip.none,
             children: [
-              Icon(
-                Icons.notifications,
-                color: widget.iconColor,
-              ),
+              Icon(Icons.notifications, color: widget.iconColor),
               if (unreadCount > 0)
                 Positioned(
                   right: -6,

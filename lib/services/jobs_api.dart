@@ -18,7 +18,7 @@ class JobsApiException implements Exception {
 }
 
 const String _kJobsCacheKey = 'cache.jobs.raw';
-const Duration _kJobsNetworkTimeout = Duration(seconds: 20);
+const Duration _kJobsNetworkTimeout = Duration(seconds: 45);
 
 List<Map<String, dynamic>>? _memoryCachedJobs;
 Future<List<Map<String, dynamic>>>? _inFlightFetchJobs;
@@ -43,9 +43,11 @@ Future<List<Map<String, dynamic>>> getCachedJobsRaw() async {
       final decoded = jsonDecode(raw);
       if (decoded is List) {
         final list = decoded
-            .map((e) => e is Map<String, dynamic>
-                ? e
-                : Map<String, dynamic>.from(e as Map))
+            .map(
+              (e) => e is Map<String, dynamic>
+                  ? e
+                  : Map<String, dynamic>.from(e as Map),
+            )
             .toList();
         if (list.isNotEmpty) {
           _memoryCachedJobs = list;
@@ -66,10 +68,7 @@ Future<void> _saveJobsToCache(List<Map<String, dynamic>> jobs) async {
 }
 
 Uri _jobsUri() {
-  const p = String.fromEnvironment(
-    'JOBS_LIST_PATH',
-    defaultValue: '/api/jobs',
-  );
+  const p = String.fromEnvironment('JOBS_LIST_PATH', defaultValue: '/api/jobs');
   final path = p.startsWith('/') ? p : '/$p';
   return Uri.parse('$kApiBaseUrl$path');
 }
@@ -102,7 +101,7 @@ Future<List<Map<String, dynamic>>> fetchJobsRaw() async {
       res = await authedGet(uri).timeout(_kJobsNetworkTimeout);
     } on TimeoutException {
       throw JobsApiException(
-        'Request timed out while loading jobs. Please check your internet connection.',
+        'The server is taking longer than usual to respond (it may be waking up). Please try again.',
       );
     } on http.ClientException {
       throw JobsApiException(
@@ -136,9 +135,11 @@ Future<List<Map<String, dynamic>>> fetchJobsRaw() async {
       throw JobsApiException('Invalid jobs response (missing jobs array).');
     }
     final parsed = list
-        .map((e) => e is Map<String, dynamic>
-            ? e
-            : Map<String, dynamic>.from(e as Map))
+        .map(
+          (e) => e is Map<String, dynamic>
+              ? e
+              : Map<String, dynamic>.from(e as Map),
+        )
         .toList();
     unawaited(_saveJobsToCache(parsed));
     return parsed;
@@ -151,4 +152,3 @@ Future<List<Map<String, dynamic>>> fetchJobsRaw() async {
     _inFlightFetchJobs = null;
   }
 }
-

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../models/training_pathway.dart';
 import '../services/pathway_links_data.dart';
+import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_top_bar.dart';
@@ -34,11 +35,7 @@ const Map<String, List<String>> _kSkillSearchAliases = {
 };
 
 class PathwayPage extends StatefulWidget {
-  const PathwayPage({
-    super.key,
-    this.initialQuery,
-    this.initialCategory,
-  });
+  const PathwayPage({super.key, this.initialQuery, this.initialCategory});
 
   final String? initialQuery;
   final String? initialCategory;
@@ -55,6 +52,7 @@ class _PathwayPageState extends State<PathwayPage> {
   String? _error;
   List<TrainingPathway> _pathways = [];
   late String _selectedCategory = widget.initialCategory ?? 'All';
+  List<String> _suggestedSkills = [];
 
   static const _categories = [
     'All',
@@ -80,6 +78,26 @@ class _PathwayPageState extends State<PathwayPage> {
       _searchController.text = widget.initialQuery!.trim();
       _debouncedQuery = widget.initialQuery!.trim().toLowerCase();
     }
+
+    final user = SessionStore.user;
+    if (user != null) {
+      final assessments = user['profile']?['skillAssessments'] as Map?;
+      if (assessments != null) {
+        for (final data in assessments.values) {
+          if (data is Map) {
+            final passed = data['passed'] == true;
+            final score = (data['scorePercentage'] as num?)?.toDouble() ?? 0.0;
+            final roleTitle = data['roleTitle'] as String?;
+            if (roleTitle != null && (!passed || score < 70)) {
+              if (!_suggestedSkills.contains(roleTitle)) {
+                _suggestedSkills.add(roleTitle);
+              }
+            }
+          }
+        }
+      }
+    }
+
     _load();
   }
 
@@ -152,7 +170,23 @@ class _PathwayPageState extends State<PathwayPage> {
       final rawTerms = qLower
           .replaceAll(_kLevelRegex, '')
           .split(_kTokenRegex)
-          .where((t) => t.length >= 3 || {'ts', 'js', 'ui', 'ux', 'qa', 'ci', 'cd', 'ai', 'go', 'db', 'c#'}.contains(t))
+          .where(
+            (t) =>
+                t.length >= 3 ||
+                {
+                  'ts',
+                  'js',
+                  'ui',
+                  'ux',
+                  'qa',
+                  'ci',
+                  'cd',
+                  'ai',
+                  'go',
+                  'db',
+                  'c#',
+                }.contains(t),
+          )
           .toList();
 
       searchTerms.addAll(rawTerms);
@@ -169,16 +203,21 @@ class _PathwayPageState extends State<PathwayPage> {
     bool matchesTerm(String text, String term) {
       final lower = text.toLowerCase();
       if (term.length <= 2) {
-        return RegExp(r'\b' + RegExp.escape(term) + r'\b', caseSensitive: false).hasMatch(lower);
+        return RegExp(
+          r'\b' + RegExp.escape(term) + r'\b',
+          caseSensitive: false,
+        ).hasMatch(lower);
       }
       return lower.contains(term);
     }
 
     bool matchesPathway(TrainingPathway pathway, String term) {
       return matchesTerm(pathway.name, term) ||
-          pathway.links.any((l) =>
-              matchesTerm(l.label, term) ||
-              (l.provider != null && matchesTerm(l.provider!, term)));
+          pathway.links.any(
+            (l) =>
+                matchesTerm(l.label, term) ||
+                (l.provider != null && matchesTerm(l.provider!, term)),
+          );
     }
 
     final filtered = _pathways.where((p) {
@@ -187,19 +226,22 @@ class _PathwayPageState extends State<PathwayPage> {
         final fieldLower = (p.field ?? '').toLowerCase();
         bool matchesCategory = false;
         if (cat == 'tesda registered') {
-          matchesCategory = fieldLower == 'tesda' ||
+          matchesCategory =
+              fieldLower == 'tesda' ||
               nameLower.contains('tesda') ||
-              p.links.any((l) =>
-                  (l.provider?.toLowerCase().contains('tesda') ?? false) ||
-                  (l.type?.toLowerCase().contains('tesda') ?? false) ||
-                  l.label.toLowerCase().contains('tesda'),
+              p.links.any(
+                (l) =>
+                    (l.provider?.toLowerCase().contains('tesda') ?? false) ||
+                    (l.type?.toLowerCase().contains('tesda') ?? false) ||
+                    l.label.toLowerCase().contains('tesda'),
               );
         } else if (cat == 'free certs') {
           matchesCategory = p.links.any(
             (l) => l.isFree || l.label.toLowerCase().contains('free'),
           );
         } else if (cat == 'mobile') {
-          matchesCategory = fieldLower == 'mobile' ||
+          matchesCategory =
+              fieldLower == 'mobile' ||
               nameLower.contains('mobile') ||
               nameLower.contains('android') ||
               nameLower.contains('ios') ||
@@ -212,7 +254,8 @@ class _PathwayPageState extends State<PathwayPage> {
                     lbl.contains('mobile');
               });
         } else if (cat == 'web') {
-          matchesCategory = fieldLower == 'web' ||
+          matchesCategory =
+              fieldLower == 'web' ||
               nameLower.contains('web') ||
               nameLower.contains('front-end') ||
               nameLower.contains('back-end') ||
@@ -232,25 +275,29 @@ class _PathwayPageState extends State<PathwayPage> {
                     lbl.contains('back-end');
               });
         } else if (cat == 'data & ai') {
-          matchesCategory = fieldLower == 'data & ai' ||
+          matchesCategory =
+              fieldLower == 'data & ai' ||
               nameLower.contains('data') ||
               nameLower.contains('machine learning') ||
               nameLower.contains('database') ||
               nameLower.contains('bi') ||
               nameLower.contains('sql');
         } else if (cat == 'cloud') {
-          matchesCategory = fieldLower == 'cloud' ||
+          matchesCategory =
+              fieldLower == 'cloud' ||
               nameLower.contains('cloud') ||
               nameLower.contains('aws') ||
               nameLower.contains('azure') ||
               nameLower.contains('gcp');
         } else if (cat == 'cybersecurity') {
-          matchesCategory = fieldLower == 'cybersecurity' ||
+          matchesCategory =
+              fieldLower == 'cybersecurity' ||
               nameLower.contains('cyber') ||
               nameLower.contains('security') ||
               nameLower.contains('penetration');
         } else if (cat == 'devops') {
-          matchesCategory = fieldLower == 'devops' ||
+          matchesCategory =
+              fieldLower == 'devops' ||
               nameLower.contains('devops') ||
               nameLower.contains('kubernetes') ||
               nameLower.contains('ci/cd') ||
@@ -259,32 +306,37 @@ class _PathwayPageState extends State<PathwayPage> {
               nameLower.contains('git') ||
               nameLower.contains('automation');
         } else if (cat == 'design') {
-          matchesCategory = fieldLower == 'design' ||
+          matchesCategory =
+              fieldLower == 'design' ||
               nameLower.contains('design') ||
               nameLower.contains('ux') ||
               nameLower.contains('ui') ||
               nameLower.contains('animation') ||
               nameLower.contains('accessibility');
         } else if (cat == 'game dev') {
-          matchesCategory = fieldLower == 'game dev' ||
+          matchesCategory =
+              fieldLower == 'game dev' ||
               nameLower.contains('game') ||
               nameLower.contains('unity') ||
               nameLower.contains('unreal');
         } else if (cat == 'it & support') {
-          matchesCategory = fieldLower == 'it & support' ||
+          matchesCategory =
+              fieldLower == 'it & support' ||
               nameLower.contains('it support') ||
               nameLower.contains('help desk') ||
               nameLower.contains('networking') ||
               nameLower.contains('linux') ||
               nameLower.contains('service management');
         } else if (cat == 'management') {
-          matchesCategory = fieldLower == 'management' ||
+          matchesCategory =
+              fieldLower == 'management' ||
               nameLower.contains('management') ||
               nameLower.contains('analysis') ||
               nameLower.contains('leadership') ||
               nameLower.contains('agile');
         } else if (cat == 'other') {
-          matchesCategory = fieldLower == 'other' ||
+          matchesCategory =
+              fieldLower == 'other' ||
               nameLower.contains('salesforce') ||
               nameLower.contains('sap') ||
               nameLower.contains('dynamics') ||
@@ -311,8 +363,9 @@ class _PathwayPageState extends State<PathwayPage> {
       return false;
     }).toList();
 
-    final horizontalPadding =
-        MediaQuery.of(context).size.width > 600 ? 32.0 : 16.0;
+    final horizontalPadding = MediaQuery.of(context).size.width > 600
+        ? 32.0
+        : 16.0;
     final tokens = context.appColors;
 
     return RefreshIndicator(
@@ -342,10 +395,7 @@ class _PathwayPageState extends State<PathwayPage> {
                 const SizedBox(height: 4),
                 Text(
                   'Browse industry certifications to boost your job matches',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: tokens.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 14, color: tokens.textSecondary),
                 ),
                 const SizedBox(height: 16),
 
@@ -374,7 +424,11 @@ class _PathwayPageState extends State<PathwayPage> {
                       ),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
-                              icon: Icon(Icons.clear, size: 18, color: tokens.textSecondary),
+                              icon: Icon(
+                                Icons.clear,
+                                size: 18,
+                                color: tokens.textSecondary,
+                              ),
                               onPressed: () {
                                 _searchDebounce?.cancel();
                                 _searchController.clear();
@@ -407,12 +461,19 @@ class _PathwayPageState extends State<PathwayPage> {
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 7,
+                            ),
                             decoration: BoxDecoration(
-                              color: selected ? tokens.primary : tokens.cardBackground,
+                              color: selected
+                                  ? tokens.primary
+                                  : tokens.cardBackground,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: selected ? tokens.primary : tokens.cardBorderSoft,
+                                color: selected
+                                    ? tokens.primary
+                                    : tokens.cardBorderSoft,
                               ),
                               boxShadow: selected
                                   ? const [
@@ -428,8 +489,12 @@ class _PathwayPageState extends State<PathwayPage> {
                               cat,
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                                color: selected ? Colors.white : tokens.textSecondary,
+                                fontWeight: selected
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                color: selected
+                                    ? Colors.white
+                                    : tokens.textSecondary,
                               ),
                             ),
                           ),
@@ -441,6 +506,73 @@ class _PathwayPageState extends State<PathwayPage> {
               ],
             ),
           ),
+          if (_suggestedSkills.isNotEmpty && widget.initialQuery == null) ...[
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                8,
+                horizontalPadding,
+                4,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Recommended for you',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: tokens.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                0,
+                horizontalPadding,
+                0,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Based on your assessments',
+                  style: TextStyle(fontSize: 13, color: tokens.textSecondary),
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  8,
+                  horizontalPadding,
+                  8,
+                ),
+                children: _suggestedSkills.map((skill) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      backgroundColor: tokens.cardBackground,
+                      side: BorderSide(color: tokens.primary),
+                      label: Text(skill),
+                      labelStyle: TextStyle(
+                        color: tokens.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onPressed: () {
+                        _searchController.text = skill;
+                        setState(() => _debouncedQuery = skill.toLowerCase());
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           Expanded(
             child: filtered.isEmpty
                 ? Padding(
@@ -449,11 +581,18 @@ class _PathwayPageState extends State<PathwayPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.search_off_rounded, size: 36, color: tokens.textFaint),
+                          Icon(
+                            Icons.search_off_rounded,
+                            size: 36,
+                            color: tokens.textFaint,
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             'No matching certification pathways found.',
-                            style: TextStyle(color: tokens.textSecondary, fontSize: 14),
+                            style: TextStyle(
+                              color: tokens.textSecondary,
+                              fontSize: 14,
+                            ),
                           ),
                         ],
                       ),
@@ -464,7 +603,7 @@ class _PathwayPageState extends State<PathwayPage> {
                       horizontalPadding,
                       4,
                       horizontalPadding,
-                      100,
+                      80,
                     ),
                     itemCount: filtered.length,
                     itemBuilder: (context, i) => _PathwayTile(
@@ -495,7 +634,9 @@ class _PathwayTileState extends State<_PathwayTile> {
   Widget build(BuildContext context) {
     final pathway = widget.pathway;
     final count = pathway.links.length;
-    final hasFree = pathway.links.any((l) => l.isFree || l.label.toLowerCase().contains('free'));
+    final hasFree = pathway.links.any(
+      (l) => l.isFree || l.label.toLowerCase().contains('free'),
+    );
     final tokens = context.appColors;
 
     return AppCard(
@@ -558,7 +699,9 @@ class _PathwayTileState extends State<_PathwayTile> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: tokens.cardBorderSoft.withValues(alpha: 0.5),
+                              color: tokens.cardBorderSoft.withValues(
+                                alpha: 0.5,
+                              ),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(

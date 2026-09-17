@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import 'session_store.dart';
+
+const Duration _kAuthTimeout = Duration(seconds: 45);
 
 class AuthApiException implements Exception {
   AuthApiException(this.message, {this.statusCode});
@@ -27,10 +30,7 @@ class AuthResult {
 }
 
 class OtpChallengeResult {
-  const OtpChallengeResult({
-    required this.challengeId,
-    required this.message,
-  });
+  const OtpChallengeResult({required this.challengeId, required this.message});
 
   final String challengeId;
   final String message;
@@ -41,12 +41,12 @@ class OtpChallengeResult {
 /// verification ([challenge] set). Exactly one is non-null.
 class LoginOutcome {
   const LoginOutcome.direct(AuthResult result)
-      : direct = result,
-        challenge = null;
+    : direct = result,
+      challenge = null;
 
   const LoginOutcome.challenge(OtpChallengeResult result)
-      : direct = null,
-        challenge = result;
+    : direct = null,
+      challenge = result;
 
   final AuthResult? direct;
   final OtpChallengeResult? challenge;
@@ -188,7 +188,13 @@ Map<String, dynamic>? _pickUser(Map<String, dynamic> body) {
 Map<String, dynamic>? _userFromFlatAuthResponse(Map<String, dynamic> body) {
   if (_pickToken(body) == null) return null;
   final copy = Map<String, dynamic>.from(body);
-  for (final k in ['token', 'accessToken', 'jwt', 'authToken', 'access_token']) {
+  for (final k in [
+    'token',
+    'accessToken',
+    'jwt',
+    'authToken',
+    'access_token',
+  ]) {
     copy.remove(k);
   }
   if (copy.isEmpty) return null;
@@ -197,9 +203,9 @@ Map<String, dynamic>? _userFromFlatAuthResponse(Map<String, dynamic> body) {
 }
 
 Map<String, String> _jsonHeaders() => {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
+  'Content-Type': 'application/json',
+  'Accept': 'application/json',
+};
 
 OtpChallengeResult _parseOtpChallengeResponse(
   http.Response res, {
@@ -246,7 +252,8 @@ OtpChallengeResult _parseOtpChallengeResponse(
     );
   }
 
-  final err = body['error'] as String? ??
+  final err =
+      body['error'] as String? ??
       body['message'] as String? ??
       body['msg'] as String? ??
       'Request failed.';
@@ -298,7 +305,8 @@ PasswordResetConfirmResult _parsePasswordResetConfirmResponse(
     );
   }
 
-  final err = body['error'] as String? ??
+  final err =
+      body['error'] as String? ??
       body['message'] as String? ??
       body['msg'] as String? ??
       'Request failed.';
@@ -335,8 +343,7 @@ AuthResult _parseAuthResponse(
       msg =
           'Server sent a web page instead of JSON ($status). Wrong URL or the API crashed—check API_BASE_URL and that Node is running.';
     } else {
-      msg =
-          'Server did not return JSON ($status). Check logs on your API.';
+      msg = 'Server did not return JSON ($status). Check logs on your API.';
     }
     throw AuthApiException(msg, statusCode: status);
   }
@@ -376,10 +383,13 @@ AuthResult _parseAuthResponse(
     return AuthResult(
       token: token,
       user: user,
-      deviceToken: (deviceToken != null && deviceToken.isNotEmpty) ? deviceToken : null,
+      deviceToken: (deviceToken != null && deviceToken.isNotEmpty)
+          ? deviceToken
+          : null,
     );
   }
-  final err = body['error'] as String? ??
+  final err =
+      body['error'] as String? ??
       body['message'] as String? ??
       body['msg'] as String? ??
       'Request failed.';
@@ -393,28 +403,40 @@ Future<AuthResult> registerUser({
   required String lastName,
 }) async {
   final uri = _registerUri();
-  final res = await http.post(
-    uri,
-    headers: _jsonHeaders(),
-    body: jsonEncode({
-      'firstName': firstName,
-      'lastName': lastName,
-      'email': email,
-      'password': password,
-    }),
-  );
+  http.Response res;
+  try {
+    res = await http
+        .post(
+          uri,
+          headers: _jsonHeaders(),
+          body: jsonEncode({
+            'firstName': firstName,
+            'lastName': lastName,
+            'email': email,
+            'password': password,
+          }),
+        )
+        .timeout(_kAuthTimeout);
+  } on TimeoutException {
+    throw AuthApiException(
+      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
+    );
+  }
   return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
 }
 
-Future<OtpChallengeResult> requestRegisterOtp({
-  required String email,
-}) async {
+Future<OtpChallengeResult> requestRegisterOtp({required String email}) async {
   final uri = _registerOtpRequestUri();
-  final res = await http.post(
-    uri,
-    headers: _jsonHeaders(),
-    body: jsonEncode({'email': email}),
-  );
+  http.Response res;
+  try {
+    res = await http
+        .post(uri, headers: _jsonHeaders(), body: jsonEncode({'email': email}))
+        .timeout(_kAuthTimeout);
+  } on TimeoutException {
+    throw AuthApiException(
+      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
+    );
+  }
   return _parseOtpChallengeResponse(res, requestedUri: uri);
 }
 
@@ -428,19 +450,28 @@ Future<AuthResult> verifyRegisterOtp({
   required String challengeId,
 }) async {
   final uri = _registerOtpVerifyUri();
-  final res = await http.post(
-    uri,
-    headers: _jsonHeaders(),
-    body: jsonEncode({
-      'firstName': firstName,
-      'lastName': lastName,
-      'email': email,
-      'phone': phone,
-      'password': password,
-      'otp': otp,
-      'challengeId': challengeId,
-    }),
-  );
+  http.Response res;
+  try {
+    res = await http
+        .post(
+          uri,
+          headers: _jsonHeaders(),
+          body: jsonEncode({
+            'firstName': firstName,
+            'lastName': lastName,
+            'email': email,
+            'phone': phone,
+            'password': password,
+            'otp': otp,
+            'challengeId': challengeId,
+          }),
+        )
+        .timeout(_kAuthTimeout);
+  } on TimeoutException {
+    throw AuthApiException(
+      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
+    );
+  }
   return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
 }
 
@@ -449,11 +480,20 @@ Future<AuthResult> loginUser({
   required String password,
 }) async {
   final uri = _loginUri();
-  final res = await http.post(
-    uri,
-    headers: _jsonHeaders(),
-    body: jsonEncode({'email': email, 'password': password}),
-  );
+  http.Response res;
+  try {
+    res = await http
+        .post(
+          uri,
+          headers: _jsonHeaders(),
+          body: jsonEncode({'email': email, 'password': password}),
+        )
+        .timeout(_kAuthTimeout);
+  } on TimeoutException {
+    throw AuthApiException(
+      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
+    );
+  }
   return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
 }
 
@@ -467,15 +507,25 @@ Future<LoginOutcome> login({
 }) async {
   final uri = _loginUri();
   final deviceToken = SessionStore.deviceToken;
-  final res = await http.post(
-    uri,
-    headers: _jsonHeaders(),
-    body: jsonEncode({
-      'email': email,
-      'password': password,
-      if (deviceToken != null && deviceToken.isNotEmpty) 'deviceToken': deviceToken,
-    }),
-  );
+  http.Response res;
+  try {
+    res = await http
+        .post(
+          uri,
+          headers: _jsonHeaders(),
+          body: jsonEncode({
+            'email': email,
+            'password': password,
+            if (deviceToken != null && deviceToken.isNotEmpty)
+              'deviceToken': deviceToken,
+          }),
+        )
+        .timeout(_kAuthTimeout);
+  } on TimeoutException {
+    throw AuthApiException(
+      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
+    );
+  }
 
   Map<String, dynamic>? body;
   if (res.body.trim().isNotEmpty) {
@@ -486,7 +536,8 @@ Future<LoginOutcome> login({
     }
   }
 
-  final isDirectSuccess = res.statusCode >= 200 &&
+  final isDirectSuccess =
+      res.statusCode >= 200 &&
       res.statusCode < 300 &&
       body != null &&
       body['challengeId'] == null;
@@ -495,7 +546,9 @@ Future<LoginOutcome> login({
       _parseAuthResponse(res, knownEmail: email, requestedUri: uri),
     );
   }
-  return LoginOutcome.challenge(_parseOtpChallengeResponse(res, requestedUri: uri));
+  return LoginOutcome.challenge(
+    _parseOtpChallengeResponse(res, requestedUri: uri),
+  );
 }
 
 Future<AuthResult> verifyLoginOtp({
@@ -505,16 +558,25 @@ Future<AuthResult> verifyLoginOtp({
   bool rememberDevice = false,
 }) async {
   final uri = _loginOtpVerifyUri();
-  final res = await http.post(
-    uri,
-    headers: _jsonHeaders(),
-    body: jsonEncode({
-      'email': email,
-      'otp': otp,
-      'challengeId': challengeId,
-      'rememberDevice': rememberDevice,
-    }),
-  );
+  http.Response res;
+  try {
+    res = await http
+        .post(
+          uri,
+          headers: _jsonHeaders(),
+          body: jsonEncode({
+            'email': email,
+            'otp': otp,
+            'challengeId': challengeId,
+            'rememberDevice': rememberDevice,
+          }),
+        )
+        .timeout(_kAuthTimeout);
+  } on TimeoutException {
+    throw AuthApiException(
+      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
+    );
+  }
   return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
 }
 
@@ -522,11 +584,16 @@ Future<OtpChallengeResult> requestPasswordResetOtp({
   required String email,
 }) async {
   final uri = _passwordResetOtpRequestUri();
-  final res = await http.post(
-    uri,
-    headers: _jsonHeaders(),
-    body: jsonEncode({'email': email}),
-  );
+  http.Response res;
+  try {
+    res = await http
+        .post(uri, headers: _jsonHeaders(), body: jsonEncode({'email': email}))
+        .timeout(_kAuthTimeout);
+  } on TimeoutException {
+    throw AuthApiException(
+      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
+    );
+  }
   return _parseOtpChallengeResponse(res, requestedUri: uri);
 }
 
@@ -536,15 +603,24 @@ Future<PasswordResetConfirmResult> confirmPasswordResetOtp({
   required String challengeId,
 }) async {
   final uri = _passwordResetOtpConfirmUri();
-  final res = await http.post(
-    uri,
-    headers: _jsonHeaders(),
-    body: jsonEncode({
-      'email': email,
-      'otp': otp,
-      'challengeId': challengeId,
-    }),
-  );
+  http.Response res;
+  try {
+    res = await http
+        .post(
+          uri,
+          headers: _jsonHeaders(),
+          body: jsonEncode({
+            'email': email,
+            'otp': otp,
+            'challengeId': challengeId,
+          }),
+        )
+        .timeout(_kAuthTimeout);
+  } on TimeoutException {
+    throw AuthApiException(
+      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
+    );
+  }
   return _parsePasswordResetConfirmResponse(res, requestedUri: uri);
 }
 
@@ -553,14 +629,23 @@ Future<void> completePasswordReset({
   required String newPassword,
 }) async {
   final uri = _passwordResetCompleteUri();
-  final res = await http.post(
-    uri,
-    headers: _jsonHeaders(),
-    body: jsonEncode({
-      'resetToken': resetToken,
-      'newPassword': newPassword,
-    }),
-  );
+  http.Response res;
+  try {
+    res = await http
+        .post(
+          uri,
+          headers: _jsonHeaders(),
+          body: jsonEncode({
+            'resetToken': resetToken,
+            'newPassword': newPassword,
+          }),
+        )
+        .timeout(_kAuthTimeout);
+  } on TimeoutException {
+    throw AuthApiException(
+      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
+    );
+  }
 
   final raw = res.body;
   if (raw.trim().isEmpty) {
@@ -592,7 +677,8 @@ Future<void> completePasswordReset({
     return;
   }
 
-  final err = body['error'] as String? ??
+  final err =
+      body['error'] as String? ??
       body['message'] as String? ??
       body['msg'] as String? ??
       'Request failed.';

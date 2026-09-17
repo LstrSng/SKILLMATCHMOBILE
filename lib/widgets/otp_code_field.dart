@@ -77,89 +77,93 @@ class _OtpCodeFieldState extends State<OtpCodeField> {
       alignment: Alignment.center,
       children: [
         // Visual presentation: 6 distinct digit boxes matching original UI
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(_length, (i) {
-            final digit = i < text.length ? text[i] : '';
-            final isCurrent =
-                isFocused && (i == text.length.clamp(0, _length - 1));
+        ExcludeSemantics(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(_length, (i) {
+              final digit = i < text.length ? text[i] : '';
+              final isCurrent =
+                  isFocused && (i == text.length.clamp(0, _length - 1));
 
-            return Container(
-              width: 44,
-              height: 52,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: tokens.surfaceMuted,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isCurrent ? tokens.primary : tokens.cardBorder,
-                  width: 2,
+              return Container(
+                width: 44,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: tokens.surfaceMuted,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isCurrent ? tokens.primary : tokens.cardBorder,
+                    width: 2,
+                  ),
                 ),
-              ),
-              child: Text(
-                digit,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: tokens.textPrimary,
+                child: Text(
+                  digit,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: tokens.textPrimary,
+                  ),
                 ),
-              ),
-            );
-          }),
+              );
+            }),
+          ),
         ),
 
         // Single underlying TextField capturing input without keyboard flickering
         Positioned.fill(
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              textSelectionTheme: const TextSelectionThemeData(
-                selectionColor: Colors.transparent,
+          child: Semantics(
+            label: '6-digit verification code',
+            textField: true,
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                textSelectionTheme: const TextSelectionThemeData(
+                  selectionColor: Colors.transparent,
+                  cursorColor: Colors.transparent,
+                  selectionHandleColor: Colors.transparent,
+                ),
+              ),
+              child: TextField(
+                controller: widget.controller,
+                focusNode: _focusNode,
+                autofocus: widget.autofocus,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                maxLength: _length,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                showCursor: false,
+                enableInteractiveSelection: true,
+                style: const TextStyle(
+                  color: Colors.transparent,
+                  fontSize: 1,
+                  letterSpacing: 0,
+                ),
                 cursorColor: Colors.transparent,
-                selectionHandleColor: Colors.transparent,
+                decoration: const InputDecoration(
+                  counterText: '',
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  fillColor: Colors.transparent,
+                  filled: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onTap: () {
+                  widget.controller.selection = TextSelection.collapsed(
+                    offset: widget.controller.text.length,
+                  );
+                },
+                onChanged: _onChanged,
+                onSubmitted: (val) {
+                  if (val.length == _length) {
+                    widget.onSubmitted?.call(val);
+                  }
+                },
               ),
-            ),
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focusNode,
-              autofocus: widget.autofocus,
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              maxLength: _length,
-              autofillHints: const [AutofillHints.oneTimeCode],
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
-              showCursor: false,
-              enableInteractiveSelection: true,
-              style: const TextStyle(
-                color: Colors.transparent,
-                fontSize: 1,
-                letterSpacing: 0,
-              ),
-              cursorColor: Colors.transparent,
-              decoration: const InputDecoration(
-                counterText: '',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                fillColor: Colors.transparent,
-                filled: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-              onTap: () {
-                widget.controller.selection = TextSelection.collapsed(
-                  offset: widget.controller.text.length,
-                );
-              },
-              onChanged: _onChanged,
-              onSubmitted: (val) {
-                if (val.length == _length) {
-                  widget.onSubmitted?.call(val);
-                }
-              },
             ),
           ),
         ),

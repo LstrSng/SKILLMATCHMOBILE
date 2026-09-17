@@ -34,7 +34,15 @@ class _DashboardPageState extends State<DashboardPage> {
   int _cachedAvgMatch = 0;
   List<Job> _cachedTopMatches = const [];
   List<int> _cachedWeeklyActivity = const [0, 0, 0, 0, 0, 0, 0];
-  List<String> _cachedWeeklyLabels = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  List<String> _cachedWeeklyLabels = const [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ];
   bool _cachedHasAnyAssessment = false;
 
   void _recomputeDerivedMetrics() {
@@ -104,7 +112,11 @@ class _DashboardPageState extends State<DashboardPage> {
         return <Map<String, dynamic>>[];
       });
 
-      final results = await Future.wait([profileFuture, jobsFuture, appsFuture]);
+      final results = await Future.wait([
+        profileFuture,
+        jobsFuture,
+        appsFuture,
+      ]);
       if (!mounted) return;
       final profile = results[0] as Map<String, dynamic>;
       final rawJobsList = results[1] as List<Map<String, dynamic>>;
@@ -159,11 +171,24 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     final profileData = _profile['profile'];
-    final hasResume = profileData is Map &&
+    final hasResume =
+        profileData is Map &&
         profileData['resume'] is Map &&
-        ((profileData['resume']['url'] as Object?)?.toString().trim().isNotEmpty == true ||
-            (profileData['resume']['data'] as Object?)?.toString().trim().isNotEmpty == true ||
-            (profileData['resume']['name'] as Object?)?.toString().trim().isNotEmpty == true);
+        ((profileData['resume']['url'] as Object?)
+                    ?.toString()
+                    .trim()
+                    .isNotEmpty ==
+                true ||
+            (profileData['resume']['data'] as Object?)
+                    ?.toString()
+                    .trim()
+                    .isNotEmpty ==
+                true ||
+            (profileData['resume']['name'] as Object?)
+                    ?.toString()
+                    .trim()
+                    .isNotEmpty ==
+                true);
 
     final checks = [
       has('firstName'),
@@ -239,7 +264,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final tokens = context.appColors;
     final name = _cachedGreetingName;
     final applied = _applications.length;
-    final matches = _jobs.length;
+    final matches = _jobs.where((j) => j.matchPercentage > 0).length;
     final avgMatch = _cachedAvgMatch;
     final profileCompletion = _cachedProfileCompletion;
     final topMatches = _cachedTopMatches;
@@ -288,7 +313,9 @@ class _DashboardPageState extends State<DashboardPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                name.isEmpty ? 'Hello, Jobseeker!' : 'Hello, $name 👋',
+                                name.isEmpty
+                                    ? 'Hello, Jobseeker!'
+                                    : 'Hello, $name 👋',
                                 style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
@@ -324,13 +351,15 @@ class _DashboardPageState extends State<DashboardPage> {
                           _HeroActionChip(
                             icon: Icons.alt_route_rounded,
                             label: 'Pathways',
-                            onTap: () => AppNavigation.switchTab(AppTab.pathway),
+                            onTap: () =>
+                                AppNavigation.switchTab(AppTab.pathway),
                           ),
                           const SizedBox(width: 8),
                           _HeroActionChip(
                             icon: Icons.person_rounded,
                             label: 'My Profile',
-                            onTap: () => AppNavigation.switchTab(AppTab.profile),
+                            onTap: () =>
+                                AppNavigation.switchTab(AppTab.profile),
                           ),
                         ],
                       ),
@@ -356,20 +385,30 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.info_outline, color: AppColors.danger, size: 20),
+                        const Icon(
+                          Icons.info_outline,
+                          color: AppColors.danger,
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             _error!,
-                            style: const TextStyle(color: AppColors.danger, fontSize: 13),
+                            style: const TextStyle(
+                              color: AppColors.danger,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                        if (SessionStore.token == null || SessionStore.token!.isEmpty)
+                        if (SessionStore.token == null ||
+                            SessionStore.token!.isEmpty)
                           TextButton(
                             onPressed: () {
                               Navigator.pushAndRemoveUntil(
                                 context,
-                                MaterialPageRoute(builder: (_) => const SignInPage()),
+                                MaterialPageRoute(
+                                  builder: (_) => const SignInPage(),
+                                ),
                                 (_) => false,
                               );
                             },
@@ -389,7 +428,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
                 // Interactive Stat Cards Grid
                 GridView.count(
-                  crossAxisCount: MediaQuery.of(context).size.width > 600 ? 4 : 2,
+                  crossAxisCount: MediaQuery.of(context).size.width > 600
+                      ? 4
+                      : 2,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: 14,
@@ -412,7 +453,9 @@ class _DashboardPageState extends State<DashboardPage> {
                       icon: Icons.work_outline_rounded,
                       iconBgColor: const Color(0xFFEFF6FF),
                       iconColor: AppColors.primary,
-                      subtitle: matches == 0 ? 'No open jobs' : '$matches available',
+                      subtitle: matches == 0
+                          ? 'Complete your profile'
+                          : '$matches with skill overlap',
                       onTap: () => AppNavigation.switchTab(AppTab.jobs),
                     ),
                     _StatCard(
@@ -493,10 +536,18 @@ class _DashboardPageState extends State<DashboardPage> {
                           onPressed: _openAssessment,
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF8B5CF6),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                          child: const Text('Start', style: TextStyle(fontWeight: FontWeight.w700)),
+                          child: const Text(
+                            'Start',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ],
                     ),
@@ -515,7 +566,11 @@ class _DashboardPageState extends State<DashboardPage> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 22),
+                              const Icon(
+                                Icons.stars_rounded,
+                                color: Color(0xFFF59E0B),
+                                size: 22,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'Top Matches for You',
@@ -528,9 +583,13 @@ class _DashboardPageState extends State<DashboardPage> {
                             ],
                           ),
                           TextButton(
-                            onPressed: () => AppNavigation.switchTab(AppTab.jobs),
+                            onPressed: () =>
+                                AppNavigation.switchTab(AppTab.jobs),
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
@@ -545,7 +604,11 @@ class _DashboardPageState extends State<DashboardPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 2),
-                                Icon(Icons.arrow_forward_rounded, size: 14, color: tokens.primary),
+                                Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 14,
+                                  color: tokens.primary,
+                                ),
                               ],
                             ),
                           ),
@@ -558,11 +621,18 @@ class _DashboardPageState extends State<DashboardPage> {
                           child: Center(
                             child: Column(
                               children: [
-                                Icon(Icons.work_off_outlined, size: 36, color: Colors.grey.shade400),
+                                Icon(
+                                  Icons.work_off_outlined,
+                                  size: 36,
+                                  color: tokens.textFaint,
+                                ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'No open job matches yet.',
-                                  style: TextStyle(color: tokens.textSecondary, fontSize: 13),
+                                  style: TextStyle(
+                                    color: tokens.textSecondary,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ],
                             ),
@@ -608,20 +678,28 @@ class _DashboardPageState extends State<DashboardPage> {
                       const SizedBox(height: 4),
                       Text(
                         'Applications submitted over the last 7 days',
-                        style: TextStyle(fontSize: 12, color: tokens.textSecondary),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: tokens.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: 20),
                       SizedBox(
                         height: 150,
-                        child: CustomPaint(
-                          size: Size.infinite,
-                          painter: BarChartPainter(
-                            days: _cachedWeeklyLabels,
-                            values: _cachedWeeklyActivity,
-                            emptyBarColor: tokens.cardBorderSoft,
-                            gridColor: tokens.cardBorderSoft,
-                            labelColor: tokens.textSecondary,
-                            todayColor: tokens.primary,
+                        child: Semantics(
+                          label:
+                              'Bar chart showing applications submitted over the last 7 days',
+                          excludeSemantics: true,
+                          child: CustomPaint(
+                            size: Size.infinite,
+                            painter: BarChartPainter(
+                              days: _cachedWeeklyLabels,
+                              values: _cachedWeeklyActivity,
+                              emptyBarColor: tokens.cardBorderSoft,
+                              gridColor: tokens.cardBorderSoft,
+                              labelColor: tokens.textSecondary,
+                              todayColor: tokens.primary,
+                            ),
                           ),
                         ),
                       ),
@@ -775,7 +853,9 @@ class _StatCard extends StatelessWidget {
                     value: progress,
                     minHeight: 4,
                     backgroundColor: tokens.surfaceMuted,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4F46E5)),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFF4F46E5),
+                    ),
                   ),
                 ),
               ] else if (subtitle.isNotEmpty) ...[
@@ -783,10 +863,7 @@ class _StatCard extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: tokens.textFaint,
-                  ),
+                  style: TextStyle(fontSize: 11, color: tokens.textFaint),
                 ),
               ],
             ],
@@ -812,7 +889,8 @@ class _JobMatchCard extends StatelessWidget {
         onTap: () {
           HapticFeedback.lightImpact();
           final applicantId =
-              (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString();
+              (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
+                  ?.toString();
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -852,7 +930,9 @@ class _JobMatchCard extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    job.company.isNotEmpty ? job.company.substring(0, 1).toUpperCase() : 'J',
+                    job.company.isNotEmpty
+                        ? job.company.substring(0, 1).toUpperCase()
+                        : 'J',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -939,9 +1019,9 @@ class BarChartPainter extends CustomPainter {
     final maxValue = values.isEmpty
         ? 1.0
         : values
-            .fold<int>(0, (m, v) => v > m ? v : m)
-            .clamp(1, 1 << 30)
-            .toDouble();
+              .fold<int>(0, (m, v) => v > m ? v : m)
+              .clamp(1, 1 << 30)
+              .toDouble();
 
     final barWidth = size.width / (values.length * 2 + 1);
     final chartHeight = size.height * 0.70;

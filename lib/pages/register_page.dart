@@ -61,7 +61,20 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_onPasswordChanged);
+    _confirmPasswordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    _passwordController.removeListener(_onPasswordChanged);
+    _confirmPasswordController.removeListener(_onPasswordChanged);
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
@@ -232,10 +245,7 @@ class _RegisterPageState extends State<RegisterPage> {
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: tokens.primary, width: 2),
       ),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 12,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     );
   }
 
@@ -252,7 +262,6 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 20),
                 // Logo
                 Container(
                   width: 56,
@@ -263,7 +272,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   child: const Icon(Icons.bolt, color: Colors.white, size: 32),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 18),
 
                 // Heading
                 Text(
@@ -274,7 +283,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     fontSize: 24,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
                 // Subtitle
                 Text(
@@ -285,7 +294,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
                 // First Name and Last Name
                 Row(
@@ -305,7 +314,10 @@ class _RegisterPageState extends State<RegisterPage> {
                           const SizedBox(height: 8),
                           TextField(
                             controller: _firstNameController,
-                            style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                            style: TextStyle(
+                              color: tokens.textPrimary,
+                              fontSize: 14,
+                            ),
                             decoration: _inputDec(tokens, 'John'),
                           ),
                         ],
@@ -327,7 +339,10 @@ class _RegisterPageState extends State<RegisterPage> {
                           const SizedBox(height: 8),
                           TextField(
                             controller: _lastNameController,
-                            style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                            style: TextStyle(
+                              color: tokens.textPrimary,
+                              fontSize: 14,
+                            ),
                             decoration: _inputDec(tokens, 'Doe'),
                           ),
                         ],
@@ -428,80 +443,142 @@ class _RegisterPageState extends State<RegisterPage> {
                           ? null
                           : _createAccount(),
                     ),
+                    if (_passwordController.text.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            _passwordController.text.length >= 8
+                                ? Icons.check_circle_rounded
+                                : Icons.info_outline_rounded,
+                            size: 16,
+                            color: _passwordController.text.length >= 8
+                                ? Colors.green
+                                : tokens.textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'At least 8 characters',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: _passwordController.text.length >= 8
+                                      ? Colors.green
+                                      : tokens.textSecondary,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (_confirmPasswordController.text.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            _confirmPasswordController.text ==
+                                    _passwordController.text
+                                ? Icons.check_circle_rounded
+                                : Icons.cancel_outlined,
+                            size: 16,
+                            color:
+                                _confirmPasswordController.text ==
+                                    _passwordController.text
+                                ? Colors.green
+                                : Colors.amber,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _confirmPasswordController.text ==
+                                    _passwordController.text
+                                ? 'Passwords match'
+                                : 'Passwords do not match',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color:
+                                      _confirmPasswordController.text ==
+                                          _passwordController.text
+                                      ? Colors.green
+                                      : Colors.amber,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 16),
 
                 // Terms Agreement
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Checkbox(
-                      value: _agreeToTerms,
-                      activeColor: tokens.primary,
-                      checkColor: Colors.white,
-                      onChanged: (value) {
-                        final nextValue = value ?? false;
-                        setState(() {
-                          _agreeToTerms = nextValue;
-                        });
-                      },
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
+                MergeSemantics(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Checkbox(
+                        value: _agreeToTerms,
+                        activeColor: tokens.primary,
+                        checkColor: Colors.white,
+                        onChanged: (value) {
+                          final nextValue = value ?? false;
+                          setState(() {
+                            _agreeToTerms = nextValue;
+                          });
+                        },
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        side: BorderSide(color: tokens.cardBorder),
                       ),
-                      side: BorderSide(color: tokens.cardBorder),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Wrap(
-                          children: [
-                            Text(
-                              'I agree to the ',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: tokens.textSecondary),
-                            ),
-                            InkWell(
-                              onTap: _showTermsOfService,
-                              child: Text(
-                                'Terms of Service',
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Wrap(
+                            children: [
+                              Text(
+                                'I agree to the ',
                                 style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: tokens.primary,
-                                      fontWeight: FontWeight.w600,
-                                      decoration: TextDecoration.underline,
-                                      decorationColor: tokens.primary,
-                                    ),
+                                    ?.copyWith(color: tokens.textSecondary),
                               ),
-                            ),
-                            Text(
-                              ' and ',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: tokens.textSecondary),
-                            ),
-                            InkWell(
-                              onTap: _showPrivacyPolicy,
-                              child: Text(
-                                'Privacy Policy',
+                              InkWell(
+                                onTap: _showTermsOfService,
+                                child: Text(
+                                  'Terms of Service',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: tokens.primary,
+                                        fontWeight: FontWeight.w600,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: tokens.primary,
+                                      ),
+                                ),
+                              ),
+                              Text(
+                                ' and ',
                                 style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: tokens.primary,
-                                      fontWeight: FontWeight.w600,
-                                      decoration: TextDecoration.underline,
-                                      decorationColor: tokens.primary,
-                                    ),
+                                    ?.copyWith(color: tokens.textSecondary),
                               ),
-                            ),
-                            Text(
-                              '.',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: tokens.textSecondary),
-                            ),
-                          ],
+                              InkWell(
+                                onTap: _showPrivacyPolicy,
+                                child: Text(
+                                  'Privacy Policy',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: tokens.primary,
+                                        fontWeight: FontWeight.w600,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: tokens.primary,
+                                      ),
+                                ),
+                              ),
+                              Text(
+                                '.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: tokens.textSecondary),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -512,7 +589,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -721,7 +798,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: Text(
@@ -734,7 +811,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text(
                   'We sent a 6-digit verification code to ${_draft.email}. Enter it below to finish creating your account.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -742,7 +819,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -779,7 +856,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(

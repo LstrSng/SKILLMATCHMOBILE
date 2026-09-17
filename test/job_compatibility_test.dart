@@ -6,7 +6,9 @@ import 'package:skillmatch/widgets/widgets.dart';
 
 void main() {
   group('SkillCompatibilityMatrix Tests', () {
-    testWidgets('renders overview and filters skills correctly', (tester) async {
+    testWidgets('renders overview and filters skills correctly', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: buildLightTheme(),
@@ -51,7 +53,9 @@ void main() {
       expect(find.text('Skill Gap'), findsOneWidget);
     });
 
-    testWidgets('handles very long skill names without horizontal overflow', (tester) async {
+    testWidgets('handles very long skill names without horizontal overflow', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: buildLightTheme(),
@@ -60,8 +64,12 @@ void main() {
               width: 320, // small screen width
               child: SingleChildScrollView(
                 child: SkillCompatibilityMatrix(
-                  matchedSkills: const ['Aesthetic and Design Sensibilities Level 4'],
-                  missingSkills: const ['Agile Coaching and Organizational Change Level 4'],
+                  matchedSkills: const [
+                    'Aesthetic and Design Sensibilities Level 4',
+                  ],
+                  missingSkills: const [
+                    'Agile Coaching and Organizational Change Level 4',
+                  ],
                   matchScore: 50,
                   onLearnSkill: (_) {},
                   onTakeQuiz: (_) {},
@@ -80,24 +88,27 @@ void main() {
   });
 
   group('Shimmer Skeletons Tests', () {
-    testWidgets('JobCardSkeleton and JobDetailSkeleton render without exception', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: buildLightTheme(),
-          home: const Scaffold(
-            body: Column(
-              children: [
-                JobCardSkeleton(),
-                Expanded(child: JobDetailSkeleton()),
-              ],
+    testWidgets(
+      'JobCardSkeleton and JobDetailSkeleton render without exception',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: buildLightTheme(),
+            home: const Scaffold(
+              body: Column(
+                children: [
+                  JobCardSkeleton(),
+                  Expanded(child: JobDetailSkeleton()),
+                ],
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.byType(JobCardSkeleton), findsOneWidget);
-      expect(find.byType(JobDetailSkeleton), findsOneWidget);
-    });
+        expect(find.byType(JobCardSkeleton), findsOneWidget);
+        expect(find.byType(JobDetailSkeleton), findsOneWidget);
+      },
+    );
   });
 
   group('RecommendationCard Tests', () {
@@ -108,7 +119,8 @@ void main() {
           home: const Scaffold(
             body: SingleChildScrollView(
               child: RecommendationCard(
-                recommendation: 'Skill gap detected in Docker, React. Recommended certification tracks available via TESDA CSS NC II or Docker Certified Associate.',
+                recommendation:
+                    'Skill gap detected in Docker, React. Recommended certification tracks available via TESDA CSS NC II or Docker Certified Associate.',
               ),
             ),
           ),
@@ -116,15 +128,20 @@ void main() {
       );
 
       // Verify header and recommendation
-      expect(find.text('AI Match Recommendation'), findsOneWidget);
-      expect(find.textContaining('Skill gap detected in Docker, React'), findsOneWidget);
+      expect(find.text('Smart Match Recommendation'), findsOneWidget);
+      expect(
+        find.textContaining('Skill gap detected in Docker, React'),
+        findsOneWidget,
+      );
 
       // Verify bottom buttons are not present
       expect(find.text('TESDA Programs'), findsNothing);
       expect(find.text('All 50+ Pathways'), findsNothing);
     });
 
-    testWidgets('renders nothing when recommendation is empty or placeholder', (tester) async {
+    testWidgets('renders nothing when recommendation is empty or placeholder', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: buildLightTheme(),
@@ -136,52 +153,58 @@ void main() {
         ),
       );
 
-      expect(find.text('AI Match Recommendation'), findsNothing);
+      expect(find.text('Smart Match Recommendation'), findsNothing);
       expect(find.text('TESDA Programs'), findsNothing);
     });
   });
 
   group('SkillCompatibilityMatrix Learn Pathway Tests', () {
-    testWidgets('renders Learn button on missing skills and triggers callback', (tester) async {
-      String? learnedSkill;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: buildLightTheme(),
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: SkillCompatibilityMatrix(
-                matchedSkills: const ['Flutter'],
-                missingSkills: const ['Docker'],
-                matchScore: 50,
-                onLearnSkill: (skill) {
-                  learnedSkill = skill;
-                },
+    testWidgets(
+      'renders Learn button on missing skills and triggers callback',
+      (tester) async {
+        String? learnedSkill;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: buildLightTheme(),
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: SkillCompatibilityMatrix(
+                  matchedSkills: const ['Flutter'],
+                  missingSkills: const ['Docker'],
+                  matchScore: 50,
+                  onLearnSkill: (skill) {
+                    learnedSkill = skill;
+                  },
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.text('Learn'), findsOneWidget);
-      await tester.tap(find.text('Learn'));
-      await tester.pumpAndSettle();
+        expect(find.text('Learn'), findsOneWidget);
+        await tester.tap(find.text('Learn'));
+        await tester.pumpAndSettle();
 
-      expect(learnedSkill, equals('Docker'));
-    });
+        expect(learnedSkill, equals('Docker'));
+      },
+    );
   });
 
   group('Skill Prescription Tests', () {
-    test('resolveSkillPrescription prescribes TypeScript certification and pathway', () {
-      final tsRx = resolveSkillPrescription('TypeScript');
-      expect(tsRx.skill, equals('TypeScript'));
-      expect(tsRx.tesdaProgram, equals('TESDA Web Development NC III'));
-      expect(tsRx.globalCert, contains('TypeScript'));
-      expect(tsRx.providerSummary, contains('Microsoft'));
-      expect(tsRx.searchKeyword, equals('TypeScript'));
+    test(
+      'resolveSkillPrescription prescribes TypeScript certification and pathway',
+      () {
+        final tsRx = resolveSkillPrescription('TypeScript');
+        expect(tsRx.skill, equals('TypeScript'));
+        expect(tsRx.tesdaProgram, equals('TESDA Web Development NC III'));
+        expect(tsRx.globalCert, contains('TypeScript'));
+        expect(tsRx.providerSummary, contains('Microsoft'));
+        expect(tsRx.searchKeyword, equals('TypeScript'));
 
-      final tsAbbrRx = resolveSkillPrescription('TS');
-      expect(tsAbbrRx.searchKeyword, equals('TypeScript'));
-    });
+        final tsAbbrRx = resolveSkillPrescription('TS');
+        expect(tsAbbrRx.searchKeyword, equals('TypeScript'));
+      },
+    );
 
     test('avoids false positive substring collisions for short abbreviations', () {
       // 'Unit Tests' should NOT match 'ts' (TypeScript), it should match 'test' (QA)
@@ -202,33 +225,36 @@ void main() {
     test('role-aware skill selection prioritizes domain-matching missing skill', () {
       // For "Associate User Interface" with ['PostgreSQL', 'Docker', 'TypeScript'],
       // it should select 'TypeScript' because it aligns with UI/frontend, not PostgreSQL.
-      final selectedUi = selectPrimaryPrescriptionSkill(
-        ['PostgreSQL', 'Docker', 'TypeScript'],
-        jobTitle: 'Associate User Interface',
-      );
+      final selectedUi = selectPrimaryPrescriptionSkill([
+        'PostgreSQL',
+        'Docker',
+        'TypeScript',
+      ], jobTitle: 'Associate User Interface');
       expect(selectedUi, equals('TypeScript'));
 
       // For "DevOps Engineer" with ['HTML', 'Docker', 'Figma'], it should select 'Docker'.
-      final selectedDevops = selectPrimaryPrescriptionSkill(
-        ['HTML', 'Docker', 'Figma'],
-        jobTitle: 'DevOps Engineer',
-      );
+      final selectedDevops = selectPrimaryPrescriptionSkill([
+        'HTML',
+        'Docker',
+        'Figma',
+      ], jobTitle: 'DevOps Engineer');
       expect(selectedDevops, equals('Docker'));
 
       // For "QA Automation Engineer" with ['PostgreSQL', 'Unit Tests', 'CSS'], it should select 'Unit Tests'.
-      final selectedQa = selectPrimaryPrescriptionSkill(
-        ['PostgreSQL', 'Unit Tests', 'CSS'],
-        jobTitle: 'QA Automation Engineer',
-      );
+      final selectedQa = selectPrimaryPrescriptionSkill([
+        'PostgreSQL',
+        'Unit Tests',
+        'CSS',
+      ], jobTitle: 'QA Automation Engineer');
       expect(selectedQa, equals('Unit Tests'));
     });
 
     test('buildJobRecommendation produces role-aware prescription text', () {
-      final rec = buildJobRecommendation(
-        0,
-        ['PostgreSQL', 'Docker', 'TypeScript'],
-        jobTitle: 'Associate User Interface',
-      );
+      final rec = buildJobRecommendation(0, [
+        'PostgreSQL',
+        'Docker',
+        'TypeScript',
+      ], jobTitle: 'Associate User Interface');
 
       // Verify that the recommendation explicitly mentions the role and prioritizes TypeScript
       expect(rec, contains('Associate User Interface role'));
@@ -239,10 +265,13 @@ void main() {
   });
 
   group('CollapsibleJobDescription Tests', () {
-    testWidgets('shows See more and expands/collapses long descriptions', (tester) async {
+    testWidgets('shows See more and expands/collapses long descriptions', (
+      tester,
+    ) async {
       final longDesc = List.generate(
         6,
-        (i) => 'Line $i: Developing scalable Flutter mobile applications with rich user interfaces.',
+        (i) =>
+            'Line $i: Developing scalable Flutter mobile applications with rich user interfaces.',
       ).join('\n');
 
       await tester.pumpWidget(
@@ -250,9 +279,7 @@ void main() {
           theme: buildLightTheme(),
           home: Scaffold(
             body: SingleChildScrollView(
-              child: CollapsibleJobDescription(
-                description: longDesc,
-              ),
+              child: CollapsibleJobDescription(description: longDesc),
             ),
           ),
         ),
@@ -278,14 +305,17 @@ void main() {
       expect(find.text('Show less'), findsNothing);
     });
 
-    testWidgets('does not show See more for short descriptions', (tester) async {
+    testWidgets('does not show See more for short descriptions', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: buildLightTheme(),
           home: const Scaffold(
             body: SingleChildScrollView(
               child: CollapsibleJobDescription(
-                description: 'Short job description that easily fits on one line.',
+                description:
+                    'Short job description that easily fits on one line.',
               ),
             ),
           ),
@@ -294,7 +324,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Job Description'), findsOneWidget);
-      expect(find.text('Short job description that easily fits on one line.'), findsOneWidget);
+      expect(
+        find.text('Short job description that easily fits on one line.'),
+        findsOneWidget,
+      );
       expect(find.text('See more'), findsNothing);
       expect(find.text('Show less'), findsNothing);
     });

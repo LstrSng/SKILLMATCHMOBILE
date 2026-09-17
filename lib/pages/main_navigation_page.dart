@@ -174,54 +174,59 @@ class _NavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.appColors;
     final activeColor = tokens.primary;
-    final inactiveColor = tokens.textFaint;
+    final inactiveColor = tokens.textSecondary;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        decoration: BoxDecoration(
-          color: selected
-              ? (tokens.isDark
-                  ? tokens.primary.withValues(alpha: 0.18)
-                  : tokens.primary.withValues(alpha: 0.10))
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedScale(
-              scale: selected ? 1.08 : 1.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              child: Icon(
-                selected ? item.filledIcon : item.outlinedIcon,
-                color: selected ? activeColor : inactiveColor,
-                size: 22,
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: '${item.label} tab',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          decoration: BoxDecoration(
+            color: selected
+                ? (tokens.isDark
+                      ? tokens.primary.withValues(alpha: 0.18)
+                      : tokens.primary.withValues(alpha: 0.10))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedScale(
+                scale: selected ? 1.08 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                child: Icon(
+                  selected ? item.filledIcon : item.outlinedIcon,
+                  color: selected ? activeColor : inactiveColor,
+                  size: 22,
+                ),
               ),
-            ),
-            const SizedBox(height: 3),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? activeColor : inactiveColor,
-                letterSpacing: selected ? -0.2 : 0,
+              const SizedBox(height: 3),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? activeColor : inactiveColor,
+                  letterSpacing: selected ? -0.2 : 0,
+                ),
+                child: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              child: Text(
-                item.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

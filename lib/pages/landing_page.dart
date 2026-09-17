@@ -63,7 +63,10 @@ class _LandingPageState extends State<LandingPage> {
         elevation: 0,
         backgroundColor: tokens.scaffoldBackground,
         surfaceTintColor: Colors.transparent,
+        titleSpacing: 20,
+        centerTitle: false,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 40,
@@ -85,24 +88,6 @@ class _LandingPageState extends State<LandingPage> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SignInPage()),
-              );
-            },
-            child: Text(
-              'Sign In',
-              style: TextStyle(
-                color: tokens.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-        ],
       ),
       body: SingleChildScrollView(
         controller: _scrollController,
@@ -112,28 +97,33 @@ class _LandingPageState extends State<LandingPage> {
             children: [
               // Hero Section
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 48,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 child: Column(
                   children: [
                     Text(
                       'Optimize Your Career Through',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w800,
-                        color: tokens.textPrimary,
-                      ),
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            color: tokens.textPrimary,
+                            height: 1.2,
+                          ),
                       textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 4),
                     ShaderMask(
                       shaderCallback: (bounds) =>
                           AppColors.primaryGradient.createShader(bounds),
                       child: Text(
                         'Skill Matching',
                         style: Theme.of(context).textTheme.headlineLarge
-                            ?.copyWith(fontSize: 34, color: Colors.white),
+                            ?.copyWith(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              height: 1.2,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -142,12 +132,12 @@ class _LandingPageState extends State<LandingPage> {
                       'Stop applying blindly. SkillMatch+ uses advanced analytics to match your unique skill profile with roles where you\'ll thrive.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: tokens.textSecondary,
-                        fontSize: 16,
+                        fontSize: 15,
                         height: 1.5,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -215,7 +205,7 @@ class _LandingPageState extends State<LandingPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 36),
 
               // Features Section Header
               Padding(
@@ -232,7 +222,7 @@ class _LandingPageState extends State<LandingPage> {
                           ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Text(
                       'Data-driven tools that reveal exactly where you fit and what to learn next.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -244,7 +234,7 @@ class _LandingPageState extends State<LandingPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
               // Feature Cards
               Padding(
@@ -257,14 +247,14 @@ class _LandingPageState extends State<LandingPage> {
                       description:
                           'Get a precise match score for every job based on your verified skills.',
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     _FeatureCard(
                       icon: Icons.show_chart,
                       title: 'Skill Gap Analysis',
                       description:
                           'Identify exactly what skills you need for your dream role.',
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     _FeatureCard(
                       icon: Icons.verified,
                       title: 'Verified Credentials',
@@ -274,7 +264,7 @@ class _LandingPageState extends State<LandingPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 36),
 
               // CTA Section
               Container(
@@ -292,7 +282,7 @@ class _LandingPageState extends State<LandingPage> {
                 ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
-                  vertical: 40,
+                  vertical: 32,
                 ),
                 child: Column(
                   children: [
@@ -306,7 +296,7 @@ class _LandingPageState extends State<LandingPage> {
                           ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Text(
                       'Join thousands of professionals who found their perfect fit with SkillMatch+.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -316,25 +306,26 @@ class _LandingPageState extends State<LandingPage> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     // Features List
                     Column(
                       children: [
                         _CTAFeature('AI-powered job matching'),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         _CTAFeature('Personalized learning paths'),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         _CTAFeature('Career growth tracking'),
                       ],
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     // Stats Grid
                     GridView.count(
                       crossAxisCount: 2,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 1.7,
                       children: [
                         _StatCard('94%', 'Match Accuracy'),
                         _StatCard('15k+', 'Skills Verified'),
@@ -342,7 +333,7 @@ class _LandingPageState extends State<LandingPage> {
                         _StatCard('30%', 'Salary Increase'),
                       ],
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -374,23 +365,20 @@ class _LandingPageState extends State<LandingPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 36),
 
               // Footer
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 24,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 child: Column(
                   children: [
                     Text(
                       '© 2026 SkillMatch+',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: tokens.textFaint,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: tokens.textFaint),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -541,7 +529,7 @@ class _StatCard extends StatelessWidget {
         color: const Color(0x1AFFFFFF),
         borderRadius: BorderRadius.circular(8),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -550,15 +538,16 @@ class _StatCard extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w700,
               color: const Color(0xFF4DFFFF),
-              fontSize: 24,
+              fontSize: 22,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Colors.white70,
+              fontSize: 12,
+            ),
             textAlign: TextAlign.center,
           ),
         ],

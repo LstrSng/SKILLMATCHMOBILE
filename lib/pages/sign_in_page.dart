@@ -138,7 +138,6 @@ class _SignInPageState extends State<SignInPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 20),
                 // Logo
                 Container(
                   width: 56,
@@ -149,7 +148,7 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                   child: const Icon(Icons.bolt, color: Colors.white, size: 32),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 18),
 
                 // Heading
                 Text(
@@ -160,7 +159,7 @@ class _SignInPageState extends State<SignInPage> {
                     fontSize: 24,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
                 // Subtitle
                 Text(
@@ -171,7 +170,7 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
                 // Email Field
                 Column(
@@ -193,7 +192,7 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // Password Field
                 Column(
@@ -220,11 +219,7 @@ class _SignInPageState extends State<SignInPage> {
                               ),
                             );
                           },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 0),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
                           child: Text(
                             'Forgot password?',
                             style: TextStyle(
@@ -243,31 +238,33 @@ class _SignInPageState extends State<SignInPage> {
                 const SizedBox(height: 12),
 
                 // Remember Me Checkbox
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _rememberMe,
-                      activeColor: tokens.primary,
-                      checkColor: Colors.white,
-                      onChanged: (value) {
-                        setState(() {
-                          _rememberMe = value ?? false;
-                        });
-                      },
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
+                MergeSemantics(
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _rememberMe,
+                        activeColor: tokens.primary,
+                        checkColor: Colors.white,
+                        onChanged: (value) {
+                          setState(() {
+                            _rememberMe = value ?? false;
+                          });
+                        },
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        side: BorderSide(color: tokens.cardBorder),
                       ),
-                      side: BorderSide(color: tokens.cardBorder),
-                    ),
-                    Text(
-                      'Remember me for 30 days',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: tokens.textSecondary,
+                      Text(
+                        'Remember me for 30 days',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: tokens.textSecondary,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
                 // Sign In Button
                 SizedBox(
@@ -276,7 +273,7 @@ class _SignInPageState extends State<SignInPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -300,7 +297,7 @@ class _SignInPageState extends State<SignInPage> {
                           ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // Sign Up Link
                 Row(
@@ -312,8 +309,8 @@ class _SignInPageState extends State<SignInPage> {
                         color: tokens.textSecondary,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
+                    TextButton(
+                      onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -451,7 +448,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 Text(
                   'Verify sign in',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -460,7 +457,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                     fontSize: 26,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text(
                   'We sent a 6-digit OTP to ${_draft.email}. Enter it below to finish signing in.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -468,7 +465,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -505,7 +502,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -625,7 +622,10 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
         iconTheme: IconThemeData(color: tokens.textPrimary),
         title: Text(
           'Reset password',
-          style: TextStyle(color: tokens.textPrimary, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: tokens.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: SafeArea(
@@ -650,7 +650,7 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 Text(
                   'Forgot your password?',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -659,7 +659,7 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
                     fontSize: 26,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text(
                   'Enter the email on your account and we will send you a 6-digit code to reset your password.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -667,7 +667,7 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 Text(
                   'Email',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -684,7 +684,7 @@ class _ForgotPasswordPageState extends State<_ForgotPasswordPage> {
                   onSubmitted: (_) => _sending ? null : _sendCode(),
                   decoration: _inputDec(tokens, 'm@example.com'),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -882,7 +882,10 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
         iconTheme: IconThemeData(color: tokens.textPrimary),
         title: Text(
           'Reset password',
-          style: TextStyle(color: tokens.textPrimary, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: tokens.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: SafeArea(
@@ -907,7 +910,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 Text(
                   'Enter code and new password',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -916,7 +919,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                     fontSize: 24,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text(
                   'We sent a 6-digit OTP to ${_draft.email}. Enter the code and your new password below.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -924,7 +927,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -1005,7 +1008,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(

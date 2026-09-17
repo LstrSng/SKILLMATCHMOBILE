@@ -202,7 +202,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,7 +268,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,10 +282,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     accountEmail.isEmpty
                         ? 'Verify your identity with a one-time password before changing your password.'
                         : 'We will send a 6-digit OTP to $accountEmail before you can set a new password.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: tokens.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 14, color: tokens.textSecondary),
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
@@ -319,7 +316,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -336,7 +333,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 100),
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -496,7 +493,10 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
         iconTheme: IconThemeData(color: tokens.textPrimary),
         title: Text(
           'Change Password',
-          style: TextStyle(color: tokens.textPrimary, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: tokens.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: SafeArea(
@@ -677,29 +677,34 @@ class _NotificationToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-            ),
-          ],
-        ),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeThumbColor: const Color(0xFF2563EB),
-        ),
-      ],
+    return MergeSemantics(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              ),
+            ],
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: const Color(0xFF2563EB),
+          ),
+        ],
+      ),
     );
   }
 }

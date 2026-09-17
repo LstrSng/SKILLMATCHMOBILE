@@ -73,7 +73,8 @@ class AppColors {
   // ---------------------------------------------------------------------------
   static const textPrimary = Color(0xFF0F172A);
   static const textSecondary = Color(0xFF64748B);
-  static const textFaint = Color(0xFF94A3B8);
+  static const textFaint = Color(0xFF475569);
+  static const textDisabled = Color(0xFF94A3B8);
 
   static const border = Color(0xFFE2E8F0);
   static const borderSoft = Color(0xFFF1F5F9);
@@ -119,23 +120,27 @@ class AppColors {
   static const badgeGapMatchDarkBg = Color(0xFF7F1D1D);
 
   static Color matchColor(int percentage, {bool isDark = false}) {
-    if (percentage >= 80) return isDark ? badgeHighMatchDark : badgeHighMatch;
-    if (percentage >= 60) return isDark ? badgeMedMatchDark : badgeMedMatch;
-    if (percentage >= 40) return isDark ? badgeLowMatchDark : badgeLowMatch;
+    if (percentage >= 85) return isDark ? badgeHighMatchDark : badgeHighMatch;
+    if (percentage >= 70) return isDark ? badgeMedMatchDark : badgeMedMatch;
+    if (percentage >= 50) return isDark ? badgeLowMatchDark : badgeLowMatch;
     return isDark ? badgeGapMatchDark : badgeGapMatch;
   }
 
   static Color matchBgColor(int percentage, {bool isDark = false}) {
-    if (percentage >= 80) return isDark ? badgeHighMatchDarkBg : badgeHighMatchBg;
-    if (percentage >= 60) return isDark ? badgeMedMatchDarkBg : badgeMedMatchBg;
-    if (percentage >= 40) return isDark ? badgeLowMatchDarkBg : badgeLowMatchBg;
+    if (percentage >= 85)
+      return isDark ? badgeHighMatchDarkBg : badgeHighMatchBg;
+    if (percentage >= 70) return isDark ? badgeMedMatchDarkBg : badgeMedMatchBg;
+    if (percentage >= 50) return isDark ? badgeLowMatchDarkBg : badgeLowMatchBg;
     return isDark ? badgeGapMatchDarkBg : badgeGapMatchBg;
   }
 
   static Color matchBorderColor(int percentage, {bool isDark = false}) {
-    if (percentage >= 80) return isDark ? const Color(0xFF065F46) : const Color(0xFFA7F3D0);
-    if (percentage >= 60) return isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE);
-    if (percentage >= 40) return isDark ? const Color(0xFF92400E) : const Color(0xFFFDE68A);
+    if (percentage >= 85)
+      return isDark ? const Color(0xFF065F46) : const Color(0xFFA7F3D0);
+    if (percentage >= 70)
+      return isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE);
+    if (percentage >= 50)
+      return isDark ? const Color(0xFF92400E) : const Color(0xFFFDE68A);
     return isDark ? const Color(0xFF991B1B) : const Color(0xFFFECACA);
   }
 
@@ -150,29 +155,13 @@ class AppColors {
   );
 
   static const cardShadowsLight = [
-    BoxShadow(
-      color: Color(0x080F172A),
-      blurRadius: 20,
-      offset: Offset(0, 6),
-    ),
-    BoxShadow(
-      color: Color(0x060F172A),
-      blurRadius: 6,
-      offset: Offset(0, 2),
-    ),
+    BoxShadow(color: Color(0x080F172A), blurRadius: 20, offset: Offset(0, 6)),
+    BoxShadow(color: Color(0x060F172A), blurRadius: 6, offset: Offset(0, 2)),
   ];
 
   static const cardShadowsDark = [
-    BoxShadow(
-      color: Color(0x3D000000),
-      blurRadius: 18,
-      offset: Offset(0, 6),
-    ),
-    BoxShadow(
-      color: Color(0x1F000000),
-      blurRadius: 6,
-      offset: Offset(0, 2),
-    ),
+    BoxShadow(color: Color(0x3D000000), blurRadius: 18, offset: Offset(0, 6)),
+    BoxShadow(color: Color(0x1F000000), blurRadius: 6, offset: Offset(0, 2)),
   ];
 
   static const subtleShadow = BoxShadow(
@@ -181,7 +170,12 @@ class AppColors {
     offset: Offset(0, 2),
   );
 
-  static BoxShadow glow(Color color, {double blur = 14, double spread = 0, double opacity = 0.25}) {
+  static BoxShadow glow(
+    Color color, {
+    double blur = 14,
+    double spread = 0,
+    double opacity = 0.25,
+  }) {
     return BoxShadow(
       color: color.withValues(alpha: opacity),
       blurRadius: blur,
@@ -378,7 +372,11 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   ) {
     if (other is! AppThemeExtension) return this;
     return AppThemeExtension(
-      scaffoldBackground: Color.lerp(scaffoldBackground, other.scaffoldBackground, t)!,
+      scaffoldBackground: Color.lerp(
+        scaffoldBackground,
+        other.scaffoldBackground,
+        t,
+      )!,
       cardBackground: Color.lerp(cardBackground, other.cardBackground, t)!,
       surfaceMuted: Color.lerp(surfaceMuted, other.surfaceMuted, t)!,
       surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t)!,
@@ -389,7 +387,11 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
       textFaint: Color.lerp(textFaint, other.textFaint, t)!,
       primary: Color.lerp(primary, other.primary, t)!,
       primarySoftBg: Color.lerp(primarySoftBg, other.primarySoftBg, t)!,
-      primaryGradient: LinearGradient.lerp(primaryGradient, other.primaryGradient, t)!,
+      primaryGradient: LinearGradient.lerp(
+        primaryGradient,
+        other.primaryGradient,
+        t,
+      )!,
       accent: Color.lerp(accent, other.accent, t)!,
       accentSoft: Color.lerp(accentSoft, other.accentSoft, t)!,
       verified: Color.lerp(verified, other.verified, t)!,

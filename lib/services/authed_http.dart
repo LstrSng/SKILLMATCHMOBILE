@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:http/http.dart' as http;
 
 import 'session_store.dart';
@@ -23,23 +24,56 @@ class AuthedException implements Exception {
   String toString() => message;
 }
 
+const Duration _kHttpTimeout = Duration(seconds: 45);
+
 Future<http.Response> authedGet(Uri uri) async {
-  final res = await http.get(uri, headers: jsonHeaders());
-  return res;
+  try {
+    final res = await http
+        .get(uri, headers: jsonHeaders())
+        .timeout(_kHttpTimeout);
+    return res;
+  } on TimeoutException {
+    throw AuthedException(
+      'Connection timed out. The server may be waking up, please try again.',
+    );
+  }
 }
 
 Future<http.Response> authedPut(Uri uri, {required String body}) async {
-  final res = await http.put(uri, headers: jsonHeaders(), body: body);
-  return res;
+  try {
+    final res = await http
+        .put(uri, headers: jsonHeaders(), body: body)
+        .timeout(_kHttpTimeout);
+    return res;
+  } on TimeoutException {
+    throw AuthedException(
+      'Connection timed out. The server may be waking up, please try again.',
+    );
+  }
 }
 
 Future<http.Response> authedPost(Uri uri, {required String body}) async {
-  final res = await http.post(uri, headers: jsonHeaders(), body: body);
-  return res;
+  try {
+    final res = await http
+        .post(uri, headers: jsonHeaders(), body: body)
+        .timeout(_kHttpTimeout);
+    return res;
+  } on TimeoutException {
+    throw AuthedException(
+      'Connection timed out. The server may be waking up, please try again.',
+    );
+  }
 }
 
 Future<http.Response> authedPatch(Uri uri, {required String body}) async {
-  final res = await http.patch(uri, headers: jsonHeaders(), body: body);
-  return res;
+  try {
+    final res = await http
+        .patch(uri, headers: jsonHeaders(), body: body)
+        .timeout(_kHttpTimeout);
+    return res;
+  } on TimeoutException {
+    throw AuthedException(
+      'Connection timed out. The server may be waking up, please try again.',
+    );
+  }
 }
-
