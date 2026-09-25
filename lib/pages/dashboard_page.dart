@@ -899,15 +899,11 @@ class _JobMatchCard extends StatelessWidget {
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
-          final applicantId =
-              (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
-                  ?.toString();
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => JobDetailPage(
                 jobId: job.id,
-                applicantId: applicantId,
                 title: job.title,
                 company: job.company,
                 location: job.location,

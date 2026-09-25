@@ -8,7 +8,6 @@ import '../services/applications_api.dart';
 import '../services/jobs_api.dart';
 import '../services/navigation_service.dart';
 import '../services/notification_store.dart';
-import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import 'job_detail_page.dart';
 import '../widgets/widgets.dart';
@@ -627,14 +626,11 @@ class _ApplicationCard extends StatelessWidget {
     }
 
     if (!context.mounted) return;
-    final applicantId = (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
-        ?.toString();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => JobDetailPage(
           jobId: application.jobId,
-          applicantId: applicantId,
           title: s('title').isEmpty ? application.jobTitle : s('title'),
           company: s('company').isEmpty ? application.company : s('company'),
           location: s('location'),

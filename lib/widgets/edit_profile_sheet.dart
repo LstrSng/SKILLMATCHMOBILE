@@ -1,17 +1,13 @@
 import 'package:image_picker/image_picker.dart';
 import '../config/cloudinary_config.dart';
 import '../services/cloudinary_service.dart';
-import 'dart:io' show File;
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/profile_api.dart';
-import '../services/session_store.dart';
 import '../services/competency.dart';
 import '../services/job_roles_data.dart';
 import 'package:skillmatch/theme/app_colors.dart';
-import 'widgets.dart';
 
 String _phoneDigitsOnly(String raw) {
   var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
@@ -86,7 +82,7 @@ Widget _profileAvatar(
 
 class EditProfileSheet extends StatefulWidget {
   final Map<String, dynamic> initial;
-  const EditProfileSheet({required this.initial});
+  const EditProfileSheet({super.key, required this.initial});
 
   @override
   State<EditProfileSheet> createState() => EditProfileSheetState();
@@ -907,13 +903,6 @@ Map<String, int> readSkillLevels(Map<String, dynamic>? user) {
   return out;
 }
 
-/// Short label for a 1–10 level, e.g. 3 → "Beginner".
-String skillLevelLabel(int level) {
-  if (level <= 3) return 'Beginner';
-  if (level <= 6) return 'Intermediate';
-  if (level <= 8) return 'Advanced';
-  return 'Expert';
-}
 
 class _SkillLevelRow extends StatelessWidget {
   const _SkillLevelRow({

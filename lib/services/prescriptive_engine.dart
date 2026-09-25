@@ -84,20 +84,37 @@ int _certRank(TrainingResource l, {required bool advanced}) {
   return tesda * 10 + l.cost.index;
 }
 
+/// Certifications from the pathways dataset for [skill], best fit for
+/// [level] first (see [_certRank]), at most [limit].
+List<TrainingResource> certificationsFor(
+  List<TrainingPathway> pathways,
+  String skill,
+  RequiredLevel? level, {
+  int limit = 3,
+}) {
+  final advanced = _isAdvanced(level);
+  final seen = <String>{};
+  final certs =
+      [
+        for (final p in pathwaysForSkill(pathways, skill))
+          for (final l in p.links)
+            if (seen.add(l.url + l.label)) l,
+      ]..sort(
+        (a, b) => _certRank(
+          a,
+          advanced: advanced,
+        ).compareTo(_certRank(b, advanced: advanced)),
+      );
+  return certs.take(limit).toList();
+}
+
 /// Certification from the pathways dataset that fits [skill] at [level].
 TrainingResource? bestCertificationFor(
   List<TrainingPathway> pathways,
   String skill,
   RequiredLevel? level,
 ) {
-  final advanced = _isAdvanced(level);
-  final certs = [for (final p in pathwaysForSkill(pathways, skill)) ...p.links]
-    ..sort(
-      (a, b) => _certRank(
-        a,
-        advanced: advanced,
-      ).compareTo(_certRank(b, advanced: advanced)),
-    );
+  final certs = certificationsFor(pathways, skill, level, limit: 1);
   return certs.isEmpty ? null : certs.first;
 }
 
@@ -112,6 +129,7 @@ bool _isRoleRelevant(String skill, String jobTitle) =>
 /// each below-level one — best first.
 Future<List<PrescribedAction>> prescribeActions({
   required String jobTitle,
+  String jobId = '',
   required List<String> requiredSkills,
   required Map<String, dynamic>? user,
 }) async {
@@ -150,7 +168,14 @@ Future<List<PrescribedAction>> prescribeActions({
     );
     final otherJobs = gap.isEmpty
         ? const <String>[]
-        : gap.first.jobTitles.where((t) => t != jobTitle).toList();
+        : [
+            // Exclude this job by id (postings can share a title).
+            for (final (i, title) in gap.first.jobTitles.indexed)
+              if (jobId.isNotEmpty && i < gap.first.jobIds.length
+                  ? gap.first.jobIds[i] != jobId
+                  : title != jobTitle)
+                title,
+          ];
     final cert = bestCertificationFor(pathways, c.skill, c.required);
     final relevant = _isRoleRelevant(c.raw, jobTitle);
 

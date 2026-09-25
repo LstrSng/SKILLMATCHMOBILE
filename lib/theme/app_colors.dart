@@ -127,20 +127,24 @@ class AppColors {
   }
 
   static Color matchBgColor(int percentage, {bool isDark = false}) {
-    if (percentage >= 85)
+    if (percentage >= 85) {
       return isDark ? badgeHighMatchDarkBg : badgeHighMatchBg;
+    }
     if (percentage >= 70) return isDark ? badgeMedMatchDarkBg : badgeMedMatchBg;
     if (percentage >= 50) return isDark ? badgeLowMatchDarkBg : badgeLowMatchBg;
     return isDark ? badgeGapMatchDarkBg : badgeGapMatchBg;
   }
 
   static Color matchBorderColor(int percentage, {bool isDark = false}) {
-    if (percentage >= 85)
+    if (percentage >= 85) {
       return isDark ? const Color(0xFF065F46) : const Color(0xFFA7F3D0);
-    if (percentage >= 70)
+    }
+    if (percentage >= 70) {
       return isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE);
-    if (percentage >= 50)
+    }
+    if (percentage >= 50) {
       return isDark ? const Color(0xFF92400E) : const Color(0xFFFDE68A);
+    }
     return isDark ? const Color(0xFF991B1B) : const Color(0xFFFECACA);
   }
 

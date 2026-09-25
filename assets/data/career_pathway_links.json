@@ -224,33 +224,12 @@
           "cost": "free"
         },
         {
-          "label": "IBM Full Stack Software Developer Professional Certificate",
-          "url": "https://www.coursera.org/professional-certificates/ibm-full-stack-cloud-developer",
-          "isFree": false,
-          "provider": "IBM",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
-        {
           "label": "MDN Web Docs — Full Stack Web Development Curriculum (Free)",
           "url": "https://developer.mozilla.org/en-US/curriculum/",
           "isFree": true,
           "provider": "MDN",
           "type": "Course",
           "cost": "free"
-        },
-        {
-          "label": "W3Schools — Certified Web Developer",
-          "url": "https://www.w3schools.com/cert/default.asp",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 95,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -266,16 +245,6 @@
           "provider": "Oracle",
           "type": "Badge",
           "cost": "free"
-        },
-        {
-          "label": "Oracle Certified Professional: Java SE 21 Developer",
-          "url": "https://education.oracle.com/java-se-21-developer-certified-professional/trackp_JSE21OCP",
-          "isFree": false,
-          "provider": "Oracle",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 245,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -315,16 +284,6 @@
           "provider": "Cisco",
           "type": "Certificate",
           "cost": "free"
-        },
-        {
-          "label": "Python Institute — PCAP: Certified Associate in Python",
-          "url": "https://pythoninstitute.org/pcap",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 295,
-          "priceUnit": "exam"
         },
         {
           "label": "Django Project — Official Web Framework Tutorial & Docs (Free)",
@@ -372,15 +331,6 @@
     {
       "name": "PHP Development",
       "links": [
-        {
-          "label": "Zend Certified PHP Engineer",
-          "url": "https://www.zend.com/training/php-certification-exam",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
         {
           "label": "PHP: The Right Way — Modern Web Standards & Best Practices",
           "url": "https://phptherightway.com/",
@@ -445,26 +395,6 @@
           "cost": "free"
         },
         {
-          "label": "Meta Front-End Developer Professional Certificate",
-          "url": "https://www.coursera.org/professional-certificates/meta-front-end-developer",
-          "isFree": false,
-          "provider": "Meta",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
-        {
-          "label": "W3C / edX — Front-End Web Developer Professional Certificate",
-          "url": "https://www.edx.org/certificates/professional-certificate/w3cx-front-end-web-developer",
-          "isFree": false,
-          "provider": "W3C",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
-        {
           "label": "Microsoft Learn — Build JavaScript Applications with TypeScript (Free)",
           "url": "https://learn.microsoft.com/en-us/training/paths/build-javascript-applications-typescript/",
           "isFree": true,
@@ -487,16 +417,6 @@
           "provider": "Microsoft",
           "type": "Guide",
           "cost": "free"
-        },
-        {
-          "label": "OpenJS Foundation — Node.js Application Developer (JSNAD)",
-          "url": "https://training.linuxfoundation.org/certification/jsnad/",
-          "isFree": false,
-          "provider": "OpenJS",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 395,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -530,17 +450,6 @@
           "cost": "free"
         },
         {
-          "label": "Meta — Advanced Front-End Development & React (Coursera)",
-          "url": "https://www.coursera.org/professional-certificates/meta-front-end-developer",
-          "isFree": false,
-          "provider": "Meta",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
-        {
           "label": "Total TypeScript — Professional TypeScript Essentials (Free Tutorials)",
           "url": "https://www.totaltypescript.com/tutorials",
           "isFree": true,
@@ -570,48 +479,6 @@
           "provider": "Postman",
           "type": "Certification",
           "cost": "free"
-        },
-        {
-          "label": "Meta Back-End Developer Professional Certificate",
-          "url": "https://www.coursera.org/professional-certificates/meta-back-end-developer",
-          "isFree": false,
-          "provider": "Meta",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
-        {
-          "label": "IBM Back-End Development Professional Certificate",
-          "url": "https://www.coursera.org/professional-certificates/ibm-backend-development",
-          "isFree": false,
-          "provider": "IBM",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
-        {
-          "label": "AWS Certified Developer – Associate",
-          "url": "https://aws.amazon.com/certification/certified-developer-associate/",
-          "isFree": false,
-          "provider": "AWS",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 150,
-          "priceUnit": "exam"
-        },
-        {
-          "label": "OpenJS Foundation — Node.js Services Developer (JSNSD)",
-          "url": "https://training.linuxfoundation.org/certification/jsnsd/",
-          "isFree": false,
-          "provider": "OpenJS",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 395,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -666,16 +533,6 @@
           "provider": "WordPress",
           "type": "Guide",
           "cost": "free"
-        },
-        {
-          "label": "WordPress.com — Advanced Professional Developer Certification",
-          "url": "https://wordpress.com/education/certifications/",
-          "isFree": false,
-          "provider": "WordPress",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 250,
-          "priceUnit": "exam"
         },
         {
           "label": "Coursera — Build a Full Website using WordPress",
@@ -733,17 +590,6 @@
       "name": "Mainframe Development",
       "links": [
         {
-          "label": "IBM z/OS Mainframe Practitioner Professional Certificate",
-          "url": "https://www.coursera.org/professional-certificates/ibm-z-mainframe",
-          "isFree": false,
-          "provider": "IBM",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
-        {
           "label": "IBM Z Xplore (free, self-paced)",
           "url": "https://www.ibm.com/z/resources/mainframe-skills",
           "isFree": true,
@@ -773,16 +619,6 @@
           "provider": "AWS",
           "type": "Badge",
           "cost": "free"
-        },
-        {
-          "label": "AWS Certified Solutions Architect – Associate",
-          "url": "https://aws.amazon.com/certification/certified-solutions-architect-associate/",
-          "isFree": false,
-          "provider": "AWS",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 150,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -799,16 +635,6 @@
           "type": "Course",
           "cost": "freeToLearn",
           "costNote": "Training is free; the certification exam is paid."
-        },
-        {
-          "label": "Microsoft Certified: Azure Administrator Associate",
-          "url": "https://learn.microsoft.com/en-us/credentials/certifications/azure-administrator/",
-          "isFree": false,
-          "provider": "Microsoft",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 165,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -824,16 +650,6 @@
           "provider": "Google",
           "type": "Badge",
           "cost": "free"
-        },
-        {
-          "label": "Google Cloud Associate Cloud Engineer",
-          "url": "https://cloud.google.com/learn/certification/cloud-engineer",
-          "isFree": false,
-          "provider": "Google",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 125,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -842,16 +658,6 @@
     {
       "name": "DevOps & Release Engineering",
       "links": [
-        {
-          "label": "AWS Certified DevOps Engineer – Professional",
-          "url": "https://aws.amazon.com/certification/certified-devops-engineer-professional/",
-          "isFree": false,
-          "provider": "AWS",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 300,
-          "priceUnit": "exam"
-        },
         {
           "label": "GitLab University — Courses & GitLab Certified Associate",
           "url": "https://university.gitlab.com/pages/certifications",
@@ -901,26 +707,6 @@
           "provider": "Docker",
           "type": "Badge",
           "cost": "free"
-        },
-        {
-          "label": "Certified Kubernetes Administrator (CKA)",
-          "url": "https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/",
-          "isFree": false,
-          "provider": "NIST",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 445,
-          "priceUnit": "exam"
-        },
-        {
-          "label": "Docker Certified Associate",
-          "url": "https://training.mirantis.com/certification/dca-certification-exam/",
-          "isFree": false,
-          "provider": "Docker",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 199,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -929,16 +715,6 @@
     {
       "name": "Infrastructure as Code (HashiCorp)",
       "links": [
-        {
-          "label": "HashiCorp Certified: Terraform Associate",
-          "url": "https://developer.hashicorp.com/certifications",
-          "isFree": false,
-          "provider": "HashiCorp",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 70.5,
-          "priceUnit": "exam"
-        },
         {
           "label": "HashiCorp Developer — Terraform Associate Tutorials & Hands-on Labs (Free)",
           "url": "https://developer.hashicorp.com/terraform/tutorials/certification-003",
@@ -954,15 +730,6 @@
     {
       "name": "Configuration Management",
       "links": [
-        {
-          "label": "Red Hat Certified Specialist — Ansible Automation Platform",
-          "url": "https://www.redhat.com/en/services/certification/red-hat-certified-specialist-managing-automation-ansible-automation-platform",
-          "isFree": false,
-          "provider": "Red Hat",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
         {
           "label": "Red Hat — Ansible Interactive Labs (Free)",
           "url": "https://www.redhat.com/en/interactive-labs/ansible",
@@ -1008,16 +775,6 @@
           "provider": "GitHub",
           "type": "Certification",
           "cost": "free"
-        },
-        {
-          "label": "GitHub Foundations Certification",
-          "url": "https://education.github.com/experiences/foundations_certificate",
-          "isFree": false,
-          "provider": "GitHub",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 99,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1026,15 +783,6 @@
     {
       "name": "Agile Tooling (Atlassian)",
       "links": [
-        {
-          "label": "Atlassian Certifications",
-          "url": "https://university.atlassian.com/student/catalog/list?category_ids=21578-certifications",
-          "isFree": false,
-          "provider": "Atlassian",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
         {
           "label": "Atlassian University — Jira Fundamentals Certification & Badge (Free)",
           "url": "https://university.atlassian.com/student/catalog/list?category_ids=21737-fundamentals-badges",
@@ -1059,26 +807,6 @@
       "name": "Observability & Monitoring",
       "links": [
         {
-          "label": "Splunk Core Certified Power User",
-          "url": "https://www.splunk.com/en_us/training/certification-track/splunk-core-certified-power-user.html",
-          "isFree": false,
-          "provider": "Splunk",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 130,
-          "priceUnit": "exam"
-        },
-        {
-          "label": "Elastic Certified Engineer",
-          "url": "https://www.elastic.co/training/certification",
-          "isFree": false,
-          "provider": "Elastic",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 500,
-          "priceUnit": "exam"
-        },
-        {
           "label": "Dynatrace University — Associate Certification Learning Track",
           "url": "https://university.dynatrace.com/",
           "isFree": false,
@@ -1102,15 +830,6 @@
     {
       "name": "Cloud-Native Service Mesh",
       "links": [
-        {
-          "label": "Linux Foundation — cloud-native certification catalog",
-          "url": "https://training.linuxfoundation.org/certification-catalog/",
-          "isFree": false,
-          "provider": "Linux Foundation",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Catalog of paid certification exams."
-        },
         {
           "label": "Istio Docs — Getting Started & Interactive Service Mesh Tasks (Free)",
           "url": "https://istio.io/latest/docs/setup/getting-started/",
@@ -1149,27 +868,6 @@
           "provider": "Kaggle",
           "type": "Certificate",
           "cost": "free"
-        },
-        {
-          "label": "Google Data Analytics Professional Certificate",
-          "url": "https://www.coursera.org/professional-certificates/google-data-analytics",
-          "isFree": false,
-          "provider": "Google",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
-        {
-          "label": "Microsoft Certified: Power BI Data Analyst Associate",
-          "url": "https://learn.microsoft.com/en-us/credentials/certifications/data-analyst-associate/",
-          "isFree": false,
-          "provider": "Microsoft",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 165,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1178,16 +876,6 @@
     {
       "name": "Data Engineering & Big Data",
       "links": [
-        {
-          "label": "Google Cloud Professional Data Engineer",
-          "url": "https://cloud.google.com/learn/certification/data-engineer",
-          "isFree": false,
-          "provider": "Google",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 200,
-          "priceUnit": "exam"
-        },
         {
           "label": "Databricks Academy — Free Self-Paced Training & Accreditations",
           "url": "https://www.databricks.com/learn/training/home",
@@ -1250,25 +938,6 @@
           "provider": "IBM",
           "type": "Certificate",
           "cost": "free"
-        },
-        {
-          "label": "Google Cloud Professional Machine Learning Engineer",
-          "url": "https://cloud.google.com/learn/certification/machine-learning-engineer",
-          "isFree": false,
-          "provider": "Google",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 200,
-          "priceUnit": "exam"
-        },
-        {
-          "label": "IBM Data Science Professional Certificate",
-          "url": "https://www.ibm.com/training/course/ibm-data-science-professional-certificate-CLP21001",
-          "isFree": false,
-          "provider": "IBM",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
         }
       ],
       "note": "",
@@ -1308,16 +977,6 @@
           "provider": "Kaggle",
           "type": "Certificate",
           "cost": "free"
-        },
-        {
-          "label": "Oracle Database SQL Certified Associate (1Z0-071)",
-          "url": "https://education.oracle.com/oracle-database-sql/pexam_1Z0-071",
-          "isFree": false,
-          "provider": "Oracle",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 245,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1326,16 +985,6 @@
     {
       "name": "GIS / Geospatial Analysis",
       "links": [
-        {
-          "label": "Esri Technical Certification",
-          "url": "https://www.esri.com/training/certification/",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 250,
-          "priceUnit": "exam"
-        },
         {
           "label": "QGIS Training Manual & Tutorials (Free)",
           "url": "https://docs.qgis.org/latest/en/docs/training_manual/",
@@ -1383,16 +1032,6 @@
           "provider": "freeCodeCamp",
           "type": "Certification",
           "cost": "free"
-        },
-        {
-          "label": "CompTIA Security+",
-          "url": "https://www.comptia.org/en-us/certifications/security/",
-          "isFree": false,
-          "provider": "CompTIA",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 425,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1401,15 +1040,6 @@
     {
       "name": "Penetration Testing & Forensics",
       "links": [
-        {
-          "label": "Certified Ethical Hacker (CEH)",
-          "url": "https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
         {
           "label": "PortSwigger — Web Security Academy",
           "url": "https://portswigger.net/web-security",
@@ -1436,16 +1066,6 @@
       "name": "Security Leadership & GRC",
       "links": [
         {
-          "label": "CISSP — ISC2",
-          "url": "https://www.isc2.org/certifications/cissp",
-          "isFree": false,
-          "provider": "ISC2",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 749,
-          "priceUnit": "exam"
-        },
-        {
           "label": "Cisco Skills for All — Cybersecurity Governance & Risk Management (Free Badge)",
           "url": "https://skillsforall.com/",
           "isFree": true,
@@ -1468,16 +1088,6 @@
     {
       "name": "Cloud Security",
       "links": [
-        {
-          "label": "CCSP — ISC2",
-          "url": "https://www.isc2.org/certifications/ccsp",
-          "isFree": false,
-          "provider": "ISC2",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 599,
-          "priceUnit": "exam"
-        },
         {
           "label": "AWS Skill Builder — Security Learning Plan & Digital Badges (Free)",
           "url": "https://explore.skillbuilder.aws/learn/course/external/view/elearning/134/aws-security-fundamentals-second-edition",
@@ -1517,16 +1127,6 @@
           "provider": "Cisco",
           "type": "Certificate",
           "cost": "free"
-        },
-        {
-          "label": "Cisco Certified Network Associate (CCNA)",
-          "url": "https://www.cisco.com/site/us/en/learn/training-certifications/certifications/enterprise/ccna/index.html",
-          "isFree": false,
-          "provider": "Cisco",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 300,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1551,16 +1151,6 @@
           "provider": "Cisco",
           "type": "Certificate",
           "cost": "free"
-        },
-        {
-          "label": "Red Hat Certified System Administrator (RHCSA)",
-          "url": "https://www.redhat.com/en/services/certification/rhcsa",
-          "isFree": false,
-          "provider": "Red Hat",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 500,
-          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1569,16 +1159,6 @@
     {
       "name": "IT Support & Help Desk",
       "links": [
-        {
-          "label": "CompTIA A+",
-          "url": "https://www.comptia.org/en-us/certifications/a/",
-          "isFree": false,
-          "provider": "CompTIA",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 265,
-          "priceUnit": "exam (2 exams required)"
-        },
         {
           "label": "Google — Technical Support Fundamentals",
           "url": "https://www.coursera.org/learn/technical-support-fundamentals",
@@ -1612,15 +1192,6 @@
       "name": "IT Service Management",
       "links": [
         {
-          "label": "ITIL 4 Foundation — PeopleCert",
-          "url": "https://www.peoplecert.org/browse-certifications/it-governance-and-service-management/ITIL-1/itil-4-foundation-2565",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Course",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
-        {
           "label": "Alison — ITIL Service Management & ISO 20000 Foundations",
           "url": "https://alison.com/course/understanding-information-technology-infrastructure-library-itil",
           "isFree": false,
@@ -1636,17 +1207,6 @@
     {
       "name": "Embedded, IoT & Robotics",
       "links": [
-        {
-          "label": "Internet of Things Specialization — UC San Diego (Coursera)",
-          "url": "https://www.coursera.org/specializations/internet-of-things",
-          "isFree": false,
-          "provider": "Coursera",
-          "type": "Course",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
         {
           "label": "Arm Education / edX — Embedded Systems Essentials",
           "url": "https://www.edx.org/learn/embedded-systems/arm-education-embedded-systems-essentials-with-arm-get-practical-with-hardware",
@@ -1671,17 +1231,6 @@
     {
       "name": "UX/UI Design",
       "links": [
-        {
-          "label": "Google UX Design Professional Certificate",
-          "url": "https://www.coursera.org/professional-certificates/google-ux-design",
-          "isFree": false,
-          "provider": "Google",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
         {
           "label": "Google — Foundations of User Experience (UX) Design",
           "url": "https://www.coursera.org/learn/foundations-user-experience-design",
@@ -1715,15 +1264,6 @@
       "name": "Animation, VFX & 3D",
       "links": [
         {
-          "label": "Autodesk Certified User — Maya",
-          "url": "https://www.autodesk.com/certification/media-entertainment-certification",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
-        {
           "label": "Blender Studio — Blender Fundamentals & 3D Modeling (Free)",
           "url": "https://studio.blender.org/training/",
           "isFree": true,
@@ -1746,15 +1286,6 @@
     {
       "name": "Game Development",
       "links": [
-        {
-          "label": "Unity Certified Professional: Programmer",
-          "url": "https://unity.com/products/unity-certifications/professional-programmer",
-          "isFree": false,
-          "provider": "Unity",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
         {
           "label": "Harvard CS50G — Introduction to Game Development (Free Certificate)",
           "url": "https://cs50.harvard.edu/games/",
@@ -1794,16 +1325,6 @@
     {
       "name": "Accessibility",
       "links": [
-        {
-          "label": "IAAP CPACC — Certified Professional in Accessibility Core Competencies",
-          "url": "https://www.accessibilityassociation.org/s/certified-professional",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 485,
-          "priceUnit": "exam (non-member)"
-        },
         {
           "label": "W3C / edX — Introduction to Web Accessibility (WAI0.1x)",
           "url": "https://www.edx.org/learn/web-accessibility/the-world-wide-web-consortium-w3c-introduction-to-web-accessibility",
@@ -1851,28 +1372,6 @@
           "provider": "Other",
           "type": "Guide",
           "cost": "free"
-        },
-        {
-          "label": "Meta Android Developer Professional Certificate",
-          "url": "https://www.coursera.org/professional-certificates/meta-android-developer",
-          "isFree": false,
-          "provider": "Meta",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
-        {
-          "label": "Coursera — Android App Development Specialization",
-          "url": "https://www.coursera.org/specializations/android-app-development",
-          "isFree": false,
-          "provider": "Coursera",
-          "type": "Course",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
         }
       ],
       "note": "Google retired its standalone Associate Android Developer exam; Google's official Compose pathway and Meta's Professional Certificate are the current industry standard learning paths.",
@@ -1904,17 +1403,6 @@
           "provider": "Apple",
           "type": "Course",
           "cost": "free"
-        },
-        {
-          "label": "Meta iOS Developer Professional Certificate",
-          "url": "https://www.coursera.org/professional-certificates/meta-ios-developer",
-          "isFree": false,
-          "provider": "Meta",
-          "type": "Certificate",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
         },
         {
           "label": "Swift.org — Official Swift Programming Documentation (Free)",
@@ -1964,17 +1452,6 @@
           "cost": "free"
         },
         {
-          "label": "Meta React Native Specialization (Coursera)",
-          "url": "https://www.coursera.org/specializations/meta-react-native",
-          "isFree": false,
-          "provider": "Coursera",
-          "type": "Course",
-          "cost": "paid",
-          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
-          "priceUsd": 49,
-          "priceUnit": "month"
-        },
-        {
           "label": "Flutter Docs — Cookbook: Useful Flutter Samples (Free)",
           "url": "https://docs.flutter.dev/cookbook",
           "isFree": true,
@@ -2004,15 +1481,6 @@
           "provider": "Other",
           "type": "Certification",
           "cost": "free"
-        },
-        {
-          "label": "ISTQB Certified Tester Foundation Level (CTFL)",
-          "url": "https://istqb.org/certifications/certified-tester-foundation-level-ctfl-v4-0/",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
         }
       ],
       "note": "",
@@ -2021,25 +1489,6 @@
     {
       "name": "Project, Program & Product Management",
       "links": [
-        {
-          "label": "PMP — Project Management Institute",
-          "url": "https://www.pmi.org/certifications/project-management-pmp",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Course",
-          "cost": "paid",
-          "priceUsd": 575,
-          "priceUnit": "exam (non-member)"
-        },
-        {
-          "label": "Certified ScrumMaster (CSM)",
-          "url": "https://www.scrumalliance.org/get-certified/scrum-master-track/certified-scrummaster",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
         {
           "label": "Scrum.org — Open Assessments: Scrum Master & Product Owner (Free Badges)",
           "url": "https://www.scrum.org/open-assessments",
@@ -2073,15 +1522,6 @@
       "name": "Business & Systems Analysis",
       "links": [
         {
-          "label": "IIBA — Certified Business Analysis Professional (CBAP)",
-          "url": "https://www.iiba.org/business-analysis-certifications/cbap/",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
-        {
           "label": "freeCodeCamp — Requirements Analysis Guide & Case Study (Free)",
           "url": "https://www.freecodecamp.org/news/how-to-analyze-the-requirements-of-a-new-product-a-startup-friendly-approach-and-a-case-study-833970e5c36c",
           "isFree": true,
@@ -2097,15 +1537,6 @@
       "name": "Enterprise & Technology Leadership",
       "links": [
         {
-          "label": "TOGAF Certification — The Open Group",
-          "url": "https://www.opengroup.org/certifications/togaf9",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
-        {
           "label": "Google Cloud — Digital Transformation with Google Cloud (Free Badges)",
           "url": "https://www.cloudskillsboost.google/course_templates/364",
           "isFree": true,
@@ -2120,16 +1551,6 @@
     {
       "name": "Salesforce Administration & Development",
       "links": [
-        {
-          "label": "Salesforce Certified Administrator — Trailhead",
-          "url": "https://trailhead.salesforce.com/credentials/administrator",
-          "isFree": false,
-          "provider": "Salesforce",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 200,
-          "priceUnit": "exam"
-        },
         {
           "label": "Salesforce Trailhead — Admin Beginner Trail & Superbadges (Free Verified Credentials)",
           "url": "https://trailhead.salesforce.com/content/learn/trails/force_com_admin_beginner",
@@ -2154,15 +1575,6 @@
       "name": "SAP & ERP Consulting",
       "links": [
         {
-          "label": "SAP Learning — get certified",
-          "url": "https://learning.sap.com/get-certified",
-          "isFree": false,
-          "provider": "SAP",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
-        {
           "label": "SAP Learning — Free Learning Journeys (formerly openSAP)",
           "url": "https://learning.sap.com/",
           "isFree": false,
@@ -2179,16 +1591,6 @@
       "name": "Microsoft Dynamics & SharePoint",
       "links": [
         {
-          "label": "Microsoft Certified: Dynamics 365 Fundamentals",
-          "url": "https://learn.microsoft.com/en-us/credentials/certifications/fundamentals",
-          "isFree": false,
-          "provider": "Microsoft",
-          "type": "Certification",
-          "cost": "paid",
-          "priceUsd": 99,
-          "priceUnit": "exam"
-        },
-        {
           "label": "Microsoft Learn — Microsoft Dynamics 365 & Power Platform Fundamentals (Free)",
           "url": "https://learn.microsoft.com/en-us/training/dynamics365/",
           "isFree": true,
@@ -2203,15 +1605,6 @@
     {
       "name": "Integration / MuleSoft",
       "links": [
-        {
-          "label": "Salesforce Certified MuleSoft Developer I — Trailhead",
-          "url": "https://trailhead.salesforce.com/credentials/mulesoftdeveloperi",
-          "isFree": false,
-          "provider": "Salesforce",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
-        },
         {
           "label": "MuleSoft Training — Getting Started with Anypoint Platform (Free Self-Paced)",
           "url": "https://training.mulesoft.com/course/development-fundamentals-mule4",
@@ -2234,15 +1627,6 @@
           "provider": "IBM",
           "type": "Certificate",
           "cost": "free"
-        },
-        {
-          "label": "Certified Blockchain Developer — Blockchain Council",
-          "url": "https://www.blockchain-council.org/certifications/certified-blockchain-developer/",
-          "isFree": false,
-          "provider": "Other",
-          "type": "Certification",
-          "cost": "paid",
-          "costNote": "Paid; check the official site for the current price."
         }
       ],
       "note": "No official standards body for blockchain exists — this is a widely used private-sector credential.",
@@ -2294,373 +1678,5 @@
       "note": "",
       "field": "Web"
     }
-  ],
-  "roleToPathway": {
-    "full stack developer": "Full-Stack & General Development",
-    "full stack java developer/programmer/engineer": "Full-Stack & General Development",
-    "full stack python developer/programmer/engineer": "Full-Stack & General Development",
-    "developer": "Full-Stack & General Development",
-    "programmer": "Full-Stack & General Development",
-    "coder": "Full-Stack & General Development",
-    "software developer": "Full-Stack & General Development",
-    "software engineer": "Full-Stack & General Development",
-    "programmer analyst": "Full-Stack & General Development",
-    "computer programmer": "Full-Stack & General Development",
-    "software architect": "Full-Stack & General Development",
-    "software development engineer": "Full-Stack & General Development",
-    "software development manager": "Full-Stack & General Development",
-    "application designer": "Full-Stack & General Development",
-    "application engineer": "Full-Stack & General Development",
-    "api developer": "Full-Stack & General Development",
-    "micro services / api lead designer": "Full-Stack & General Development",
-    "lead programmer": "Full-Stack & General Development",
-    "technical lead": "Full-Stack & General Development",
-    "entry level developer": "Full-Stack & General Development",
-    "entry level programmer": "Full-Stack & General Development",
-    "entry level software developer": "Full-Stack & General Development",
-    "entry level software engineer": "Full-Stack & General Development",
-    "jr developer": "Full-Stack & General Development",
-    "junior developer": "Full-Stack & General Development",
-    "junior software developer": "Full-Stack & General Development",
-    "junior software engineer": "Full-Stack & General Development",
-    "new grad software engineer": "Full-Stack & General Development",
-    "it apprentice": "Full-Stack & General Development",
-    "java developer": "Java Development",
-    "java architect": "Java Development",
-    "python developer": "Python Development",
-    "python architect": "Python Development",
-    ".net developer": ".NET / C# Development",
-    "c# developer": ".NET / C# Development",
-    "manager net": ".NET / C# Development",
-    "php developer": "PHP Development",
-    "manager php": "PHP Development",
-    "typescript developer": "TypeScript Development",
-    "typescript engineer": "TypeScript Development",
-    "typescript programmer": "TypeScript Development",
-    "ts developer": "TypeScript Development",
-    "javascript developer": "JavaScript & Front-End",
-    "react developer": "JavaScript & Front-End",
-    "front-end designer": "JavaScript & Front-End",
-    "front end developer": "JavaScript & Front-End",
-    "front end web developer": "JavaScript & Front-End",
-    "ui developer": "JavaScript & Front-End",
-    "junior front end developer": "JavaScript & Front-End",
-    "back end developer": "Back-End Development",
-    "web developer": "General Web / CMS",
-    "web engineer": "General Web / CMS",
-    "web designer": "General Web / CMS",
-    "web designer (ui/ux designer)": "General Web / CMS",
-    "webmaster": "General Web / CMS",
-    "web content manager": "General Web / CMS",
-    "web producer": "General Web / CMS",
-    "entry level web developer": "General Web / CMS",
-    "junior web developer": "General Web / CMS",
-    "e-commerce developer": "General Web / CMS",
-    "wordpress developer": "WordPress Development",
-    "ruby on rails developer": "Ruby on Rails",
-    "mainframe developer": "Mainframe Development",
-    "aws solutions architect": "Cloud Architecture (AWS)",
-    "cloud architect": "Cloud Architecture (AWS)",
-    "cloud computing specialist": "Cloud Architecture (AWS)",
-    "cloud migration specialist": "Cloud Architecture (AWS)",
-    "cloud system administrator": "Cloud Architecture (AWS)",
-    "cloud system engineer": "Cloud Architecture (AWS)",
-    "cloud/software applications engineer": "Cloud Architecture (AWS)",
-    "cloud/software architect": "Cloud Architecture (AWS)",
-    "cloud/software developer": "Cloud Architecture (AWS)",
-    "cloud administrator": "Cloud Architecture (AWS)",
-    "cloud automation engineer": "Cloud Architecture (AWS)",
-    "cloud engineer": "Cloud Architecture (AWS)",
-    "cloud network engineer": "Cloud Architecture (AWS)",
-    "senior cloud architect": "Cloud Architecture (AWS)",
-    "azure devops engineer": "Cloud Administration (Azure)",
-    "gcp devops engineer": "Cloud Engineering (GCP)",
-    "devops engineer": "DevOps & Release Engineering",
-    "devops architect": "DevOps & Release Engineering",
-    "devops manager": "DevOps & Release Engineering",
-    "senior devops engineer": "DevOps & Release Engineering",
-    "senior devops architect": "DevOps & Release Engineering",
-    "devsecops engineer": "DevOps & Release Engineering",
-    "devsecops architect": "DevOps & Release Engineering",
-    "senior devsecops architect": "DevOps & Release Engineering",
-    "aws devops engineer": "DevOps & Release Engineering",
-    "build engineer": "DevOps & Release Engineering",
-    "build and release engineer": "DevOps & Release Engineering",
-    "senior build engineer": "DevOps & Release Engineering",
-    "senior build and release engineer": "DevOps & Release Engineering",
-    "release manager": "DevOps & Release Engineering",
-    "platform engineer": "DevOps & Release Engineering",
-    "production support engineer": "DevOps & Release Engineering",
-    "operations engineer": "DevOps & Release Engineering",
-    "automation specialist": "DevOps & Release Engineering",
-    "kubernetes engineer": "Site Reliability & Kubernetes",
-    "kubernetes operations engineer": "Site Reliability & Kubernetes",
-    "kubernetes administrator": "Site Reliability & Kubernetes",
-    "sre engineer": "Site Reliability & Kubernetes",
-    "sre architect": "Site Reliability & Kubernetes",
-    "senior sre engineer": "Site Reliability & Kubernetes",
-    "senior sre architect": "Site Reliability & Kubernetes",
-    "site reliability engineer (kubernetes – docker)": "Site Reliability & Kubernetes",
-    "site reliability engineer (kubernetes â€ï¿½ docker)": "Site Reliability & Kubernetes",
-    "docker engineer": "Site Reliability & Kubernetes",
-    "openshift engineer": "Site Reliability & Kubernetes",
-    "openstack engineer": "Site Reliability & Kubernetes",
-    "terraform engineer": "Infrastructure as Code (HashiCorp)",
-    "packer engineer": "Infrastructure as Code (HashiCorp)",
-    "vault engineer": "Infrastructure as Code (HashiCorp)",
-    "consul engineer": "Infrastructure as Code (HashiCorp)",
-    "nomad engineer": "Infrastructure as Code (HashiCorp)",
-    "ansible automation engineer": "Configuration Management",
-    "ansible operations engineer": "Configuration Management",
-    "senior ansible development engineer": "Configuration Management",
-    "chef operations engineer": "Configuration Management",
-    "chef inspec engineer": "Configuration Management",
-    "puppet engineer": "Configuration Management",
-    "puppet operations engineer": "Configuration Management",
-    "jenkins engineer": "CI/CD Pipeline Tooling",
-    "bamboo engineer": "CI/CD Pipeline Tooling",
-    "teamcity engineer": "CI/CD Pipeline Tooling",
-    "tfs engineer": "CI/CD Pipeline Tooling",
-    "octopus deploy engineer": "CI/CD Pipeline Tooling",
-    "xl deploy engineer": "CI/CD Pipeline Tooling",
-    "udeploy engineer": "CI/CD Pipeline Tooling",
-    "gradle engineer": "CI/CD Pipeline Tooling",
-    "maven engineer": "CI/CD Pipeline Tooling",
-    "groovy engineer": "CI/CD Pipeline Tooling",
-    "git engineer": "Version Control & Git Platforms",
-    "github engineer": "Version Control & Git Platforms",
-    "gitlab engineer": "Version Control & Git Platforms",
-    "bitbucket engineer": "Version Control & Git Platforms",
-    "gerrit administrator": "Version Control & Git Platforms",
-    "gerrit engineer": "Version Control & Git Platforms",
-    "jira administrator": "Agile Tooling (Atlassian)",
-    "jira engineer": "Agile Tooling (Atlassian)",
-    "confluence engineer": "Agile Tooling (Atlassian)",
-    "artifactory administrator": "Agile Tooling (Atlassian)",
-    "artifactory engineer": "Agile Tooling (Atlassian)",
-    "nexus engineer": "Agile Tooling (Atlassian)",
-    "grafana engineer": "Observability & Monitoring",
-    "prometheus engineer": "Observability & Monitoring",
-    "nagios engineer": "Observability & Monitoring",
-    "zabbix engineer": "Observability & Monitoring",
-    "datadog engineer": "Observability & Monitoring",
-    "new relic engineer": "Observability & Monitoring",
-    "appdynamics engineer": "Observability & Monitoring",
-    "elk engineer": "Observability & Monitoring",
-    "splunk engineer": "Observability & Monitoring",
-    "splunk enterprise security engineer": "Observability & Monitoring",
-    "sonarqube engineer": "Observability & Monitoring",
-    "fluentd engineer": "Observability & Monitoring",
-    "istio engineer": "Cloud-Native Service Mesh",
-    "envoy engineer": "Cloud-Native Service Mesh",
-    "falco engineer": "Cloud-Native Service Mesh",
-    "fortify engineer": "Cloud-Native Service Mesh",
-    "notary engineer": "Cloud-Native Service Mesh",
-    "data analyst": "Data Analytics & BI",
-    "data analysts": "Data Analytics & BI",
-    "data modeler": "Data Analytics & BI",
-    "data quality engineer": "Data Analytics & BI",
-    "database analyst": "Data Analytics & BI",
-    "business intelligence analyst": "Data Analytics & BI",
-    "business intelligence developer": "Data Analytics & BI",
-    "power bi analyst": "Data Analytics & BI",
-    "power bi developer": "Data Analytics & BI",
-    "data warehouse manager": "Data Analytics & BI",
-    "data warehouse programming specialist": "Data Analytics & BI",
-    "web analytics developer": "Data Analytics & BI",
-    "principle engineer in data analysis": "Data Analytics & BI",
-    "data engineer": "Data Engineering & Big Data",
-    "big data architect": "Data Engineering & Big Data",
-    "big data engineer": "Data Engineering & Big Data",
-    "big data specialist": "Data Engineering & Big Data",
-    "admin big data": "Data Engineering & Big Data",
-    "principle engineer in big data": "Data Engineering & Big Data",
-    "data architect": "Data Engineering & Big Data",
-    "database architect": "Data Engineering & Big Data",
-    "data scientist": "Data Science & Machine Learning",
-    "data science specialist": "Data Science & Machine Learning",
-    "machine learning engineer": "Data Science & Machine Learning",
-    "machine learning architect": "Data Science & Machine Learning",
-    "principle engineer in machine learning": "Data Science & Machine Learning",
-    "artificial intelligence engineer": "Data Science & Machine Learning",
-    "artificial intelligence researcher": "Data Science & Machine Learning",
-    "artificial intelligence architect": "Data Science & Machine Learning",
-    "ai researcher": "Data Science & Machine Learning",
-    "ai software architect": "Data Science & Machine Learning",
-    "artificial intelligence / machine learning leader": "Data Science & Machine Learning",
-    "artificial intelligence / machine learning sr.leader": "Data Science & Machine Learning",
-    "principle engineer in artificial intelligence": "Data Science & Machine Learning",
-    "natural language processing engineer": "Data Science & Machine Learning",
-    "machine learning engineer for cybersecurity": "Data Science & Machine Learning",
-    "computer and information research scientist": "Data Science & Machine Learning",
-    "computer and information research manager": "Data Science & Machine Learning",
-    "computer research scientist": "Data Science & Machine Learning",
-    "database administrator": "Database Administration",
-    "database developer": "Database Administration",
-    "sql developer": "Database Administration",
-    "oracle developer": "Database Administration",
-    "oracle sql developer": "Database Administration",
-    "director oracle": "Database Administration",
-    "geographic information systems (gis) analyst": "GIS / Geospatial Analysis",
-    "cybersecurity analyst": "Cybersecurity Analysis",
-    "cybersecurity engineer": "Cybersecurity Analysis",
-    "cybersecurity specialist": "Cybersecurity Analysis",
-    "infosec analyst/cybersecurity analyst": "Cybersecurity Analysis",
-    "information security analyst": "Cybersecurity Analysis",
-    "security administrator": "Cybersecurity Analysis",
-    "security specialist": "Cybersecurity Analysis",
-    "it security specialist": "Cybersecurity Analysis",
-    "penetration tester": "Penetration Testing & Forensics",
-    "computer forensic analyst": "Penetration Testing & Forensics",
-    "security consultant": "Security Leadership & GRC",
-    "security engineer": "Security Leadership & GRC",
-    "security manager": "Security Leadership & GRC",
-    "director of security": "Security Leadership & GRC",
-    "identity and access management specialist": "Security Leadership & GRC",
-    "application security engineer": "Security Leadership & GRC",
-    "cloud security engineer": "Cloud Security",
-    "mobile security specialist": "Cloud Security",
-    "network analyst": "Networking",
-    "network architect": "Networking",
-    "network infrastructure specialist": "Networking",
-    "network operations engineer": "Networking",
-    "network reliability engineer": "Networking",
-    "network security engineer": "Networking",
-    "network engineer": "Networking",
-    "network and systems administrator": "Networking",
-    "computer network specialist": "Networking",
-    "computer network architect": "Networking",
-    "internet engineer": "Networking",
-    "entry level network engineer": "Networking",
-    "linux administrator": "Linux & Systems Administration",
-    "manager linux": "Linux & Systems Administration",
-    "manager unix": "Linux & Systems Administration",
-    "systems administrator": "Linux & Systems Administration",
-    "systems engineer": "Linux & Systems Administration",
-    "systems integration manager": "Linux & Systems Administration",
-    "it systems administrator": "Linux & Systems Administration",
-    "powershell engineer": "Linux & Systems Administration",
-    "it support specialist": "IT Support & Help Desk",
-    "it technician": "IT Support & Help Desk",
-    "it engineer": "IT Support & Help Desk",
-    "it manager": "IT Support & Help Desk",
-    "it director": "IT Support & Help Desk",
-    "it auditor": "IT Support & Help Desk",
-    "help desk technician": "IT Support & Help Desk",
-    "computer support specialist": "IT Support & Help Desk",
-    "customer service representative": "IT Support & Help Desk",
-    "technology assistant": "IT Support & Help Desk",
-    "technology specialist": "IT Support & Help Desk",
-    "manager hardware": "IT Support & Help Desk",
-    "computer hardware engineer": "IT Support & Help Desk",
-    "director hardware": "IT Support & Help Desk",
-    "firmware manager": "IT Support & Help Desk",
-    "knowledge manager": "IT Service Management",
-    "embedded systems engineer": "Embedded, IoT & Robotics",
-    "embedded software engineer": "Embedded, IoT & Robotics",
-    "internet of things (iot) developer": "Embedded, IoT & Robotics",
-    "robotics engineer": "Embedded, IoT & Robotics",
-    "cnc programmer": "Embedded, IoT & Robotics",
-    "ui (user interface) designer": "UX/UI Design",
-    "ui designer": "UX/UI Design",
-    "ux designer": "UX/UI Design",
-    "ux/ui designer": "UX/UI Design",
-    "ux/ui researcher": "UX/UI Design",
-    "ux/ui specialist": "UX/UI Design",
-    "interaction designer": "UX/UI Design",
-    "information architect": "UX/UI Design",
-    "frameworks specialist": "UX/UI Design",
-    "2d artist/animator": "Animation, VFX & 3D",
-    "3d artist/animator": "Animation, VFX & 3D",
-    "animation director": "Animation, VFX & 3D",
-    "animator": "Animation, VFX & 3D",
-    "art director": "Animation, VFX & 3D",
-    "character designer": "Animation, VFX & 3D",
-    "compositor": "Animation, VFX & 3D",
-    "computer graphics animator": "Animation, VFX & 3D",
-    "effects technical director (fx td)": "Animation, VFX & 3D",
-    "forensic animator": "Animation, VFX & 3D",
-    "graphic effects supervisor": "Animation, VFX & 3D",
-    "layout artist": "Animation, VFX & 3D",
-    "motion graphics artist": "Animation, VFX & 3D",
-    "multimedia architect": "Animation, VFX & 3D",
-    "rigging artist": "Animation, VFX & 3D",
-    "storyboard artist": "Animation, VFX & 3D",
-    "technical animator": "Animation, VFX & 3D",
-    "vfx artist": "Animation, VFX & 3D",
-    "visual effects animator": "Animation, VFX & 3D",
-    "game developer": "Game Development",
-    "unity developer": "Game Development",
-    "accessibility specialist": "Accessibility",
-    "android developer": "Android Development",
-    "mobile app developer": "Mobile App Development (Cross-Platform)",
-    "mobile developer": "Mobile App Development (Cross-Platform)",
-    "mobile application developer": "Mobile App Development (Cross-Platform)",
-    "ios developer": "iOS Development",
-    "junior ios developer": "iOS Development",
-    "qa engineer": "QA & Test Automation",
-    "quality assurance manager": "QA & Test Automation",
-    "software quality assurance analyst": "QA & Test Automation",
-    "selenium engineer": "QA & Test Automation",
-    "junit engineer": "QA & Test Automation",
-    "pytest engineer": "QA & Test Automation",
-    "jacoco engineer": "QA & Test Automation",
-    "coverage.py engineer": "QA & Test Automation",
-    "agile project manager": "Project, Program & Product Management",
-    "project manager": "Project, Program & Product Management",
-    "program manager": "Project, Program & Product Management",
-    "product manager": "Project, Program & Product Management",
-    "technical product manager": "Project, Program & Product Management",
-    "digital program manager": "Project, Program & Product Management",
-    "portfolio manager": "Project, Program & Product Management",
-    "requirements manager": "Project, Program & Product Management",
-    "iteration manager": "Project, Program & Product Management",
-    "web project manager": "Project, Program & Product Management",
-    "technology adoption manager": "Project, Program & Product Management",
-    "digital transformation consultant": "Project, Program & Product Management",
-    "senior it consultant": "Project, Program & Product Management",
-    "business systems analyst": "Business & Systems Analysis",
-    "director business systems": "Business & Systems Analysis",
-    "computer systems analyst": "Business & Systems Analysis",
-    "intelligence specialist": "Business & Systems Analysis",
-    "information technology analyst": "Business & Systems Analysis",
-    "chief information officer": "Enterprise & Technology Leadership",
-    "chief information officer (cio)": "Enterprise & Technology Leadership",
-    "chief technology officer (cto)": "Enterprise & Technology Leadership",
-    "director of engineering": "Enterprise & Technology Leadership",
-    "implementation director": "Enterprise & Technology Leadership",
-    "information management systems director": "Enterprise & Technology Leadership",
-    "infrastructure architect": "Enterprise & Technology Leadership",
-    "integration director": "Enterprise & Technology Leadership",
-    "it program engagement director": "Enterprise & Technology Leadership",
-    "technology manager": "Enterprise & Technology Leadership",
-    "technology officer": "Enterprise & Technology Leadership",
-    "technical operations officer": "Enterprise & Technology Leadership",
-    "salesforce developer": "Salesforce Administration & Development",
-    "sap consultant": "SAP & ERP Consulting",
-    "erp consultant": "SAP & ERP Consulting",
-    "microsoft dynamics developer": "Microsoft Dynamics & SharePoint",
-    "sharepoint manager": "Microsoft Dynamics & SharePoint",
-    "sharepoint developer": "Microsoft Dynamics & SharePoint",
-    "mulesoft developer": "Integration / MuleSoft",
-    "blockchain developer": "Blockchain Development",
-    "it sales director": "Technology Sales & Accounts",
-    "it sales executive": "Technology Sales & Accounts",
-    "technology sales consultant": "Technology Sales & Accounts",
-    "technical account manager": "Technology Sales & Accounts",
-    "tech sales engineer": "Technology Sales & Accounts",
-    "seo consultant": "SEO & Digital Marketing",
-    "seo manager": "SEO & Digital Marketing",
-    "search engine optimization": "SEO & Digital Marketing",
-    "cross-platform mobile developer": "Mobile App Development (Cross-Platform)",
-    "flutter developer": "Mobile App Development (Cross-Platform)",
-    "react native developer": "Mobile App Development (Cross-Platform)",
-    "ios app developer": "iOS Development",
-    "android app developer": "Android Development",
-    "web application developer": "Full-Stack & General Development",
-    "web app developer": "Full-Stack & General Development",
-    "front-end web developer": "JavaScript & Front-End",
-    "back-end web developer": "Back-End Development",
-    "full stack web developer": "Full-Stack & General Development"
-  }
+  ]
 }

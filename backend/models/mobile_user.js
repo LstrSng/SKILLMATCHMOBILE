@@ -52,10 +52,6 @@ const mobileUserSchema = new mongoose.Schema({
     portfolioUrl: { type: String, default: "" },
     bio: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
-    // Skills sorted like the app's profile screen (PSF-SDS catalogs). Each
-    // entry is "<name> (<level>/10)", e.g. "Figma (5/10)" — the level is the
-    // applicant's self-rating, 1 (beginner) to 10 (expert); unrated skills
-    // are just the name. Build with toStoredSkills() in utils/skill_groups.js.
     skills: {
         techStack: { type: [String], default: [] },
         functional: { type: [String], default: [] },

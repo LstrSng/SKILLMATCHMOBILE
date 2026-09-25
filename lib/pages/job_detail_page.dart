@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../models/job_match_result.dart';
 import '../services/applications_api.dart';
 import '../services/coding_challenge_bank.dart';
-import '../models/training_pathway.dart';
 import '../services/competency.dart';
 import '../services/job_roles_data.dart';
 import '../services/prescriptive_engine.dart';
@@ -12,7 +11,7 @@ import '../services/saved_jobs_store.dart';
 import '../services/session_store.dart';
 import '../widgets/coding_challenge_sheet.dart';
 import 'company_details_page.dart';
-import 'pathway_page.dart';
+import 'job_pathway_page.dart';
 import 'settings_page.dart';
 import 'skill_assessment_page.dart';
 import 'package:skillmatch/theme/app_colors.dart';
@@ -22,7 +21,6 @@ class JobDetailPage extends StatefulWidget {
   const JobDetailPage({
     super.key,
     required this.jobId,
-    this.applicantId,
     required this.title,
     required this.company,
     required this.location,
@@ -37,7 +35,6 @@ class JobDetailPage extends StatefulWidget {
   });
 
   final String jobId;
-  final String? applicantId;
   final String title;
   final String company;
   final String location;
@@ -61,6 +58,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
   String? _error;
   JobMatchResult? _matchResult;
   List<PrescribedAction> _actions = const [];
+  List<SkillCompetency> _competencies = const [];
   String? _csvDescription;
 
   /// Prioritize the employer's custom posting description, falling back
@@ -140,6 +138,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
           : competencyMatchPercent(competencies);
       final actions = await prescribeActions(
         jobTitle: widget.title,
+        jobId: widget.jobId,
         requiredSkills: [...widget.matchedSkills, ...widget.unmatchedSkills],
         user: SessionStore.user,
       );
@@ -155,6 +154,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
       setState(() {
         _matchResult = result;
         _actions = actions;
+        _competencies = competencies;
         _csvDescription = role?.description;
         _loading = false;
       });
@@ -243,11 +243,21 @@ class _JobDetailPageState extends State<JobDetailPage> {
     );
   }
 
-  void _openSkillPathway(String skill) {
+  void _openJobPathway() {
     HapticFeedback.selectionClick();
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => PathwayPage(initialQuery: skill)),
+      MaterialPageRoute(
+        builder: (context) => JobPathwayPage(
+          jobTitle: _displayTitle,
+          qualifiedPercent: _displayScore,
+          actions: _actions,
+          qualifiedSkills: [
+            for (final c in _competencies)
+              if (c.status == CompetencyStatus.meets) c.skill,
+          ],
+        ),
+      ),
     );
   }
 
@@ -405,20 +415,19 @@ class _JobDetailPageState extends State<JobDetailPage> {
               matchedSkills: result.matchedSkills,
               missingSkills: result.missingSkills,
               matchScore: result.matchScore,
-              competencies: assessCompetencies([
-                ...result.matchedSkills,
-                ...result.missingSkills,
-              ], SessionStore.user),
-              onLearnSkill: _openSkillPathway,
+              competencies: _competencies,
               onTakeQuiz: _openSkillAssessment,
             ),
             const SizedBox(height: 16),
 
             // Recommendation Summary Card
-            RecommendationCard(
-              recommendation: result.recommendation,
+            RecommendationCard(recommendation: result.recommendation),
+            const SizedBox(height: 16),
+            QualificationCard(
+              qualifiedPercent: result.matchScore,
               actions: _actions,
-              onOpenAction: _openSkillPathway,
+              competencies: _competencies,
+              onViewPathway: _openJobPathway,
             ),
           ],
         ),
@@ -705,7 +714,6 @@ class SkillCompatibilityMatrix extends StatefulWidget {
     required this.missingSkills,
     required this.matchScore,
     this.competencies,
-    this.onLearnSkill,
     this.onTakeQuiz,
   });
 
@@ -716,7 +724,6 @@ class SkillCompatibilityMatrix extends StatefulWidget {
   /// Applicant's level vs. the PSF-SDS level required for each skill (see
   /// [assessCompetencies]); rows show both when given.
   final List<SkillCompetency>? competencies;
-  final ValueChanged<String>? onLearnSkill;
   final ValueChanged<String>? onTakeQuiz;
 
   @override
@@ -726,6 +733,10 @@ class SkillCompatibilityMatrix extends StatefulWidget {
 
 class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
   _SkillMatrixFilter _filter = _SkillMatrixFilter.all;
+
+  /// Rows shown before "Show all".
+  static const _kCollapsedCount = 6;
+  bool _showAll = false;
 
   @override
   Widget build(BuildContext context) {
@@ -886,21 +897,41 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
               ),
             )
           else ...[
-            ...displayedMatched.map(
-              (skill) => _MatchedSkillRow(
-                skill: skill,
-                competency: competencyFor(skill),
-              ),
-            ),
-            ...displayedMissing.map(
-              (skill) => _MissingSkillRow(
-                competency: competencyFor(skill),
-                skill: skill,
-                onLearn: widget.onLearnSkill != null
-                    ? () => widget.onLearnSkill!(skill)
-                    : null,
-              ),
-            ),
+            ...() {
+              final rows = <Widget>[
+                for (final skill in displayedMatched)
+                  _MatchedSkillRow(
+                    skill: skill,
+                    competency: competencyFor(skill),
+                  ),
+                for (final skill in displayedMissing)
+                  _MissingSkillRow(
+                    competency: competencyFor(skill),
+                    skill: skill,
+                  ),
+              ];
+              final hidden = rows.length - _kCollapsedCount;
+              return [
+                ...(_showAll ? rows : rows.take(_kCollapsedCount)),
+                if (hidden > 0)
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () => setState(() => _showAll = !_showAll),
+                      icon: Icon(
+                        _showAll
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                        size: 18,
+                      ),
+                      label: Text(
+                        _showAll
+                            ? 'Show less'
+                            : 'Show all ${rows.length} skills (+$hidden more)',
+                      ),
+                    ),
+                  ),
+              ];
+            }(),
           ],
         ],
       ),
@@ -958,7 +989,7 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
   }
 }
 
-/// "Required: Level 3 · You: Level 2" under a skill in the matrix.
+/// "You: Beginner (Level 2) · needs Level 3" under a skill in the matrix.
 class _LevelLine extends StatelessWidget {
   const _LevelLine({required this.competency});
 
@@ -967,12 +998,7 @@ class _LevelLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    final required = competency.required;
-    final you = competency.applicantLevel;
-    final text = [
-      if (required != null) 'Required: ${required.label}',
-      you != null ? 'You: $you' : 'You: not in your skills',
-    ].join(' · ');
+    final text = competency.levelSummary;
     return Padding(
       padding: const EdgeInsets.only(top: 6, left: 2),
       child: Text(
@@ -1001,8 +1027,8 @@ class _MatchedSkillRow extends StatelessWidget {
     final badgeColor = belowLevel ? tokens.warning : tokens.success;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: tokens.cardBackground,
         borderRadius: BorderRadius.circular(12),
@@ -1068,11 +1094,10 @@ class _MatchedSkillRow extends StatelessWidget {
 }
 
 class _MissingSkillRow extends StatelessWidget {
-  const _MissingSkillRow({required this.skill, this.competency, this.onLearn});
+  const _MissingSkillRow({required this.skill, this.competency});
 
   final String skill;
   final SkillCompetency? competency;
-  final VoidCallback? onLearn;
 
   @override
   Widget build(BuildContext context) {
@@ -1080,8 +1105,8 @@ class _MissingSkillRow extends StatelessWidget {
     final isDark = context.isDarkMode;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1719) : const Color(0xFFFFF7F7),
         borderRadius: BorderRadius.circular(12),
@@ -1136,51 +1161,6 @@ class _MissingSkillRow extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ],
-          if (onLearn != null) ...[
-            const SizedBox(width: 8),
-            InkWell(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                onLearn!();
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  color: tokens.primarySoftBg,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: tokens.primary.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.explore_outlined,
-                      size: 13,
-                      color: tokens.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Learn',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: tokens.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 13,
-                      color: tokens.primary,
-                    ),
-                  ],
-                ),
               ),
             ),
           ],
@@ -1319,21 +1299,203 @@ class _JobDetailBottomBar extends StatelessWidget {
   }
 }
 
-class RecommendationCard extends StatelessWidget {
-  const RecommendationCard({
+/// "You are X% qualified for this job": the competency-weighted match, the
+/// skills to upskill (below the required level or missing, most impact
+/// first) and the ones already qualified, with a link to the job's
+/// upskilling pathway.
+class QualificationCard extends StatefulWidget {
+  const QualificationCard({
     super.key,
-    required this.recommendation,
-    this.actions = const [],
-    this.onOpenAction,
+    required this.qualifiedPercent,
+    required this.actions,
+    required this.competencies,
+    this.onViewPathway,
   });
 
-  final String recommendation;
-
-  /// Ranked actions from [prescribeActions]; shown as an action plan.
+  final int qualifiedPercent;
   final List<PrescribedAction> actions;
+  final List<SkillCompetency> competencies;
+  final VoidCallback? onViewPathway;
 
-  /// Opens the certifications for an action's skill.
-  final ValueChanged<String>? onOpenAction;
+  @override
+  State<QualificationCard> createState() => _QualificationCardState();
+}
+
+class _QualificationCardState extends State<QualificationCard> {
+  /// Skills shown before "Show all".
+  static const _kCollapsedCount = 5;
+  bool _showAll = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    final qualifiedPercent = widget.qualifiedPercent;
+    final actions = widget.actions;
+    final competencies = widget.competencies;
+    final onViewPathway = widget.onViewPathway;
+    if (competencies.isEmpty) return const SizedBox.shrink();
+    final shown = _showAll ? actions : actions.take(_kCollapsedCount);
+    final hidden = actions.length - _kCollapsedCount;
+    final color = AppColors.matchColor(
+      qualifiedPercent,
+      isDark: context.isDarkMode,
+    );
+    final qualified = [
+      for (final c in competencies)
+        if (c.status == CompetencyStatus.meets) c.skill,
+    ];
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(text: 'You are '),
+                TextSpan(
+                  text: '$qualifiedPercent% qualified',
+                  style: TextStyle(color: color, fontWeight: FontWeight.w900),
+                ),
+                const TextSpan(text: ' for this job'),
+              ],
+            ),
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: tokens.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: qualifiedPercent / 100,
+              minHeight: 8,
+              color: color,
+              backgroundColor: tokens.surfaceMuted,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Based on your skill levels vs. the PSF-SDS levels this job requires.',
+            style: TextStyle(fontSize: 12, color: tokens.textSecondary),
+          ),
+          if (actions.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'To qualify, upskill ${actions.length == 1 ? 'this skill' : 'these ${actions.length} skills'}:',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: tokens.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final a in shown)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Icon(
+                        a.isLevelUp
+                            ? Icons.trending_up_rounded
+                            : Icons.add_circle_outline_rounded,
+                        size: 16,
+                        color: tokens.warning,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            a.skill,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: tokens.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            a.competency.gapDescription,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: tokens.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '+${a.matchGain}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: tokens.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (hidden > 0)
+              TextButton.icon(
+                onPressed: () => setState(() => _showAll = !_showAll),
+                icon: Icon(
+                  _showAll
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
+                  size: 18,
+                ),
+                label: Text(
+                  _showAll
+                      ? 'Show less'
+                      : 'Show all ${actions.length} skills (+$hidden more)',
+                ),
+              ),
+          ] else ...[
+            const SizedBox(height: 12),
+            Text(
+              'You meet every required skill level. You\'re ready to apply!',
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: tokens.success,
+              ),
+            ),
+          ],
+          if (qualified.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Already qualified: ${qualified.join(', ')}',
+              style: TextStyle(fontSize: 12, color: tokens.textSecondary),
+            ),
+          ],
+          if (actions.isNotEmpty && onViewPathway != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onViewPathway,
+                icon: const Icon(Icons.route_rounded, size: 18),
+                label: const Text('View my upskilling pathway for this job'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class RecommendationCard extends StatelessWidget {
+  const RecommendationCard({super.key, required this.recommendation});
+
+  final String recommendation;
 
   static const _kPlaceholders = {
     '',
@@ -1387,111 +1549,7 @@ class RecommendationCard extends StatelessWidget {
               ),
             ),
           ),
-          if (actions.length > 1) ...[
-            const SizedBox(height: 14),
-            Text(
-              'Action plan (ranked by impact)',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: tokens.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            for (final (i, a) in actions.take(3).indexed)
-              _ActionRow(
-                rank: i + 1,
-                action: a,
-                onTap: onOpenAction == null
-                    ? null
-                    : () => onOpenAction!(a.skill),
-              ),
-          ],
         ],
-      ),
-    );
-  }
-}
-
-/// One ranked action: skill, match change, reach and certification cost.
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({required this.rank, required this.action, this.onTap});
-
-  final int rank;
-  final PrescribedAction action;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.appColors;
-    final cert = action.certification;
-    final details = [
-      if (action.levelChange != null) action.levelChange!,
-      'match ${action.currentScore}% → ${action.newScore}%',
-      if (action.otherJobs.isNotEmpty)
-        '+${action.otherJobs.length} other job${action.otherJobs.length == 1 ? '' : 's'}',
-      if (cert == null)
-        'no cert needed'
-      else
-        switch (cert.cost) {
-          TrainingCost.free => 'free cert',
-          TrainingCost.freeToLearn => 'free to learn',
-          TrainingCost.paid => cert.pesoPrice ?? 'paid cert',
-        },
-    ].join(' · ');
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: rank == 1 ? tokens.primary : tokens.surfaceMuted,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '$rank',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: rank == 1 ? Colors.white : tokens.textSecondary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    action.isLevelUp ? '↑ Raise ${action.skill}' : action.skill,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: tokens.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    details,
-                    style: TextStyle(fontSize: 12, color: tokens.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            if (onTap != null)
-              Icon(
-                Icons.chevron_right_rounded,
-                color: tokens.textFaint,
-                size: 20,
-              ),
-          ],
-        ),
       ),
     );
   }

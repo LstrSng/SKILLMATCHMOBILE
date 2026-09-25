@@ -132,10 +132,14 @@ Future<Map<String, dynamic>> applyToJob({
       throw AuthedException('You already applied to this job.', statusCode: 409);
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw AuthedException(
-        'Could not apply (${res.statusCode}).',
-        statusCode: res.statusCode,
-      );
+      String msg = 'Could not apply (${res.statusCode}).';
+      try {
+        final errJson = jsonDecode(res.body);
+        if (errJson is Map && errJson['message'] != null) {
+          msg = errJson['message'].toString();
+        }
+      } catch (_) {}
+      throw AuthedException(msg, statusCode: res.statusCode);
     }
     final decoded = jsonDecode(res.body);
     if (decoded is! Map) throw AuthedException('Invalid apply response.');

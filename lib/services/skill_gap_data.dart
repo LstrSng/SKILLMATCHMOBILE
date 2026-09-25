@@ -8,6 +8,7 @@ class SkillGap {
   const SkillGap({
     required this.skill,
     required this.jobTitles,
+    this.jobIds = const [],
     required this.required,
     required this.rating,
   });
@@ -15,6 +16,10 @@ class SkillGap {
   /// Plain skill name, without a competency level ("Cloud Computing").
   final String skill;
   final List<String> jobTitles;
+
+  /// Ids of the jobs in [jobTitles] (same order), to tell apart postings
+  /// that share a title.
+  final List<String> jobIds;
 
   /// Highest level the jobs require, or null if they list none.
   final RequiredLevel? required;
@@ -42,7 +47,11 @@ Future<List<SkillGap>> loadSkillGapsFromPostedJobs() async {
       final key = c.skill.toLowerCase();
       final prev = byKey[key];
       final titles = [...?prev?.jobTitles];
-      if (!titles.contains(job.title)) titles.add(job.title);
+      final ids = [...?prev?.jobIds];
+      if (!ids.contains(job.id)) {
+        ids.add(job.id);
+        titles.add(job.title);
+      }
       final prevLevel = prev?.required;
       final highest =
           prevLevel == null ||
@@ -53,6 +62,7 @@ Future<List<SkillGap>> loadSkillGapsFromPostedJobs() async {
       byKey[key] = SkillGap(
         skill: c.skill,
         jobTitles: titles,
+        jobIds: ids,
         required: highest,
         rating: c.rating,
       );

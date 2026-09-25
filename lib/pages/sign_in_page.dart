@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../services/auth_api.dart';
 import '../services/session_store.dart';
+import '../services/validators.dart';
 import '../widgets/app_password_field.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/centered_form_width.dart';
@@ -719,20 +720,6 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
     super.dispose();
   }
 
-  String? _passwordError(String password) {
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
-    }
-    final hasUpper = RegExp(r'[A-Z]').hasMatch(password);
-    final hasLower = RegExp(r'[a-z]').hasMatch(password);
-    final hasNumber = RegExp(r'\d').hasMatch(password);
-    final hasSpecial = RegExp(r'[^A-Za-z0-9]').hasMatch(password);
-    if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-      return 'Password must include uppercase, lowercase, number, and special character.';
-    }
-    return null;
-  }
-
   Future<void> _submit() async {
     final otp = _otpController.text.trim();
     final newPassword = _newPasswordController.text;
@@ -745,7 +732,7 @@ class _ResetPasswordOtpPageState extends State<_ResetPasswordOtpPage> {
       return;
     }
 
-    final passwordError = _passwordError(newPassword);
+    final passwordError = passwordStrengthError(newPassword);
     if (passwordError != null) {
       ScaffoldMessenger.of(
         context,

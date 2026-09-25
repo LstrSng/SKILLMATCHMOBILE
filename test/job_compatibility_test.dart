@@ -75,7 +75,6 @@ void main() {
                     'Agile Coaching and Organizational Change Level 4',
                   ],
                   matchScore: 50,
-                  onLearnSkill: (_) {},
                   onTakeQuiz: (_) {},
                 ),
               ),
@@ -162,36 +161,58 @@ void main() {
     });
   });
 
-  group('SkillCompatibilityMatrix Learn Pathway Tests', () {
-    testWidgets(
-      'renders Learn button on missing skills and triggers callback',
-      (tester) async {
-        String? learnedSkill;
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: buildLightTheme(),
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: SkillCompatibilityMatrix(
-                  matchedSkills: const ['Flutter'],
-                  missingSkills: const ['Docker'],
-                  matchScore: 50,
-                  onLearnSkill: (skill) {
-                    learnedSkill = skill;
-                  },
-                ),
+  group('QualificationCard Tests', () {
+    testWidgets('shows % qualified, skills to upskill and qualified skills', (
+      tester,
+    ) async {
+      const user = {
+        'skills': ['Budgeting', 'Collaboration'],
+        'skillLevels': {'Budgeting': 1, 'Collaboration': 9},
+      };
+      const required = [
+        'Budgeting Level 4',
+        'Collaboration Intermediate',
+        'Cloud Computing Level 4',
+      ];
+      final competencies = assessCompetencies(required, user);
+      final actions = await tester.runAsync(
+        () => prescribeActions(
+          jobTitle: 'Business Analyst',
+          requiredSkills: required,
+          user: user,
+        ),
+      );
+      var opened = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildLightTheme(),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: QualificationCard(
+                qualifiedPercent: competencyMatchPercent(competencies),
+                actions: actions!,
+                competencies: competencies,
+                onViewPathway: () => opened = true,
               ),
             ),
           ),
-        );
+        ),
+      );
 
-        expect(find.text('Learn'), findsOneWidget);
-        await tester.tap(find.text('Learn'));
-        await tester.pumpAndSettle();
-
-        expect(learnedSkill, equals('Docker'));
-      },
-    );
+      expect(find.text('You are 39% qualified for this job'), findsOneWidget);
+      expect(find.text('To qualify, upskill these 2 skills:'), findsOneWidget);
+      expect(
+        find.text('You: Beginner (Level 1) · needs Level 4'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Not in your skills yet · needs Level 4'),
+        findsOneWidget,
+      );
+      expect(find.text('Already qualified: Collaboration'), findsOneWidget);
+      await tester.tap(find.text('View my upskilling pathway for this job'));
+      expect(opened, isTrue);
+    });
   });
 
   group('Prescriptive Analytics Tests', () {
@@ -297,7 +318,7 @@ void main() {
     );
 
     test(
-      'recommends professional certifications for advanced levels',
+      'recommends certification-track courses for advanced levels',
       () async {
         final pathways = await allTrainingPathways();
         final basic = bestCertificationFor(
@@ -310,8 +331,10 @@ void main() {
           'Cloud Computing',
           RequiredLevel.parse('Cloud Computing Level 5'),
         );
+        // Only free links remain: foundational free training for low
+        // levels, courses leading to a certification for advanced ones.
         expect(basic?.cost, TrainingCost.free);
-        expect(advanced?.cost, TrainingCost.paid);
+        expect(advanced?.cost, TrainingCost.freeToLearn);
       },
     );
 

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../services/jobs_api.dart';
 import '../services/navigation_service.dart';
 import '../services/notification_store.dart';
-import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import 'job_detail_page.dart';
 import '../widgets/widgets.dart';
@@ -115,15 +114,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
             orElse: () => <String, dynamic>{},
           );
           if (target.isNotEmpty && mounted) {
-            final applicantId =
-                (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
-                    ?.toString();
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => JobDetailPage(
                   jobId: notification.targetId!,
-                  applicantId: applicantId,
                   title: target['title']?.toString() ?? 'Job Match',
                   company: target['company']?.toString() ?? '',
                   location: target['location']?.toString() ?? '',

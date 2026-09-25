@@ -57,4 +57,56 @@ void main() {
     expect(c.rating, kUnratedSkillLevel);
     expect(c.status, CompetencyStatus.meets);
   });
+
+  test('describes what the applicant still needs', () {
+    final byName = {
+      for (final c in assessCompetencies(
+        ['React', 'Cloud Computing Level 4', 'Budgeting Level 3'],
+        {
+          'skills': ['Budgeting'],
+          'skillLevels': {'Budgeting': 2},
+        },
+      ))
+        c.skill: c.gapDescription,
+    };
+    expect(byName['React'], 'Not in your skills yet · any level is enough');
+    expect(byName['Cloud Computing'], 'Not in your skills yet · needs Level 4');
+    expect(byName['Budgeting'], 'You: Beginner (Level 2) · needs Level 3');
+  });
+
+  test('summarizes matched skills with the required level', () {
+    final byName = {
+      for (final c in assessCompetencies(
+        ['Collaboration Basic', 'Figma', 'Budgeting Level 3'],
+        {
+          'skills': ['Collaboration', 'Figma', 'Budgeting'],
+          'skillLevels': {'Collaboration': 2, 'Figma': 8, 'Budgeting': 2},
+        },
+      ))
+        c.skill: c.levelSummary,
+    };
+    expect(byName['Collaboration'], 'You: Beginner (Basic) · required Basic');
+    expect(byName['Figma'], 'You: Advanced (8/10) · any level is enough');
+    expect(byName['Budgeting'], 'You: Beginner (Level 2) · needs Level 3');
+  });
+
+  test('counts a skill listed twice once, at the stricter level', () {
+    final result = assessCompetencies(
+      [
+        'agile software development',
+        'Agile Software Development Level 4',
+        'React',
+      ],
+      {
+        'skills': ['Agile Software Development', 'React'],
+        'skillLevels': {'Agile Software Development': 3, 'React': 5},
+      },
+    );
+    expect(result, hasLength(2));
+    final agile = result.firstWhere(
+      (c) => c.skill == 'Agile Software Development',
+    );
+    expect(agile.required?.label, 'Level 4');
+    expect(agile.status, CompetencyStatus.belowLevel);
+  });
 }

@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/training_pathway.dart';
+import '../services/competency.dart';
 import '../services/completed_certs.dart';
+import '../services/jobs_api.dart';
 import '../services/pathway_links_data.dart';
+import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import '../services/skill_gap_data.dart';
 import 'package:skillmatch/theme/app_colors.dart';
@@ -57,6 +60,7 @@ class _PathwayPageState extends State<PathwayPage> {
   List<TrainingPathway> _pathways = [];
   late String _selectedCategory = widget.initialCategory ?? 'All';
   Set<String> _completedKeys = completedCertificationKeys();
+  Set<String> _completedPathways = completedPathwayKeys();
 
   /// Skills the user is missing across posted jobs, with the pathways
   /// whose certifications cover each one.
@@ -71,23 +75,50 @@ class _PathwayPageState extends State<PathwayPage> {
       _gapMatches
           .where(
             (m) => !m.pathways.any(
-              (p) => p.links.any(
-                (l) => isCertificationCompleted(l, _completedKeys),
-              ),
+              (p) =>
+                  _completedPathways.contains(p.name.toLowerCase()) ||
+                  p.links.any(
+                    (l) => isCertificationCompleted(l, _completedKeys),
+                  ),
             ),
           )
           .toList();
 
-  /// Pathway name -> the missing skills its certifications cover.
+  /// Pathway name -> the skill gaps its certifications cover, e.g.
+  /// "Figma" or, when the user has the skill below the required level,
+  /// "Figma — You: Beginner (Level 2) · needs Level 3".
   Map<String, List<String>> get _gapSkillsByPathway {
     final out = <String, List<String>>{};
+    final seenByPathway = <String, Set<String>>{};
     for (final m in _openGaps) {
+      final gap = m.gap;
+      final required = gap.required;
+      final rating = gap.rating;
+      final label = gap.isLevelGap && required != null && rating != null
+          ? '${gap.skill} — You: ${skillLevelLabel(rating)} '
+                '(${required.labelForRating(rating)}) · needs ${required.label}'
+          : gap.skill;
+      final key = _skillKey(gap.skill);
       for (final p in m.pathways) {
-        out.putIfAbsent(p.name, () => []).add(m.gap.skill);
+        final seen = seenByPathway.putIfAbsent(p.name, () => {});
+        // The dataset spells some skills two ways ("Sensibility" /
+        // "Sensibilities"); list each only once.
+        if (seen.add(key)) out.putIfAbsent(p.name, () => []).add(label);
       }
     }
     return out;
   }
+
+  /// Normalizes a skill name so spelling variants compare equal:
+  /// "User Interface (UI) Design" and "User Interface Design", or
+  /// "Specification" and "Specifications".
+  static String _skillKey(String skill) => skill
+      .toLowerCase()
+      .replaceAll(RegExp(r'\([^)]*\)'), ' ')
+      .split(RegExp(r'[^a-z0-9]+'))
+      .where((w) => w.isNotEmpty)
+      .map((w) => w.replaceFirst(RegExp(r'(ies|y|s)$'), ''))
+      .join(' ');
 
   Future<void> _loadGaps() async {
     try {
@@ -107,6 +138,43 @@ class _PathwayPageState extends State<PathwayPage> {
       });
     } catch (_) {
       // No jobs or offline: the section just stays hidden.
+    }
+  }
+
+  /// Whether the user completed [pathway] or any certification in it.
+  bool _isCompleted(TrainingPathway pathway) =>
+      _completedPathways.contains(pathway.name.toLowerCase()) ||
+      pathway.links.any((l) => isCertificationCompleted(l, _completedKeys));
+
+  Future<void> _togglePathwayCompleted(
+    TrainingPathway pathway,
+    bool completed,
+  ) async {
+    HapticFeedback.selectionClick();
+    final previous = _completedPathways;
+    final key = pathway.name.toLowerCase();
+    setState(() {
+      _completedPathways = {..._completedPathways};
+      completed ? _completedPathways.add(key) : _completedPathways.remove(key);
+    });
+    try {
+      final keys = await setPathwayCompleted(
+        name: pathway.name,
+        completed: completed,
+      );
+      if (!mounted) return;
+      setState(() => _completedPathways = keys);
+      showAppToast(
+        context,
+        completed
+            ? 'Marked "${pathway.name}" as completed.'
+            : 'Removed completed mark.',
+        type: AppToastType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _completedPathways = previous);
+      showAppToast(context, e.toString(), type: AppToastType.error);
     }
   }
 
@@ -147,6 +215,7 @@ class _PathwayPageState extends State<PathwayPage> {
   static const _categories = [
     'All',
     'My Skill Gaps',
+    'Completed',
     'TESDA Registered',
     'Free Certs',
     'Mobile',
@@ -173,6 +242,7 @@ class _PathwayPageState extends State<PathwayPage> {
     _load();
     _loadGaps();
     SessionStore.skillsChanged.addListener(_loadGaps);
+    completionsChanged.addListener(_syncCompleted);
   }
 
   void _onSearchChanged(String v) {
@@ -180,6 +250,33 @@ class _PathwayPageState extends State<PathwayPage> {
     _searchDebounce = Timer(const Duration(milliseconds: 200), () {
       if (mounted) setState(() => _debouncedQuery = v.trim().toLowerCase());
     });
+  }
+
+  /// Re-reads completed pathways/certifications from the saved profile.
+  void _syncCompleted() {
+    if (!mounted) return;
+    setState(() {
+      _completedKeys = completedCertificationKeys();
+      _completedPathways = completedPathwayKeys();
+    });
+  }
+
+  /// Pull-to-refresh: reloads the profile (completions), posted jobs (skill
+  /// gaps) and pathways without replacing the page with a spinner.
+  Future<void> _refresh() async {
+    await Future.wait([
+      fetchMyProfile().then((_) {}, onError: (_) {}),
+      fetchJobsRaw().then((_) {}, onError: (_) {}),
+    ]);
+    if (!mounted) return;
+    _syncCompleted();
+    await _loadGaps();
+    try {
+      final pathways = await allTrainingPathways();
+      if (mounted) setState(() => _pathways = pathways);
+    } catch (_) {
+      // Keep the pathways already shown.
+    }
   }
 
   Future<void> _load() async {
@@ -206,6 +303,7 @@ class _PathwayPageState extends State<PathwayPage> {
   @override
   void dispose() {
     SessionStore.skillsChanged.removeListener(_loadGaps);
+    completionsChanged.removeListener(_syncCompleted);
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -309,6 +407,8 @@ class _PathwayPageState extends State<PathwayPage> {
         if (!selectedGapPathways.contains(p.name)) return false;
       } else if (cat == 'my skill gaps') {
         if (!gapSkillsByPathway.containsKey(p.name)) return false;
+      } else if (cat == 'completed') {
+        if (!_isCompleted(p)) return false;
       } else if (!isAllCat) {
         final nameLower = p.name.toLowerCase();
         final fieldLower = (p.field ?? '').toLowerCase();
@@ -462,7 +562,7 @@ class _PathwayPageState extends State<PathwayPage> {
     // One scroll view for the whole page so the header, search and skill
     // gap chips scroll away with the list instead of staying pinned.
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: _refresh,
       color: tokens.primary,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -486,9 +586,12 @@ class _PathwayPageState extends State<PathwayPage> {
                         title: 'Certifications & Pathways',
                         subtitle:
                             'Earn certifications that boost your job matches.',
-                        highlight: _completedKeys.isEmpty
-                            ? '${_pathways.length} pathways'
-                            : '${_pathways.length} pathways · ${_completedKeys.length} completed',
+                        highlight: () {
+                          final done = _pathways.where(_isCompleted).length;
+                          return done == 0
+                              ? '${_pathways.length} pathways'
+                              : '${_pathways.length} pathways · $done completed';
+                        }(),
                       ),
                       const SizedBox(height: 16),
 
@@ -633,7 +736,10 @@ class _PathwayPageState extends State<PathwayPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'No matching certification pathways found.',
+                        cat == 'completed' && qLower.isEmpty
+                            ? 'Nothing completed yet. Tap "Complete" on a pathway or certification to see it here.'
+                            : 'No matching certification pathways found.',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           color: tokens.textSecondary,
                           fontSize: 14,
@@ -659,6 +765,11 @@ class _PathwayPageState extends State<PathwayPage> {
                   pathway: filtered[i],
                   gapSkills: gapSkillsByPathway[filtered[i].name] ?? const [],
                   completedKeys: _completedKeys,
+                  pathwayCompleted: _completedPathways.contains(
+                    filtered[i].name.toLowerCase(),
+                  ),
+                  onTogglePathway: (done) =>
+                      _togglePathwayCompleted(filtered[i], done),
                   onToggleCompleted: (link, done) =>
                       _toggleCompleted(filtered[i], link, done),
                 ),
@@ -676,6 +787,10 @@ class _PathwayTile extends StatefulWidget {
   /// Missing skills (from posted jobs) this pathway's certifications cover.
   final List<String> gapSkills;
   final Set<String> completedKeys;
+
+  /// Whether the user marked this whole pathway as completed.
+  final bool pathwayCompleted;
+  final ValueChanged<bool> onTogglePathway;
   final void Function(TrainingResource link, bool completed) onToggleCompleted;
 
   const _PathwayTile({
@@ -683,6 +798,8 @@ class _PathwayTile extends StatefulWidget {
     required this.pathway,
     this.gapSkills = const [],
     required this.completedKeys,
+    this.pathwayCompleted = false,
+    required this.onTogglePathway,
     required this.onToggleCompleted,
   });
 
@@ -697,9 +814,6 @@ class _PathwayTileState extends State<_PathwayTile> {
   Widget build(BuildContext context) {
     final pathway = widget.pathway;
     final count = pathway.links.length;
-    final doneCount = pathway.links
-        .where((l) => isCertificationCompleted(l, widget.completedKeys))
-        .length;
     final hasFree = pathway.links.any((l) => l.isFree);
     final tokens = context.appColors;
 
@@ -787,31 +901,6 @@ class _PathwayTileState extends State<_PathwayTile> {
                             color: tokens.textSecondary,
                           ),
                         ),
-                        if (doneCount > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tokens.successBg,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color: tokens.success.withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Text(
-                              doneCount == count
-                                  ? '✓ ALL COMPLETED'
-                                  : '✓ $doneCount/$count COMPLETED',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                color: tokens.success,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
                         if (hasFree)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -874,10 +963,26 @@ class _PathwayTileState extends State<_PathwayTile> {
                       TextSpan(
                         children: [
                           const TextSpan(
-                            text: 'Fills your skill gaps: ',
+                            text: 'Fills your skill gaps:',
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          TextSpan(text: widget.gapSkills.join(', ')),
+                          TextSpan(
+                            text: () {
+                              final gaps = widget.gapSkills;
+                              if (gaps.length == 1) return ' ${gaps.single}';
+                              // Collapsed cards show the first few; the full
+                              // list shows when the card is opened.
+                              const collapsed = 3;
+                              final shown = _expanded
+                                  ? gaps
+                                  : gaps.take(collapsed);
+                              final more = gaps.length - collapsed;
+                              return shown.map((g) => '\n• $g').join() +
+                                  (!_expanded && more > 0
+                                      ? '\n+$more more (tap to see all)'
+                                      : '');
+                            }(),
+                          ),
                         ],
                       ),
                       style: TextStyle(
@@ -891,6 +996,11 @@ class _PathwayTileState extends State<_PathwayTile> {
               ),
             ),
           ],
+          const SizedBox(height: 12),
+          CompleteButton(
+            completed: widget.pathwayCompleted,
+            onPressed: () => widget.onTogglePathway(!widget.pathwayCompleted),
+          ),
           if (_expanded) ...[
             const SizedBox(height: 16),
             Divider(height: 1, color: tokens.cardBorderSoft),

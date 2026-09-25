@@ -17,6 +17,14 @@ import 'job_roles_data.dart';
 /// | 7–8           | Level 5          | Intermediate / Advanced (8) |
 /// | 9–10          | Level 6          | Advanced     |
 
+/// Short label for a 1–10 rating, e.g. 3 → "Beginner".
+String skillLevelLabel(int rating) {
+  if (rating <= 3) return 'Beginner';
+  if (rating <= 6) return 'Intermediate';
+  if (rating <= 8) return 'Advanced';
+  return 'Expert';
+}
+
 /// Rating a skill gets when the applicant hasn't rated it.
 const int kUnratedSkillLevel = 5;
 
@@ -119,6 +127,36 @@ class SkillCompetency {
   final int? rating;
   final CompetencyStatus status;
 
+  /// e.g. "Beginner (Level 2)", "Advanced (8/10)", or null if missing.
+  String? get applicantDescription {
+    final r = rating;
+    if (r == null) return null;
+    final scaled = required?.labelForRating(r) ?? '$r/10';
+    return '${skillLevelLabel(r)} ($scaled)';
+  }
+
+  /// The applicant's standing on this skill, e.g. "You: Beginner (Basic) ·
+  /// required Basic" when met, otherwise [gapDescription].
+  String get levelSummary {
+    if (status != CompetencyStatus.meets) return gapDescription;
+    final req = required == null
+        ? 'any level is enough'
+        : 'required ${required!.label}';
+    return 'You: $applicantDescription · $req';
+  }
+
+  /// What the applicant still needs, e.g. "You: Beginner (Level 2) · needs
+  /// Level 3" or "Not in your skills yet · any level is enough".
+  String get gapDescription {
+    final needs = required == null
+        ? 'any level is enough'
+        : 'needs ${required!.label}';
+    final you = applicantDescription;
+    return you == null
+        ? 'Not in your skills yet · $needs'
+        : 'You: $you · $needs';
+  }
+
   /// Applicant's level on the required scale, e.g. "Level 2".
   String? get applicantLevel {
     final r = rating;
@@ -159,8 +197,23 @@ List<SkillCompetency> assessCompetencies(
     }
   }
 
+  // Some postings list a skill twice ("agile software development" and
+  // "Agile Software Development Level 4"); count it once, at the stricter
+  // (higher) required level.
+  final unique = <String, String>{};
+  for (final raw in requiredSkills) {
+    final key = plainSkillName(raw).toLowerCase();
+    if (key.isEmpty) continue;
+    final current = unique[key];
+    final newMin = RequiredLevel.parse(raw)?.minRating ?? 0;
+    final currentMin = current == null
+        ? -1
+        : (RequiredLevel.parse(current)?.minRating ?? 0);
+    if (newMin > currentMin) unique[key] = raw;
+  }
+
   return [
-    for (final raw in requiredSkills)
+    for (final raw in unique.values)
       () {
         final skill = plainSkillName(raw);
         final required = RequiredLevel.parse(raw);

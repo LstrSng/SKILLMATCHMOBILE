@@ -13,6 +13,10 @@ import '../services/saved_jobs_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/widgets.dart';
 
+/// Minimum match % for a newly posted job to trigger a "New Job Matches"
+/// notification.
+const _kNotifyMatchThreshold = 50;
+
 class JobsPage extends StatefulWidget {
   const JobsPage({super.key});
 
@@ -136,6 +140,10 @@ class _JobsPageState extends State<JobsPage> {
               .where((j) => j.id.isNotEmpty)
               .map((j) => MapEntry(j.id, j.title))
               .toList(),
+          matchingIds: {
+            for (final j in list)
+              if (j.matchPercentage >= _kNotifyMatchThreshold) j.id,
+          },
         ),
       );
     } catch (e) {
@@ -869,8 +877,6 @@ class _JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    final applicantId = (SessionStore.user?['_id'] ?? SessionStore.user?['id'])
-        ?.toString();
     final matchColor = AppColors.matchColor(job.matchPercentage);
 
     return AppCard(
@@ -885,7 +891,6 @@ class _JobCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => JobDetailPage(
                 jobId: job.id,
-                applicantId: applicantId,
                 title: job.title,
                 company: job.company,
                 location: job.location,

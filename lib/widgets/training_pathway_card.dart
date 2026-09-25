@@ -93,7 +93,7 @@ class TrainingLinksList extends StatelessWidget {
                               height: 1.3,
                             ),
                           ),
-                          if (isDone) ...[
+                          if (isDone && onToggleCompleted == null) ...[
                             const SizedBox(height: 3),
                             Text(
                               '✓ Completed',
@@ -144,6 +144,14 @@ class TrainingLinksList extends StatelessWidget {
                               ],
                             ),
                           ],
+                          if (onToggleCompleted != null) ...[
+                            const SizedBox(height: 10),
+                            CompleteButton(
+                              completed: isDone,
+                              onPressed: () =>
+                                  onToggleCompleted!(link, !isDone),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -172,21 +180,6 @@ class TrainingLinksList extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (onToggleCompleted != null)
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        tooltip: isDone
-                            ? 'Mark as not completed'
-                            : 'Mark as completed',
-                        icon: Icon(
-                          isDone
-                              ? Icons.check_circle_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          color: isDone ? tokens.success : tokens.textFaint,
-                          size: 22,
-                        ),
-                        onPressed: () => onToggleCompleted!(link, !isDone),
-                      ),
                   ],
                 ),
               ),
@@ -253,7 +246,7 @@ class TrainingPathwayCard extends StatelessWidget {
           const SizedBox(height: 14),
           if (onToggleCompleted != null) ...[
             Text(
-              'Passed or finished one? Tap ○ to mark it as completed.',
+              'Passed or finished one? Tap "Complete" to mark it as completed.',
               style: TextStyle(fontSize: 12, color: tokens.textSecondary),
             ),
             const SizedBox(height: 10),
@@ -324,6 +317,68 @@ class _CostLine extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Full-width "Complete" button that turns into a green "Completed" one
+/// once marked done (tap again to undo).
+class CompleteButton extends StatelessWidget {
+  const CompleteButton({
+    super.key,
+    required this.completed,
+    required this.onPressed,
+  });
+
+  final bool completed;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    const padding = EdgeInsets.symmetric(horizontal: 14, vertical: 8);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+    );
+    return Align(
+      alignment: Alignment.center,
+      child: SizedBox(
+        width: double.infinity,
+        height: 38,
+        child: completed
+            ? FilledButton.icon(
+                onPressed: onPressed,
+                style: FilledButton.styleFrom(
+                  backgroundColor: tokens.success,
+                  foregroundColor: Colors.white,
+                  padding: padding,
+                  shape: shape,
+                  textStyle: const TextStyle(
+                    fontFamily: 'Roboto',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                icon: const Icon(Icons.check_circle_rounded, size: 18),
+                label: const Text('Completed'),
+              )
+            : OutlinedButton.icon(
+                onPressed: onPressed,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: tokens.success,
+                  side: BorderSide(color: tokens.success),
+                  padding: padding,
+                  shape: shape,
+                  textStyle: const TextStyle(
+                    fontFamily: 'Roboto',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                icon: const Icon(Icons.check_rounded, size: 18),
+                label: const Text('Complete'),
+              ),
+      ),
     );
   }
 }

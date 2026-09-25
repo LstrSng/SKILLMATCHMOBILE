@@ -7,8 +7,7 @@ import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/centered_form_width.dart';
-import '../widgets/edit_profile_sheet.dart'
-    show kDefaultSkillLevel, skillLevelLabel;
+import '../widgets/edit_profile_sheet.dart' show kDefaultSkillLevel;
 import 'main_navigation_page.dart';
 
 bool _hasSkills(Map<String, dynamic>? user) {

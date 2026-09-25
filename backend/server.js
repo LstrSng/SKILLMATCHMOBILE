@@ -188,6 +188,7 @@ async function verifyOtp({ email, purpose, otp, challengeId }) {
 
 function userPublic(u) {
   if (!u) return null;
+  const storedSkills = readStoredSkills(u);
   const education = Array.isArray(u.education)
     ? u.education
         .map((it) => ({
@@ -220,8 +221,8 @@ function userPublic(u) {
     avatarUrl: u.avatarUrl || "",
     // The app works with a flat list plus a { name: level } map; the
     // database stores them grouped (see toStoredSkills).
-    skills: readStoredSkills(u).names,
-    skillLevels: readStoredSkills(u).levels,
+    skills: storedSkills.names,
+    skillLevels: storedSkills.levels,
     education,
     experience,
     profile: u.profile && typeof u.profile === "object" ? u.profile : {},
@@ -244,103 +245,13 @@ const JOBS_QUERY_LIMIT = Math.min(
 function stripLevelSuffix(str) {
   return String(str || "")
     .trim()
-    .replace(/\s*\(?\s*(?:level\s*\d+|lvl\s*\d+|beginner|intermediate|advanced|basic|expert)\s*\)?\s*$/i, "")
+    .replace(/\s*\(?\s*(?:level\s*\d+(?:\s*-\s*\d+)?|lvl\s*\d+|beginner|intermediate|advanced|basic|expert)\s*\)?\s*$/i, "")
     .trim();
 }
-
-// Mobile match analytics: compare applicant skills vs. job skills
-app.get(
-  "/api/mobile/match/:applicantId/:jobId",
-  requireDb,
-  requireAuth,
-  async (req, res) => {
-    try {
-      const { applicantId, jobId } = req.params ?? {};
-
-      if (!applicantId || !jobId) {
-        return res.status(400).json({ message: "Missing applicantId or jobId." });
-      }
-
-      // Load job and applicant
-      const [jobDoc, applicant] = await Promise.all([
-        Job.findById(jobId).lean(),
-        User.findById(applicantId).lean(),
-      ]);
-
-      if (!jobDoc) return res.status(404).json({ message: "Job not found." });
-      if (!applicant) return res.status(404).json({ message: "Applicant not found." });
-
-      const job = normalizeJobDoc(jobDoc);
-
-      // Collect job skill candidates (both matched and unmatched)
-      const allSkills = [
-        ...(Array.isArray(job.matchedSkills) ? job.matchedSkills : []),
-        ...(Array.isArray(job.unmatchedSkills) ? job.unmatchedSkills : []),
-      ];
-      const seen = new Set();
-      const jobSkills = [];
-      for (const s of allSkills) {
-        const norm = String(s ?? "").trim();
-        if (!norm) continue;
-        const key = norm.toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          jobSkills.push(norm);
-        }
-      }
-
-      const applicantSkills = readStoredSkills(applicant).names;
-
-      const lowerApplicant = new Set(
-        applicantSkills.flatMap((s) => [s.toLowerCase(), stripLevelSuffix(s).toLowerCase()])
-      );
-
-      const matchedSkills = [];
-      const missingSkills = [];
-      for (const s of jobSkills) {
-        const raw = String(s ?? "").trim();
-        if (!raw) continue;
-        if (
-          lowerApplicant.has(raw.toLowerCase()) ||
-          lowerApplicant.has(stripLevelSuffix(raw).toLowerCase())
-        ) {
-          matchedSkills.push(raw);
-        } else {
-          missingSkills.push(raw);
-        }
-      }
-
-      const total = matchedSkills.length + missingSkills.length;
-      const matchScore = total > 0 ? Math.round((matchedSkills.length / total) * 100) : (Number(job.matchPercentage) || 0);
-
-      let recommendation = "No recommendation available.";
-      if (matchScore >= 80) recommendation = "Great fit — you match most required skills.";
-      else if (matchScore >= 50) recommendation = "Good fit — consider learning a few missing skills to improve your chances.";
-      else if (matchScore > 0) recommendation = `Low match — consider gaining experience in ${missingSkills.slice(0,3).join(', ')}.`;
-
-      return res.json({
-        jobTitle: job.title || "",
-        matchScore,
-        matchedSkills,
-        missingSkills,
-        recommendation,
-      });
-    } catch (err) {
-      console.error("Match analytics error:", err);
-      return res.status(500).json({ message: "Could not compute match analytics." });
-    }
-  }
-);
 
 // Jobs stored in MongoDB (collection: JOBS_COLLECTION, default `jobs`)
 app.get("/api/jobs", requireDb, async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res
-        .status(503)
-        .json({ message: "Database is not connected yet." });
-    }
-
     const raw = await Job.find({})
       .sort({ _id: -1 })
       .limit(JOBS_QUERY_LIMIT)
@@ -746,7 +657,11 @@ app.post("/api/assessments/:id/submit", requireDb, async (req, res) => {
       : Math.max(1, Number(body.totalCount) || 1);
 
     if (Array.isArray(body.answers) && doc?.questions?.length) {
-      totalCount = doc.questions.length;
+      // Grade on the server: each question counts once, only answers that
+      // match the stored answer key are correct, and the score is out of
+      // the questions actually asked (the test is adaptive, so that can be
+      // fewer than all of the assessment's questions).
+      const graded = new Set();
       let computedCorrect = 0;
       for (const ans of body.answers) {
         if (!ans) continue;
@@ -757,18 +672,15 @@ app.post("/api/assessments/:id/submit", requireDb, async (req, res) => {
             (qId && (item.questionId === qId || String(item._id) === qId)) ||
             (ans.prompt && item.prompt && item.prompt.trim() === ans.prompt.trim())
         );
-        if (q) {
-          const target = String(q.correctAnswer ?? "").trim().toLowerCase();
-          if (selAns && target && selAns === target) {
-            computedCorrect += 1;
-          } else if (ans.isCorrect === true && !selAns) {
-            computedCorrect += 1;
-          }
-        } else if (ans.isCorrect === true) {
-          computedCorrect += 1;
-        }
+        if (!q) continue;
+        const key = String(q._id ?? q.questionId ?? q.prompt);
+        if (graded.has(key)) continue;
+        graded.add(key);
+        const target = String(q.correctAnswer ?? "").trim().toLowerCase();
+        if (selAns && target && selAns === target) computedCorrect += 1;
       }
-      correctCount = Math.min(computedCorrect, totalCount);
+      totalCount = Math.max(1, graded.size);
+      correctCount = computedCorrect;
     } else {
       correctCount = Math.max(0, Math.min(Number(body.correctCount) || 0, totalCount));
       totalCount = Math.max(1, Number(body.totalCount) || totalCount);
@@ -889,6 +801,12 @@ function signupValidationError({ firstName, lastName, email, phone, password }) 
   if (!/^09\d{9}$/.test(phone)) {
     return "Contact number must be 11 digits and start with 09.";
   }
+  return passwordError(password);
+}
+
+// Returns an error message if [password] is too weak, else null. Used by
+// sign-up and password reset so both enforce the same rule.
+function passwordError(password) {
   if (
     password.length < 8 ||
     !/[A-Z]/.test(password) ||
@@ -1224,9 +1142,8 @@ app.post("/api/users/password/reset/complete", requireDb, async (req, res) => {
     if (!resetToken || !newPassword) {
       return res.status(400).json({ message: "resetToken and newPassword are required." });
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: "Password must be at least 8 characters." });
-    }
+    const weak = passwordError(newPassword);
+    if (weak) return res.status(400).json({ message: weak });
 
     let decoded;
     try {
@@ -1354,30 +1271,18 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
       const existingProfile = (req.user.profile && typeof req.user.profile === "object")
         ? req.user.profile
         : {};
-      patch.profile = {
-        ...existingProfile,
-        ...body.profile,
-        skillAssessments: {
-          ...(existingProfile.skillAssessments || {}),
-          ...(body.profile.skillAssessments || {}),
-        },
-      };
-      if (Array.isArray(body.profile.certifications)) {
-        patch.profile.certifications = body.profile.certifications;
-      } else if (existingProfile.certifications) {
-        patch.profile.certifications = existingProfile.certifications;
-      }
-      if (Array.isArray(body.profile.assessmentRecords)) {
-        patch.profile.assessmentRecords = body.profile.assessmentRecords;
-      } else if (existingProfile.assessmentRecords) {
-        patch.profile.assessmentRecords = existingProfile.assessmentRecords;
-      }
-      if (body.profile.resume !== undefined) {
-        patch.profile.resume = body.profile.resume;
-      } else if (body.profile.removeResume === true || body.removeResume === true) {
+      // Assessment results are graded and saved only by
+      // /api/assessments/:id/submit, so clients can't overwrite them (e.g.
+      // to fake a passed assessment). `removeResume` is a flag, not data.
+      const {
+        skillAssessments: _ignoredAssessments,
+        assessmentRecords: _ignoredRecords,
+        removeResume,
+        ...incoming
+      } = body.profile;
+      patch.profile = { ...existingProfile, ...incoming };
+      if (removeResume === true || body.removeResume === true) {
         patch.profile.resume = null;
-      } else if (existingProfile.resume !== undefined) {
-        patch.profile.resume = existingProfile.resume;
       }
     }
     if (patch.skills) {
@@ -1404,6 +1309,12 @@ app.post("/api/applications", requireDb, requireAuth, async (req, res) => {
     const { jobId, jobSnapshot } = req.body ?? {};
     if (!jobId || String(jobId).trim() === "") {
       return res.status(400).json({ message: "jobId is required." });
+    }
+    const jobExists =
+      mongoose.Types.ObjectId.isValid(jobId) &&
+      (await Job.exists({ _id: jobId }));
+    if (!jobExists) {
+      return res.status(404).json({ message: "This job is no longer available." });
     }
 
     const snapshot = jobSnapshot && typeof jobSnapshot === "object" ? jobSnapshot : {};
@@ -1491,6 +1402,9 @@ app.patch("/api/applications/:id", requireDb, requireAuth, async (req, res) => {
     const { status } = req.body ?? {};
     const next = String(status ?? "").trim();
     if (!next) return res.status(400).json({ message: "status is required." });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: "Application not found." });
+    }
 
     if (next !== "Withdrawn") {
       return res.status(403).json({

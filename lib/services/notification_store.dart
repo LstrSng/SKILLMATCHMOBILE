@@ -126,7 +126,10 @@ class NotificationStore {
   static const kPrefApplicationUpdates = 'applicationUpdates';
   static const kPrefWeeklyDigest = 'weeklyDigest';
 
-  static Future<bool> getPreference(String name, {required bool defaultValue}) async {
+  static Future<bool> getPreference(
+    String name, {
+    required bool defaultValue,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_preferenceKey(name)) ?? defaultValue;
   }
@@ -246,10 +249,9 @@ class NotificationStore {
       if (status == 'Withdrawn') continue;
 
       final snapshot = raw['jobSnapshot'];
-      final title =
-          snapshot is Map
-              ? (snapshot['title'] as Object?)?.toString().trim() ?? ''
-              : '';
+      final title = snapshot is Map
+          ? (snapshot['title'] as Object?)?.toString().trim() ?? ''
+          : '';
       final notificationTitle = title.isEmpty ? 'Application Update' : title;
 
       if (oldStatus != null && oldStatus != status) {
@@ -258,7 +260,8 @@ class NotificationStore {
             AppNotification(
               id: '$id:$status',
               title: notificationTitle,
-              message: 'Your application status changed from $oldStatus to $status.',
+              message:
+                  'Your application status changed from $oldStatus to $status.',
               createdAt: DateTime.now(),
               type: 'application',
               targetId: id,
@@ -321,8 +324,11 @@ class NotificationStore {
   /// Compares freshly fetched job IDs against the set already seen on this
   /// device and raises a notification when new postings match.
   static Future<void> syncNewJobMatches(
-    List<MapEntry<String, String>> jobs, // (id, title)
-  ) async {
+    List<MapEntry<String, String>> jobs, { // (id, title)
+    /// Ids of the jobs that actually match the user; only these trigger a
+    /// notification (every job is still marked as seen).
+    required Set<String> matchingIds,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final seenRaw = prefs.getString(_seenJobIdsKey());
     Set<String> seen;
@@ -339,7 +345,12 @@ class NotificationStore {
     }
 
     final newJobs = jobs
-        .where((j) => j.key.isNotEmpty && !seen.contains(j.key))
+        .where(
+          (j) =>
+              j.key.isNotEmpty &&
+              !seen.contains(j.key) &&
+              matchingIds.contains(j.key),
+        )
         .toList();
 
     final nextSeen = {...seen, ...jobs.map((j) => j.key)};
@@ -391,7 +402,9 @@ class NotificationStore {
             : 'No active applications this week — explore the jobs feed for new opportunities.',
         createdAt: now,
         type: 'weekly_digest',
-        actionLabel: activeApplicationCount > 0 ? 'View Applications' : 'Explore Jobs',
+        actionLabel: activeApplicationCount > 0
+            ? 'View Applications'
+            : 'Explore Jobs',
       ),
     );
   }
