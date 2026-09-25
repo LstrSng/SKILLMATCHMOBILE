@@ -45,6 +45,19 @@ const applicationSchema = new mongoose.Schema(
       default: [],
     },
     withdrawnAt: { type: Date, default: null },
+
+    // Mini coding question answered before applying to a developer role.
+    codingChallenge: {
+      type: {
+        questionId: { type: String, default: "" },
+        language: { type: String, default: "" },
+        selectedAnswer: { type: String, default: "" },
+        correct: { type: Boolean, default: false },
+        timeTakenSeconds: { type: Number, default: 0 },
+        answeredAt: { type: Date, default: null },
+      },
+      default: null,
+    },
   },
   { timestamps: true, collection: "applications" }
 );

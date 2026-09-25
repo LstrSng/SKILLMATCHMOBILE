@@ -41,6 +41,10 @@ const mobileUserSchema = new mongoose.Schema({
         required: true
     },
 
+    // false until the sign-up OTP is entered. Missing on accounts created
+    // before this field existed (those were verified at sign-up).
+    emailVerified: { type: Boolean },
+
     // Profile fields for the mobile app (user-customizable).
     headline: { type: String, default: "" },
     location: { type: String, default: "" },
@@ -49,6 +53,8 @@ const mobileUserSchema = new mongoose.Schema({
     bio: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
     skills: { type: [String], default: [] },
+    // Self-rated proficiency per skill, 1 (beginner) to 10 (expert).
+    skillLevels: { type: mongoose.Schema.Types.Mixed, default: {} },
     education: { type: [educationItemSchema], default: [] },
     experience: { type: [experienceItemSchema], default: [] },
 

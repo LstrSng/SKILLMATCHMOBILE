@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/training_pathway.dart';
+import '../services/completed_certs.dart';
 import '../services/pathway_links_data.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/training_pathway_card.dart';
 
@@ -53,6 +55,57 @@ class _PathwayPageState extends State<PathwayPage> {
   List<TrainingPathway> _pathways = [];
   late String _selectedCategory = widget.initialCategory ?? 'All';
   List<String> _suggestedSkills = [];
+  Set<String> _completedKeys = completedCertificationKeys();
+
+  /// Recommended roles whose pathway the user hasn't completed a cert in yet.
+  List<String> _visibleSuggestions = [];
+
+  Future<void> _refreshSuggestions() async {
+    final visible = <String>[];
+    for (final role in _suggestedSkills) {
+      final pathway = await trainingPathwayForRole(role);
+      final done =
+          pathway != null &&
+          pathway.links.any((l) => isCertificationCompleted(l, _completedKeys));
+      if (!done) visible.add(role);
+    }
+    if (mounted) setState(() => _visibleSuggestions = visible);
+  }
+
+  Future<void> _toggleCompleted(
+    TrainingPathway pathway,
+    TrainingResource link,
+    bool completed,
+  ) async {
+    HapticFeedback.selectionClick();
+    final previous = _completedKeys;
+    final key = link.label.trim().toLowerCase();
+    setState(() {
+      _completedKeys = {..._completedKeys};
+      completed ? _completedKeys.add(key) : _completedKeys.remove(key);
+    });
+    try {
+      final keys = await setCertificationCompleted(
+        link: link,
+        pathwayName: pathway.name,
+        completed: completed,
+      );
+      if (!mounted) return;
+      setState(() => _completedKeys = keys);
+      _refreshSuggestions();
+      showAppToast(
+        context,
+        completed
+            ? 'Marked "${link.label}" as completed.'
+            : 'Removed completed mark.',
+        type: AppToastType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _completedKeys = previous);
+      showAppToast(context, e.toString(), type: AppToastType.error);
+    }
+  }
 
   static const _categories = [
     'All',
@@ -98,7 +151,9 @@ class _PathwayPageState extends State<PathwayPage> {
       }
     }
 
+    _visibleSuggestions = List.of(_suggestedSkills);
     _load();
+    _refreshSuggestions();
   }
 
   void _onSearchChanged(String v) {
@@ -506,7 +561,8 @@ class _PathwayPageState extends State<PathwayPage> {
               ],
             ),
           ),
-          if (_suggestedSkills.isNotEmpty && widget.initialQuery == null) ...[
+          if (_visibleSuggestions.isNotEmpty &&
+              widget.initialQuery == null) ...[
             Padding(
               padding: EdgeInsets.fromLTRB(
                 horizontalPadding,
@@ -551,7 +607,7 @@ class _PathwayPageState extends State<PathwayPage> {
                   horizontalPadding,
                   8,
                 ),
-                children: _suggestedSkills.map((skill) {
+                children: _visibleSuggestions.map((skill) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
@@ -609,6 +665,9 @@ class _PathwayPageState extends State<PathwayPage> {
                     itemBuilder: (context, i) => _PathwayTile(
                       key: ValueKey(filtered[i].name),
                       pathway: filtered[i],
+                      completedKeys: _completedKeys,
+                      onToggleCompleted: (link, done) =>
+                          _toggleCompleted(filtered[i], link, done),
                     ),
                   ),
           ),
@@ -620,8 +679,15 @@ class _PathwayPageState extends State<PathwayPage> {
 
 class _PathwayTile extends StatefulWidget {
   final TrainingPathway pathway;
+  final Set<String> completedKeys;
+  final void Function(TrainingResource link, bool completed) onToggleCompleted;
 
-  const _PathwayTile({super.key, required this.pathway});
+  const _PathwayTile({
+    super.key,
+    required this.pathway,
+    required this.completedKeys,
+    required this.onToggleCompleted,
+  });
 
   @override
   State<_PathwayTile> createState() => _PathwayTileState();
@@ -634,6 +700,9 @@ class _PathwayTileState extends State<_PathwayTile> {
   Widget build(BuildContext context) {
     final pathway = widget.pathway;
     final count = pathway.links.length;
+    final doneCount = pathway.links
+        .where((l) => isCertificationCompleted(l, widget.completedKeys))
+        .length;
     final hasFree = pathway.links.any(
       (l) => l.isFree || l.label.toLowerCase().contains('free'),
     );
@@ -723,6 +792,31 @@ class _PathwayTileState extends State<_PathwayTile> {
                             color: tokens.textSecondary,
                           ),
                         ),
+                        if (doneCount > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tokens.successBg,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: tokens.success.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Text(
+                              doneCount == count
+                                  ? '✓ ALL COMPLETED'
+                                  : '✓ $doneCount/$count COMPLETED',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: tokens.success,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
                         if (hasFree)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -766,7 +860,11 @@ class _PathwayTileState extends State<_PathwayTile> {
             const SizedBox(height: 16),
             Divider(height: 1, color: tokens.cardBorderSoft),
             const SizedBox(height: 12),
-            TrainingPathwayCard(pathway: pathway),
+            TrainingPathwayCard(
+              pathway: pathway,
+              completedKeys: widget.completedKeys,
+              onToggleCompleted: widget.onToggleCompleted,
+            ),
           ],
         ],
       ),

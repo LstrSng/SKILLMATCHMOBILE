@@ -125,6 +125,8 @@ class EditProfileSheetState extends State<EditProfileSheet> {
     return <String>[];
   })();
   late final List<String> _initialSkills = List.of(_selectedSkills);
+  late Map<String, int> _skillLevels = readSkillLevels(widget.initial);
+  late final Map<String, int> _initialSkillLevels = Map.of(_skillLevels);
   List<String> _skillOptions = [];
   late final TextEditingController _education = TextEditingController(
     text: (() {
@@ -202,6 +204,9 @@ class EditProfileSheetState extends State<EditProfileSheet> {
     if (a.length != b.length) return true;
     for (var i = 0; i < a.length; i++) {
       if (a[i] != b[i]) return true;
+    }
+    for (final skill in _selectedSkills) {
+      if (_skillLevels[skill] != _initialSkillLevels[skill]) return true;
     }
     return false;
   }
@@ -409,6 +414,10 @@ class EditProfileSheetState extends State<EditProfileSheet> {
         'bio': _bio.text.trim(),
         'avatarUrl': _avatarUrl.trim(),
         'skills': _selectedSkills,
+        'skillLevels': {
+          for (final skill in _selectedSkills)
+            skill: _skillLevels[skill] ?? kDefaultSkillLevel,
+        },
         'education': _parseEducation(_education.text),
         'experience': _parseExperience(_experience.text),
       });
@@ -610,7 +619,10 @@ class EditProfileSheetState extends State<EditProfileSheet> {
               SkillsSelector(
                 options: _skillOptions,
                 initialSelected: _selectedSkills,
+                initialLevels: _skillLevels,
                 onChanged: (list) => setState(() => _selectedSkills = list),
+                onLevelsChanged: (levels) =>
+                    setState(() => _skillLevels = levels),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -642,15 +654,23 @@ class EditProfileSheetState extends State<EditProfileSheet> {
 /// Lets the user build up their skills list by picking from a fixed set of
 /// [options] instead of typing free text, so profile skills stay in the
 /// same vocabulary that job postings are matched against.
+///
+/// When [onLevelsChanged] is set, each selected skill also gets a 1–10
+/// proficiency slider (new skills start at [kDefaultSkillLevel]).
 class SkillsSelector extends StatefulWidget {
   final List<String> options;
   final List<String> initialSelected;
   final ValueChanged<List<String>> onChanged;
+  final Map<String, int> initialLevels;
+  final ValueChanged<Map<String, int>>? onLevelsChanged;
 
   const SkillsSelector({
+    super.key,
     required this.options,
     required this.initialSelected,
     required this.onChanged,
+    this.initialLevels = const {},
+    this.onLevelsChanged,
   });
 
   @override
@@ -659,8 +679,24 @@ class SkillsSelector extends StatefulWidget {
 
 class SkillsSelectorState extends State<SkillsSelector> {
   late final List<String> _selected = List.of(widget.initialSelected);
+  late final Map<String, int> _levels = {
+    for (final s in widget.initialSelected)
+      s: widget.initialLevels[s] ?? kDefaultSkillLevel,
+  };
   final _searchController = TextEditingController();
   String _query = '';
+
+  bool get _withLevels => widget.onLevelsChanged != null;
+
+  void _notify() {
+    widget.onChanged(_selected);
+    widget.onLevelsChanged?.call(Map.of(_levels));
+  }
+
+  void _setLevel(String skill, int level) {
+    setState(() => _levels[skill] = level);
+    widget.onLevelsChanged?.call(Map.of(_levels));
+  }
 
   @override
   void dispose() {
@@ -670,9 +706,14 @@ class SkillsSelectorState extends State<SkillsSelector> {
 
   void _toggle(String skill) {
     setState(() {
-      if (!_selected.remove(skill)) _selected.add(skill);
+      if (_selected.remove(skill)) {
+        _levels.remove(skill);
+      } else {
+        _selected.add(skill);
+        _levels[skill] = kDefaultSkillLevel;
+      }
     });
-    widget.onChanged(_selected);
+    _notify();
   }
 
   void _addCustom(String skill) {
@@ -682,11 +723,14 @@ class SkillsSelectorState extends State<SkillsSelector> {
       (s) => s.toLowerCase() == trimmed.toLowerCase(),
     );
     setState(() {
-      if (!alreadyHave) _selected.add(trimmed);
+      if (!alreadyHave) {
+        _selected.add(trimmed);
+        _levels[trimmed] = kDefaultSkillLevel;
+      }
       _searchController.clear();
       _query = '';
     });
-    widget.onChanged(_selected);
+    _notify();
   }
 
   @override
@@ -707,7 +751,22 @@ class SkillsSelectorState extends State<SkillsSelector> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_selected.isNotEmpty) ...[
+        if (_selected.isNotEmpty && _withLevels) ...[
+          Text(
+            'Rate each skill from 1 (beginner) to 10 (expert).',
+            style: TextStyle(fontSize: 12, color: tokens.textSecondary),
+          ),
+          const SizedBox(height: 6),
+          ..._selected.map(
+            (s) => _SkillLevelRow(
+              skill: s,
+              level: _levels[s] ?? kDefaultSkillLevel,
+              onChanged: (v) => _setLevel(s, v),
+              onRemove: () => _toggle(s),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ] else if (_selected.isNotEmpty) ...[
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -828,6 +887,98 @@ class SkillsSelectorState extends State<SkillsSelector> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Level given to a newly picked skill before the user adjusts it.
+const int kDefaultSkillLevel = 5;
+
+/// Reads the 1–10 skill levels from a user map (missing ones are omitted).
+Map<String, int> readSkillLevels(Map<String, dynamic>? user) {
+  final raw = user?['skillLevels'];
+  if (raw is! Map) return {};
+  final out = <String, int>{};
+  raw.forEach((k, v) {
+    final level = v is num ? v.round() : int.tryParse(v.toString());
+    if (level != null && level >= 1) out[k.toString()] = level.clamp(1, 10);
+  });
+  return out;
+}
+
+/// Short label for a 1–10 level, e.g. 3 → "Beginner".
+String skillLevelLabel(int level) {
+  if (level <= 3) return 'Beginner';
+  if (level <= 6) return 'Intermediate';
+  if (level <= 8) return 'Advanced';
+  return 'Expert';
+}
+
+class _SkillLevelRow extends StatelessWidget {
+  const _SkillLevelRow({
+    required this.skill,
+    required this.level,
+    required this.onChanged,
+    required this.onRemove,
+  });
+
+  final String skill;
+  final int level;
+  final ValueChanged<int> onChanged;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 0),
+      decoration: BoxDecoration(
+        color: tokens.primarySoftBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: tokens.cardBorderSoft),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  skill,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: tokens.textPrimary,
+                  ),
+                ),
+              ),
+              Text(
+                '$level/10 · ${skillLevelLabel(level)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: tokens.primary,
+                ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Remove $skill',
+                icon: Icon(Icons.close, size: 18, color: tokens.textSecondary),
+                onPressed: onRemove,
+              ),
+            ],
+          ),
+          Slider(
+            value: level.toDouble(),
+            min: 1,
+            max: 10,
+            divisions: 9,
+            label: '$level',
+            activeColor: tokens.primary,
+            onChanged: (v) => onChanged(v.round()),
+          ),
+        ],
+      ),
     );
   }
 }

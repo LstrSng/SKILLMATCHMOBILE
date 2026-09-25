@@ -9,9 +9,17 @@ import 'session_store.dart';
 const Duration _kAuthTimeout = Duration(seconds: 45);
 
 class AuthApiException implements Exception {
-  AuthApiException(this.message, {this.statusCode});
+  AuthApiException(
+    this.message, {
+    this.statusCode,
+    this.accountCreated = false,
+  });
   final String message;
   final int? statusCode;
+
+  /// Sign-up only: the account exists even though this step failed (e.g.
+  /// the verification email could not be sent), so the user can sign in.
+  final bool accountCreated;
 
   @override
   String toString() => message;
@@ -257,7 +265,11 @@ OtpChallengeResult _parseOtpChallengeResponse(
       body['message'] as String? ??
       body['msg'] as String? ??
       'Request failed.';
-  throw AuthApiException(err, statusCode: res.statusCode);
+  throw AuthApiException(
+    err,
+    statusCode: res.statusCode,
+    accountCreated: body['accountCreated'] == true,
+  );
 }
 
 PasswordResetConfirmResult _parsePasswordResetConfirmResponse(
@@ -343,7 +355,7 @@ AuthResult _parseAuthResponse(
       msg =
           'Server sent a web page instead of JSON ($status). Wrong URL or the API crashed—check API_BASE_URL and that Node is running.';
     } else {
-      msg = 'Server did not return JSON ($status). Check logs on your API.';
+      msg = 'Something went wrong on our end ($status). Please try again later.';
     }
     throw AuthApiException(msg, statusCode: status);
   }
@@ -425,12 +437,30 @@ Future<AuthResult> registerUser({
   return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
 }
 
-Future<OtpChallengeResult> requestRegisterOtp({required String email}) async {
+/// Creates the (unverified) account and emails a sign-up code. Pass only
+/// [email] to resend the code for an account that was already created.
+Future<OtpChallengeResult> requestRegisterOtp({
+  required String email,
+  String? password,
+  String? firstName,
+  String? lastName,
+  String? phone,
+}) async {
   final uri = _registerOtpRequestUri();
   http.Response res;
   try {
     res = await http
-        .post(uri, headers: _jsonHeaders(), body: jsonEncode({'email': email}))
+        .post(
+          uri,
+          headers: _jsonHeaders(),
+          body: jsonEncode({
+            'email': email,
+            'password': ?password,
+            'firstName': ?firstName,
+            'lastName': ?lastName,
+            'phone': ?phone,
+          }),
+        )
         .timeout(_kAuthTimeout);
   } on TimeoutException {
     throw AuthApiException(

@@ -29,6 +29,23 @@ class _SignupDraft {
   final String challengeId;
 }
 
+final _kNameRegex = RegExp(r"^[\p{L}][\p{L} .'-]*$", unicode: true);
+
+/// Lets only letters (incl. accented, e.g. ñ), spaces, and . ' - be typed.
+final _kNameInputFormatter = FilteringTextInputFormatter.allow(
+  RegExp(r"[\p{L} .'-]", unicode: true),
+);
+final _kEmailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
+
+/// Leaves the sign-up flow for the Sign In page. The account already
+/// exists at this point, so the user can sign in without the sign-up code.
+void goToSignInAfterSignup(BuildContext context) {
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const SignInPage()),
+    (route) => route.isFirst,
+  );
+}
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -45,6 +62,49 @@ class _RegisterPageState extends State<RegisterPage> {
   final _confirmPasswordController = TextEditingController();
   bool _agreeToTerms = false;
   bool _submitting = false;
+
+  /// Inline errors are shown once the user has tried to submit.
+  bool _attempted = false;
+
+  String? _nameError(String value, String label) {
+    final v = value.trim();
+    if (v.isEmpty) return 'Enter your ${label.toLowerCase()}.';
+    if (v.length < 2) return '$label must be at least 2 characters.';
+    if (v.length > 50) return '$label must be 50 characters or fewer.';
+    if (!_kNameRegex.hasMatch(v)) {
+      return "Use letters only (spaces, . - ' allowed).";
+    }
+    return null;
+  }
+
+  /// Field errors for the current input, keyed by field name.
+  Map<String, String?> _fieldErrors() {
+    final emailValue = _emailController.text.trim();
+    final phoneValue = _phoneController.text.trim();
+    final passwordValue = _passwordController.text;
+    return {
+      'firstName': _nameError(_firstNameController.text, 'First name'),
+      'lastName': _nameError(_lastNameController.text, 'Last name'),
+      'email': emailValue.isEmpty
+          ? 'Enter your email.'
+          : (!_kEmailRegex.hasMatch(emailValue)
+                ? 'Enter a valid email (e.g. juan@gmail.com).'
+                : null),
+      'phone': phoneValue.isEmpty
+          ? 'Enter your contact number.'
+          : (!RegExp(r'^09\d{9}$').hasMatch(phoneValue)
+                ? 'Must be 11 digits and start with 09 (e.g. 09171234567).'
+                : null),
+      'password': passwordValue.isEmpty
+          ? 'Enter a password.'
+          : _passwordStandardError(passwordValue),
+      'confirmPassword': _confirmPasswordController.text != passwordValue
+          ? 'Passwords do not match.'
+          : null,
+    };
+  }
+
+  String? _err(String field) => _attempted ? _fieldErrors()[field] : null;
 
   String? _passwordStandardError(String password) {
     if (password.length < 8) {
@@ -65,6 +125,14 @@ class _RegisterPageState extends State<RegisterPage> {
     super.initState();
     _passwordController.addListener(_onPasswordChanged);
     _confirmPasswordController.addListener(_onPasswordChanged);
+    for (final c in [
+      _firstNameController,
+      _lastNameController,
+      _emailController,
+      _phoneController,
+    ]) {
+      c.addListener(_onPasswordChanged);
+    }
   }
 
   void _onPasswordChanged() {
@@ -91,47 +159,31 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       return;
     }
-    final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
-    final password = _passwordController.text;
-    final firstName = _firstNameController.text.trim();
-    final lastName = _lastNameController.text.trim();
-    if (firstName.isEmpty || lastName.isEmpty) {
+    setState(() => _attempted = true);
+    final errors = _fieldErrors();
+    final firstError = errors.values.whereType<String>().firstOrNull;
+    if (firstError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter first name and last name.')),
-      );
-      return;
-    }
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter email and password.')),
-      );
-      return;
-    }
-    if (phone.length != 11) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter an 11-digit contact number.')),
-      );
-      return;
-    }
-    final passwordError = _passwordStandardError(password);
-    if (passwordError != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(passwordError)));
-      return;
-    }
-    if (password != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password and confirmation do not match.'),
+        SnackBar(
+          content: Text('Please fix the highlighted fields. $firstError'),
         ),
       );
       return;
     }
+    final email = _emailController.text.trim().toLowerCase();
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text;
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
     setState(() => _submitting = true);
     try {
-      final challenge = await requestRegisterOtp(email: email);
+      final challenge = await requestRegisterOtp(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        phone: phone,
+      );
       if (!mounted) return;
       final draft = _SignupDraft(
         firstName: firstName,
@@ -153,6 +205,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
+      if (e.accountCreated) goToSignInAfterSignup(context);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -227,9 +280,15 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  InputDecoration _inputDec(AppThemeExtension tokens, String hint) {
+  InputDecoration _inputDec(
+    AppThemeExtension tokens,
+    String hint, {
+    String? errorText,
+  }) {
     return InputDecoration(
       hintText: hint,
+      errorText: errorText,
+      errorMaxLines: 3,
       hintStyle: TextStyle(color: tokens.textFaint),
       filled: true,
       fillColor: tokens.surfaceMuted,
@@ -318,7 +377,16 @@ class _RegisterPageState extends State<RegisterPage> {
                               color: tokens.textPrimary,
                               fontSize: 14,
                             ),
-                            decoration: _inputDec(tokens, 'John'),
+                            textCapitalization: TextCapitalization.words,
+                            inputFormatters: [
+                              _kNameInputFormatter,
+                              LengthLimitingTextInputFormatter(50),
+                            ],
+                            decoration: _inputDec(
+                              tokens,
+                              'Juan',
+                              errorText: _err('firstName'),
+                            ),
                           ),
                         ],
                       ),
@@ -343,7 +411,16 @@ class _RegisterPageState extends State<RegisterPage> {
                               color: tokens.textPrimary,
                               fontSize: 14,
                             ),
-                            decoration: _inputDec(tokens, 'Doe'),
+                            textCapitalization: TextCapitalization.words,
+                            inputFormatters: [
+                              _kNameInputFormatter,
+                              LengthLimitingTextInputFormatter(50),
+                            ],
+                            decoration: _inputDec(
+                              tokens,
+                              'Dela Cruz',
+                              errorText: _err('lastName'),
+                            ),
                           ),
                         ],
                       ),
@@ -367,8 +444,16 @@ class _RegisterPageState extends State<RegisterPage> {
                     TextField(
                       controller: _emailController,
                       style: TextStyle(color: tokens.textPrimary, fontSize: 14),
-                      decoration: _inputDec(tokens, 'm@example.com'),
+                      decoration: _inputDec(
+                        tokens,
+                        'm@example.com',
+                        errorText: _err('email'),
+                      ),
                       keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                      ],
                     ),
                   ],
                 ),
@@ -394,7 +479,11 @@ class _RegisterPageState extends State<RegisterPage> {
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(11),
                       ],
-                      decoration: _inputDec(tokens, '11-digit contact number'),
+                      decoration: _inputDec(
+                        tokens,
+                        '09XXXXXXXXX',
+                        errorText: _err('phone'),
+                      ),
                     ),
                   ],
                 ),
@@ -412,7 +501,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    AppPasswordField(controller: _passwordController),
+                    AppPasswordField(
+                      controller: _passwordController,
+                      errorText: _err('password'),
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       'Use 8+ characters with uppercase, lowercase, number, and symbol.',
@@ -439,6 +531,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     AppPasswordField(
                       controller: _confirmPasswordController,
                       hintText: 'Re-enter your password',
+                      errorText: _err('confirmPassword'),
                       onSubmitted: (_) => (_submitting || !_agreeToTerms)
                           ? null
                           : _createAccount(),
@@ -769,127 +862,138 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    return Scaffold(
-      backgroundColor: tokens.scaffoldBackground,
-      appBar: AppBar(
+    // The account already exists, so leaving this page goes to Sign In
+    // instead of back to the sign-up form.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) goToSignInAfterSignup(context);
+      },
+      child: Scaffold(
         backgroundColor: tokens.scaffoldBackground,
-        elevation: 0,
-        iconTheme: IconThemeData(color: tokens.textPrimary),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: CenteredFormWidth(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: tokens.primarySoftBg,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Icon(
-                      Icons.mark_email_read_rounded,
-                      color: tokens.primary,
-                      size: 34,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: Text(
-                    'Verification',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: tokens.textPrimary,
-                      fontSize: 26,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'We sent a 6-digit verification code to ${_draft.email}. Enter it below to finish creating your account.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: tokens.textSecondary,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: tokens.cardBackground,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: tokens.cardBorder),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Verification code',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: tokens.textPrimary,
-                        ),
+        appBar: AppBar(
+          backgroundColor: tokens.scaffoldBackground,
+          elevation: 0,
+          iconTheme: IconThemeData(color: tokens.textPrimary),
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: CenteredFormWidth(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: tokens.primarySoftBg,
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                      const SizedBox(height: 10),
-                      OtpCodeField(
-                        controller: _otpController,
-                        autofocus: true,
-                        onSubmitted: (_) => _verifying ? null : _verifyOtp(),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _infoMessage ??
-                            'The code expires in 10 minutes. If it does not arrive, resend it.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: tokens.textSecondary,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: tokens.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      child: Icon(
+                        Icons.mark_email_read_rounded,
+                        color: tokens.primary,
+                        size: 34,
                       ),
                     ),
-                    onPressed: _verifying ? null : _verifyOtp,
-                    child: _verifying
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Verify and Continue',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      'Verification',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: tokens.textPrimary,
+                            fontSize: 26,
                           ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Center(child: ResendCodeButton(onResend: _resendCode)),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    'Your account has been created. We sent a 6-digit code to ${_draft.email} to verify your email.',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: tokens.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: tokens.cardBackground,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: tokens.cardBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Verification code',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: tokens.textPrimary,
+                              ),
+                        ),
+                        const SizedBox(height: 10),
+                        OtpCodeField(
+                          controller: _otpController,
+                          autofocus: true,
+                          onSubmitted: (_) => _verifying ? null : _verifyOtp(),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _infoMessage ??
+                              'The code expires in 10 minutes. If it does not arrive, resend it.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: tokens.textSecondary,
+                                height: 1.5,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: tokens.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _verifying ? null : _verifyOtp,
+                      child: _verifying
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Verify and Continue',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Center(child: ResendCodeButton(onResend: _resendCode)),
+                ],
+              ),
             ),
           ),
         ),

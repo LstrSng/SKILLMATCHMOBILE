@@ -24,6 +24,7 @@ class AppPasswordField extends StatefulWidget {
       vertical: 12,
     ),
     this.iconSize = 20,
+    this.errorText,
   });
 
   final TextEditingController controller;
@@ -33,6 +34,9 @@ class AppPasswordField extends StatefulWidget {
   final Color? fillColor;
   final EdgeInsetsGeometry contentPadding;
   final double iconSize;
+
+  /// Inline validation message shown under the field, if any.
+  final String? errorText;
 
   @override
   State<AppPasswordField> createState() => _AppPasswordFieldState();
@@ -55,6 +59,8 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
       style: TextStyle(color: tokens.textPrimary, fontSize: 14),
       decoration: InputDecoration(
         hintText: widget.hintText,
+        errorText: widget.errorText,
+        errorMaxLines: 3,
         hintStyle: TextStyle(color: tokens.textFaint),
         filled: true,
         fillColor: widget.fillColor ?? tokens.surfaceMuted,

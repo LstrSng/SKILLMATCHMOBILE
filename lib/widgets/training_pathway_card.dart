@@ -19,10 +19,21 @@ Future<void> _launchTrainingLink(BuildContext context, String url) async {
 /// pathway, plus its "no official cert body" note when present. No card
 /// chrome of its own — embed it inside whatever card/section it belongs
 /// to (see [TrainingPathwayCard] for a standalone version).
+///
+/// When [onToggleCompleted] is set, each link gets a "mark as completed"
+/// button, and links whose label is in [completedKeys] show as completed.
 class TrainingLinksList extends StatelessWidget {
-  const TrainingLinksList({super.key, required this.pathway});
+  const TrainingLinksList({
+    super.key,
+    required this.pathway,
+    this.completedKeys = const {},
+    this.onToggleCompleted,
+  });
 
   final TrainingPathway pathway;
+  final Set<String> completedKeys;
+  final void Function(TrainingResource link, bool completed)?
+  onToggleCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +51,9 @@ class TrainingLinksList extends StatelessWidget {
             final isTesda = (provider?.toLowerCase().contains('tesda') ?? false) ||
                 (type?.toLowerCase().contains('tesda') ?? false) ||
                 link.label.toLowerCase().contains('tesda');
+            final isDone = completedKeys.contains(
+              link.label.trim().toLowerCase(),
+            );
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -48,9 +62,13 @@ class TrainingLinksList extends StatelessWidget {
                 onTap: () => _launchTrainingLink(context, link.url),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: tokens.primarySoftBg,
+                    color: isDone ? tokens.successBg : tokens.primarySoftBg,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: tokens.cardBorderSoft),
+                    border: Border.all(
+                      color: isDone
+                          ? tokens.success.withValues(alpha: 0.5)
+                          : tokens.cardBorderSoft,
+                    ),
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -73,10 +91,21 @@ class TrainingLinksList extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w600,
-                                color: tokens.primary,
+                                color: isDone ? tokens.success : tokens.primary,
                                 height: 1.3,
                               ),
                             ),
+                            if (isDone) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                '✓ Completed',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: tokens.success,
+                                ),
+                              ),
+                            ],
                             if (provider != null || type != null) ...[
                               const SizedBox(height: 3),
                               Row(
@@ -168,6 +197,21 @@ class TrainingLinksList extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (onToggleCompleted != null)
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          tooltip: isDone
+                              ? 'Mark as not completed'
+                              : 'Mark as completed',
+                          icon: Icon(
+                            isDone
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            color: isDone ? tokens.success : tokens.textFaint,
+                            size: 22,
+                          ),
+                          onPressed: () => onToggleCompleted!(link, !isDone),
+                        ),
                     ],
                   ),
                 ),
@@ -199,12 +243,18 @@ class TrainingPathwayCard extends StatelessWidget {
     super.key,
     required this.pathway,
     this.subtitle,
+    this.completedKeys = const {},
+    this.onToggleCompleted,
   });
 
   final TrainingPathway pathway;
 
   /// Defaults to "Verified resources for the {pathway.name} pathway".
   final String? subtitle;
+
+  final Set<String> completedKeys;
+  final void Function(TrainingResource link, bool completed)?
+  onToggleCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +278,18 @@ class TrainingPathwayCard extends StatelessWidget {
             style: TextStyle(fontSize: 13, color: tokens.textSecondary),
           ),
           const SizedBox(height: 14),
-          TrainingLinksList(pathway: pathway),
+          if (onToggleCompleted != null) ...[
+            Text(
+              'Passed or finished one? Tap ○ to mark it as completed.',
+              style: TextStyle(fontSize: 12, color: tokens.textSecondary),
+            ),
+            const SizedBox(height: 10),
+          ],
+          TrainingLinksList(
+            pathway: pathway,
+            completedKeys: completedKeys,
+            onToggleCompleted: onToggleCompleted,
+          ),
         ],
       ),
     );

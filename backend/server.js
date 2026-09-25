@@ -146,7 +146,7 @@ async function createAndSendOtp({ email, purpose }) {
     return {
       ok: false,
       status: 500,
-      message: "Failed to send OTP email. Check server logs.",
+      message: "We couldn't send the verification code. Please try again in a moment.",
     };
   }
 
@@ -185,6 +185,17 @@ async function verifyOtp({ email, purpose, otp, challengeId }) {
   return { ok: true };
 }
 
+// Keeps only the levels of listed skills, as whole numbers from 1 to 10.
+function normalizeSkillLevels(raw, skills) {
+  const out = {};
+  if (!raw || typeof raw !== "object" || !Array.isArray(skills)) return out;
+  for (const skill of skills) {
+    const level = Math.round(Number(raw[skill]));
+    if (Number.isFinite(level) && level >= 1) out[skill] = Math.min(10, level);
+  }
+  return out;
+}
+
 function userPublic(u) {
   if (!u) return null;
   const education = Array.isArray(u.education)
@@ -218,6 +229,7 @@ function userPublic(u) {
     bio: u.bio || "",
     avatarUrl: u.avatarUrl || "",
     skills: Array.isArray(u.skills) ? u.skills : [],
+    skillLevels: normalizeSkillLevels(u.skillLevels, u.skills),
     education,
     experience,
     profile: u.profile && typeof u.profile === "object" ? u.profile : {},
@@ -874,9 +886,48 @@ app.post("/api/users/register", requireDb, async (req, res) => {
   });
 });
 
+// Returns an error message if the sign-up fields are invalid, else null.
+function signupValidationError({ firstName, lastName, email, phone, password }) {
+  if (!firstName || !lastName || !email || !phone || !password) {
+    return "Missing required fields.";
+  }
+  const namePattern = /^[\p{L}][\p{L} .'-]{0,49}$/u;
+  if (!namePattern.test(firstName) || !namePattern.test(lastName)) {
+    return "Names may only contain letters, spaces, periods, hyphens, and apostrophes.";
+  }
+  if (!isValidEmail(email)) return "Please enter a valid email address.";
+  if (!/^09\d{9}$/.test(phone)) {
+    return "Contact number must be 11 digits and start with 09.";
+  }
+  if (
+    password.length < 8 ||
+    !/[A-Z]/.test(password) ||
+    !/[a-z]/.test(password) ||
+    !/\d/.test(password) ||
+    !/[^A-Za-z0-9]/.test(password)
+  ) {
+    return "Password must be at least 8 characters and include uppercase, lowercase, number, and special character.";
+  }
+  return null;
+}
+
+function readSignupFields(body) {
+  return {
+    firstName: String(body?.firstName || "").trim(),
+    lastName: String(body?.lastName || "").trim(),
+    email: normalizeEmail(body?.email),
+    phone: String(body?.phone || "").trim(),
+    password: String(body?.password || ""),
+  };
+}
+
+// Creates the account right away (unverified), then emails a code to verify
+// it. Skipping the code is fine: the user can still sign in later.
+// Called with only { email } to resend the code for an unverified account.
 app.post("/api/users/register/otp/request", requireDb, async (req, res) => {
   try {
-    const email = normalizeEmail(req.body?.email);
+    const fields = readSignupFields(req.body);
+    const { email } = fields;
     if (!email) {
       return res.status(400).json({ message: "email is required." });
     }
@@ -884,49 +935,79 @@ app.post("/api/users/register/otp/request", requireDb, async (req, res) => {
       return res.status(400).json({ message: "Please enter a valid email address." });
     }
 
-    const existing = await User.findOne({ email }).select("_id").lean();
-    if (existing) {
-      return res.status(400).json({ message: "User already exists with that email." });
+    const isResend = !fields.password;
+    const existing = await User.findOne({ email }).select("_id emailVerified").lean();
+
+    if (isResend) {
+      if (!existing) {
+        return res.status(400).json({ message: "No account found for that email." });
+      }
+      if (existing.emailVerified !== false) {
+        return res.status(400).json({ message: "This email is already verified. Please sign in." });
+      }
+    } else {
+      if (existing) {
+        return res.status(400).json({
+          message: "An account with that email already exists. Please sign in.",
+        });
+      }
+      const error = signupValidationError(fields);
+      if (error) return res.status(400).json({ message: error });
+
+      await User.create({
+        email,
+        password: await bcrypt.hash(fields.password, 10),
+        firstName: fields.firstName,
+        lastName: fields.lastName,
+        phone: fields.phone,
+        emailVerified: false,
+      });
     }
 
     const result = await createAndSendOtp({ email, purpose: "signup" });
     if (!result.ok) {
-      return res.status(result.status).json({ message: result.message });
+      const message = isResend
+        ? result.message
+        : "Your account was created, but we couldn't send the verification code. You can sign in now.";
+      return res.status(result.status).json({ message, accountCreated: !isResend });
     }
 
-    return res.json({ message: "OTP sent.", challengeId: result.challengeId });
+    return res.json({
+      message: isResend ? "OTP sent." : "Account created. Enter the code we emailed you.",
+      challengeId: result.challengeId,
+      accountCreated: !isResend,
+    });
   } catch (err) {
+    if (err?.code === 11000) {
+      return res.status(400).json({
+        message: "An account with that email already exists. Please sign in.",
+      });
+    }
     console.error("Signup OTP request error:", err);
-    return res.status(500).json({ message: "Server error while sending OTP." });
+    return res.status(500).json({ message: "Server error while creating your account." });
   }
 });
 
+// Verifies the sign-up code and logs the user in.
 app.post("/api/users/register/otp/verify", requireDb, async (req, res) => {
   try {
-    const firstName = String(req.body?.firstName || "").trim();
-    const lastName = String(req.body?.lastName || "").trim();
-    const email = normalizeEmail(req.body?.email);
-    const phone = String(req.body?.phone || "").trim();
-    const password = String(req.body?.password || "");
+    const fields = readSignupFields(req.body);
+    const { email } = fields;
     const otp = String(req.body?.otp || "").trim();
     const challengeId = String(req.body?.challengeId || "").trim();
 
-    if (!firstName || !lastName || !email || !phone || !password || !otp || !challengeId) {
-      return res.status(400).json({ message: "Missing required fields." });
-    }
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ message: "Please enter a valid email address." });
-    }
-    if (!/^\d{11}$/.test(phone)) {
-      return res.status(400).json({ message: "Contact number must be exactly 11 digits." });
-    }
-    if (password.length < 8) {
-      return res.status(400).json({ message: "Password must be at least 8 characters." });
+    if (!email || !otp || !challengeId) {
+      return res.status(400).json({ message: "email, otp, and challengeId are required." });
     }
 
-    const existing = await User.findOne({ email }).select("_id").lean();
-    if (existing) {
-      return res.status(400).json({ message: "User already exists with that email." });
+    const existing = await User.findOne({ email });
+    if (existing && existing.emailVerified !== false) {
+      return res.status(400).json({ message: "This email is already verified. Please sign in." });
+    }
+    if (!existing) {
+      // Older app versions create the account only at this step.
+      const error = signupValidationError(fields);
+      if (error) return res.status(400).json({ message: error });
     }
 
     const check = await verifyOtp({ email, purpose: "signup", otp, challengeId });
@@ -934,14 +1015,20 @@ app.post("/api/users/register/otp/verify", requireDb, async (req, res) => {
       return res.status(check.status).json({ message: check.message });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      email,
-      password: passwordHash,
-      firstName,
-      lastName,
-      phone,
-    });
+    let user = existing;
+    if (user) {
+      user.emailVerified = true;
+      await user.save();
+    } else {
+      user = await User.create({
+        email,
+        password: await bcrypt.hash(fields.password, 10),
+        firstName: fields.firstName,
+        lastName: fields.lastName,
+        phone: fields.phone,
+        emailVerified: true,
+      });
+    }
 
     return res.status(201).json({
       _id: user._id,
@@ -949,6 +1036,7 @@ app.post("/api/users/register/otp/verify", requireDb, async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
+      user: userPublic(user.toObject()),
       token: generateToken(user._id),
     });
   } catch (err) {
@@ -1052,6 +1140,11 @@ app.post("/api/users/login/otp/verify", requireDb, async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "No account found for that email." });
+    }
+    if (user.emailVerified === false) {
+      // A login code also proves the user owns this email.
+      user.emailVerified = true;
+      await user.save();
     }
 
     const response = {
@@ -1203,6 +1296,15 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
           .filter(Boolean);
       }
     }
+    if (body.skillLevels !== undefined) {
+      patch.skillLevels = normalizeSkillLevels(
+        body.skillLevels,
+        patch.skills ?? req.user.skills ?? []
+      );
+    } else if (patch.skills) {
+      // Drop levels of skills that were removed.
+      patch.skillLevels = normalizeSkillLevels(req.user.skillLevels, patch.skills);
+    }
     if (body.education !== undefined) {
       const normalizeItem = (it) => ({
         degree: String(it?.degree ?? "").trim(),
@@ -1308,6 +1410,18 @@ app.post("/api/applications", requireDb, requireAuth, async (req, res) => {
     }
 
     const snapshot = jobSnapshot && typeof jobSnapshot === "object" ? jobSnapshot : {};
+    const rawChallenge = req.body?.codingChallenge;
+    const codingChallenge =
+      rawChallenge && typeof rawChallenge === "object"
+        ? {
+            questionId: String(rawChallenge.questionId ?? ""),
+            language: String(rawChallenge.language ?? ""),
+            selectedAnswer: String(rawChallenge.selectedAnswer ?? ""),
+            correct: rawChallenge.correct === true,
+            timeTakenSeconds: Math.max(0, Number(rawChallenge.timeTakenSeconds) || 0),
+            answeredAt: rawChallenge.answeredAt ? new Date(rawChallenge.answeredAt) : new Date(),
+          }
+        : null;
 
     const existing = await Application.findOne({
       userId: req.user._id,
@@ -1327,6 +1441,7 @@ app.post("/api/applications", requireDb, requireAuth, async (req, res) => {
           postedDate: String(snapshot.postedDate ?? existing.jobSnapshot?.postedDate ?? ""),
           matchPercentage: Number(snapshot.matchPercentage ?? existing.jobSnapshot?.matchPercentage ?? 0) || 0,
         };
+        if (codingChallenge) existing.codingChallenge = codingChallenge;
         existing.statusHistory.push({ status: "Applied", at: new Date() });
         const saved = await existing.save();
         return res.status(200).json({ application: saved, reactivated: true });
@@ -1349,6 +1464,7 @@ app.post("/api/applications", requireDb, requireAuth, async (req, res) => {
       },
       status: "Applied",
       statusHistory: [{ status: "Applied", at: new Date() }],
+      codingChallenge,
     });
     return res.status(201).json({ application: doc });
   } catch (err) {

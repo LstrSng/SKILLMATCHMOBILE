@@ -117,11 +117,16 @@ Future<List<Map<String, dynamic>>> fetchMyApplications() async {
 Future<Map<String, dynamic>> applyToJob({
   required String jobId,
   required Map<String, dynamic> jobSnapshot,
+  Map<String, dynamic>? codingChallenge,
 }) async {
   return _withNetworkErrors(() async {
     final res = await authedPost(
       _appsUri(),
-      body: jsonEncode({'jobId': jobId, 'jobSnapshot': jobSnapshot}),
+      body: jsonEncode({
+        'jobId': jobId,
+        'jobSnapshot': jobSnapshot,
+        'codingChallenge': ?codingChallenge,
+      }),
     );
     if (res.statusCode == 409) {
       throw AuthedException('You already applied to this job.', statusCode: 409);

@@ -1192,6 +1192,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final resume = _resumeData();
     final certifications = _certificationsData();
     final skills = _skills();
+    final skillLevels = readSkillLevels(_user);
     final education = _education();
     final experience = _experience();
     final assessmentResults = _assessmentResults();
@@ -1489,7 +1490,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                       res.roleTitle?.toLowerCase() ?? '___',
                                     ))),
                           );
-                          return _SkillTag(skill: s, isVerified: isVerified);
+                          return _SkillTag(
+                            skill: s,
+                            level: skillLevels[s],
+                            isVerified: isVerified,
+                          );
                         }),
                         Material(
                           color: Colors.transparent,
@@ -2575,14 +2580,16 @@ class _ProfileInfoPill extends StatelessWidget {
 
 class _SkillTag extends StatelessWidget {
   final String skill;
+  final int? level;
   final bool isVerified;
 
-  const _SkillTag({required this.skill, this.isVerified = false});
+  const _SkillTag({required this.skill, this.level, this.isVerified = false});
 
   @override
   Widget build(BuildContext context) {
     return SkillChip(
-      label: skill,
+      label: level == null ? skill : '$skill · $level/10',
+      tooltip: level == null ? null : '${skillLevelLabel(level!)} ($level/10)',
       status: isVerified ? SkillChipStatus.verified : SkillChipStatus.neutral,
       isVerified: isVerified,
       size: SkillChipSize.medium,

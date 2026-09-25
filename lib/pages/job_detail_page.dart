@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../models/job_match_result.dart';
 import '../services/applications_api.dart';
+import '../services/coding_challenge_bank.dart';
 import '../services/job_roles_data.dart';
 import '../services/saved_jobs_store.dart';
+import '../services/session_store.dart';
+import '../widgets/coding_challenge_sheet.dart';
 import 'company_details_page.dart';
 import 'pathway_page.dart';
 import 'settings_page.dart';
@@ -215,11 +218,25 @@ class _JobDetailPageState extends State<JobDetailPage> {
       return;
     }
 
+    Map<String, dynamic>? codingChallenge;
+    if (isDeveloperRole(_displayTitle)) {
+      final skills = SessionStore.user?['skills'];
+      codingChallenge = await showCodingChallengeSheet(
+        context,
+        jobTitle: _displayTitle,
+        userSkills: skills is List
+            ? skills.map((e) => e.toString()).toList()
+            : const [],
+      );
+      if (codingChallenge == null || !mounted) return;
+    }
+
     HapticFeedback.mediumImpact();
     setState(() => _applying = true);
     try {
       await applyToJob(
         jobId: widget.jobId,
+        codingChallenge: codingChallenge,
         jobSnapshot: {
           'title': _displayTitle,
           'company': widget.company,
