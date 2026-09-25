@@ -1291,7 +1291,7 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
         body.skillLevels && typeof body.skillLevels === "object"
           ? body.skillLevels
           : current.levels;
-      // Stores skills grouped with levels, plus the flat skillNames list.
+      // Stores skills grouped, each as "<name> (<level>/10)".
       Object.assign(patch, toStoredSkills(names, levels));
     }
     if (body.education !== undefined) {
@@ -1380,12 +1380,12 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
         patch.profile.resume = existingProfile.resume;
       }
     }
-    if (patch.skillNames) {
+    if (patch.skills) {
       // Remove the old-format fields (no longer in the schema, so this
       // goes straight to the collection).
       await User.collection.updateOne(
         { _id: req.user._id },
-        { $unset: { skillLevels: "", skillGroups: "" } }
+        { $unset: { skillLevels: "", skillGroups: "", skillNames: "" } }
       );
     }
     const updated = await User.findByIdAndUpdate(req.user._id, patch, {

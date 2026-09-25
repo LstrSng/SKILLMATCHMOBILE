@@ -69,10 +69,23 @@ function validLevel(value) {
   return Number.isFinite(n) && n >= 1 ? Math.min(10, n) : null;
 }
 
+/** "Figma (5/10)" -> { name: "Figma", level: 5 }; "Figma" -> level null. */
+function parseStoredSkill(entry) {
+  if (entry && typeof entry === "object") {
+    // Older { name, level } form.
+    return { name: String(entry.name ?? "").trim(), level: validLevel(entry.level) };
+  }
+  const text = String(entry ?? "").trim();
+  const m = text.match(/^(.*?)\s*\((\d{1,2})\/10\)$/);
+  return m
+    ? { name: m[1].trim(), level: validLevel(m[2]) }
+    : { name: text, level: null };
+}
+
 /**
  * Builds the stored form of a user's skills from a flat list of names and
- * a { name: level } map: `skills` grouped into techStack / functional /
- * enabling as [{ name, level }], plus `skillNames` (flat list).
+ * a { name: level } map: grouped into techStack / functional / enabling,
+ * each entry "<name> (<level>/10)" (or just the name when unrated).
  */
 export function toStoredSkills(names, levels) {
   const seen = new Set();
@@ -81,21 +94,19 @@ export function toStoredSkills(names, levels) {
     const name = String(raw ?? "").trim();
     if (!name || seen.has(name.toLowerCase())) continue;
     seen.add(name.toLowerCase());
-    skills[categorizeSkill(name)].push({
-      name,
-      level: validLevel(levels && typeof levels === "object" ? levels[name] : null),
-    });
+    const level = validLevel(
+      levels && typeof levels === "object" ? levels[name] : null
+    );
+    skills[categorizeSkill(name)].push(level ? `${name} (${level}/10)` : name);
   }
-  return {
-    skills,
-    skillNames: GROUPS.flatMap((g) => skills[g].map((s) => s.name)),
-  };
+  return { skills };
 }
 
 /**
  * Reads a stored user's skills back as a flat list of names and a
  * { name: level } map (the format the mobile app uses). Also accepts the
- * old format: `skills` as a plain array plus a `skillLevels` map.
+ * older formats: a plain array plus a `skillLevels` map, and grouped
+ * { name, level } objects.
  */
 export function readStoredSkills(user) {
   const stored = user?.skills;
@@ -111,11 +122,10 @@ export function readStoredSkills(user) {
   const names = [];
   const levels = {};
   for (const group of GROUPS) {
-    for (const item of stored?.[group] ?? []) {
-      const name = String(item?.name ?? "").trim();
+    for (const entry of stored?.[group] ?? []) {
+      const { name, level } = parseStoredSkill(entry);
       if (!name) continue;
       names.push(name);
-      const level = validLevel(item?.level);
       if (level) levels[name] = level;
     }
   }
