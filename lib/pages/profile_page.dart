@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/cloudinary_config.dart';
 import '../models/skill_assessment.dart';
 import '../services/cloudinary_service.dart';
+import '../services/competency.dart';
 import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
@@ -1474,68 +1475,59 @@ class _ProfilePageState extends State<ProfilePage> {
                       onAction: _openEdit,
                     )
                   else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ...skills.map((s) {
-                          final isVerified = assessmentResults.values.any(
-                            (res) =>
-                                res.passed &&
-                                ((res.roleTitle?.toLowerCase().contains(
-                                          s.toLowerCase(),
-                                        ) ??
-                                        false) ||
-                                    (s.toLowerCase().contains(
-                                      res.roleTitle?.toLowerCase() ?? '___',
-                                    ))),
-                          );
-                          return _SkillTag(
-                            skill: s,
-                            level: skillLevels[s],
-                            isVerified: isVerified,
-                          );
-                        }),
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _openEdit,
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
+                    _SkillGroups(
+                      skills: skills,
+                      levels: skillLevels,
+                      isVerified: (s) => assessmentResults.values.any(
+                        (res) =>
+                            res.passed &&
+                            ((res.roleTitle?.toLowerCase().contains(
+                                      s.toLowerCase(),
+                                    ) ??
+                                    false) ||
+                                (s.toLowerCase().contains(
+                                  res.roleTitle?.toLowerCase() ?? '___',
+                                ))),
+                      ),
+                      addMore: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _openEdit,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tokens.surfaceMuted,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: tokens.primary.withValues(alpha: 0.3),
                               ),
-                              decoration: BoxDecoration(
-                                color: tokens.surfaceMuted,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: tokens.primary.withValues(alpha: 0.3),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.add,
+                                  size: 14,
+                                  color: tokens.primary,
                                 ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    size: 14,
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Add more',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
                                     color: tokens.primary,
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Add more',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: tokens.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
                 ],
               ),
@@ -2588,8 +2580,14 @@ class _SkillTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SkillChip(
-      label: level == null ? skill : '$skill · $level/10',
-      tooltip: level == null ? null : '${skillLevelLabel(level!)} ($level/10)',
+      // PSF-SDS skills show their dataset level (e.g. "Level 4",
+      // "Advanced"); tech-stack skills show the 1–10 rating.
+      label: level == null
+          ? skill
+          : '$skill · ${datasetLevelLabel(skill, level!) ?? '$level/10'}',
+      tooltip: level == null
+          ? null
+          : '${datasetLevelLabel(skill, level!) ?? skillLevelLabel(level!)} ($level/10)',
       status: isVerified ? SkillChipStatus.verified : SkillChipStatus.neutral,
       isVerified: isVerified,
       size: SkillChipSize.medium,
@@ -2730,6 +2728,136 @@ class _ExperienceItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The profile's skills split into Tech Stack, Functional and Enabling
+/// groups (see [categorizeSkill]); empty groups are hidden.
+class _SkillGroups extends StatefulWidget {
+  const _SkillGroups({
+    required this.skills,
+    required this.levels,
+    required this.isVerified,
+    required this.addMore,
+  });
+
+  final List<String> skills;
+  final Map<String, int> levels;
+  final bool Function(String skill) isVerified;
+  final Widget addMore;
+
+  @override
+  State<_SkillGroups> createState() => _SkillGroupsState();
+}
+
+class _SkillGroupsState extends State<_SkillGroups> {
+  @override
+  void initState() {
+    super.initState();
+    // Categories come from the PSF-SDS catalogs; regroup once loaded.
+    loadJobRoles().then((_) {
+      if (mounted) setState(() {});
+    }, onError: (_) {});
+  }
+
+  static const _groups = [
+    (
+      category: SkillCategory.techStack,
+      title: 'Tech Stack',
+      subtitle: 'Languages, frameworks & tools',
+      icon: Icons.code_rounded,
+    ),
+    (
+      category: SkillCategory.functional,
+      title: 'Functional Skills',
+      subtitle: 'Job-specific competencies',
+      icon: Icons.work_outline_rounded,
+    ),
+    (
+      category: SkillCategory.enabling,
+      title: 'Enabling Skills',
+      subtitle: 'Soft skills & work habits',
+      icon: Icons.groups_rounded,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    final byCategory = <SkillCategory, List<String>>{};
+    for (final s in widget.skills) {
+      byCategory.putIfAbsent(categorizeSkill(s), () => []).add(s);
+    }
+
+    final sections = <Widget>[];
+    for (final g in _groups) {
+      final items = byCategory[g.category];
+      if (items == null || items.isEmpty) continue;
+      if (sections.isNotEmpty) {
+        sections.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Divider(height: 1, color: tokens.cardBorderSoft),
+          ),
+        );
+      }
+      sections.add(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(g.icon, size: 16, color: tokens.primary),
+                const SizedBox(width: 6),
+                Text(
+                  g.title,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: tokens.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${items.length}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: tokens.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Padding(
+              padding: const EdgeInsets.only(left: 22),
+              child: Text(
+                g.subtitle,
+                style: TextStyle(fontSize: 11.5, color: tokens.textFaint),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final s in items)
+                  _SkillTag(
+                    skill: s,
+                    level: widget.levels[s],
+                    isVerified: widget.isVerified(s),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [...sections, const SizedBox(height: 14), widget.addMore],
     );
   }
 }

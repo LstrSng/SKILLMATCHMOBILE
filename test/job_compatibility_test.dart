@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skillmatch/pages/job_detail_page.dart';
+import 'package:skillmatch/services/prescriptive_engine.dart';
+import 'package:skillmatch/models/training_pathway.dart';
+import 'package:skillmatch/services/pathway_links_data.dart';
+import 'package:skillmatch/services/competency.dart';
 import 'package:skillmatch/theme/app_theme.dart';
 import 'package:skillmatch/widgets/widgets.dart';
 
@@ -190,78 +194,152 @@ void main() {
     );
   });
 
-  group('Skill Prescription Tests', () {
-    test(
-      'resolveSkillPrescription prescribes TypeScript certification and pathway',
-      () {
-        final tsRx = resolveSkillPrescription('TypeScript');
-        expect(tsRx.skill, equals('TypeScript'));
-        expect(tsRx.tesdaProgram, equals('TESDA Web Development NC III'));
-        expect(tsRx.globalCert, contains('TypeScript'));
-        expect(tsRx.providerSummary, contains('Microsoft'));
-        expect(tsRx.searchKeyword, equals('TypeScript'));
+  group('Prescriptive Analytics Tests', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
 
-        final tsAbbrRx = resolveSkillPrescription('TS');
-        expect(tsAbbrRx.searchKeyword, equals('TypeScript'));
+    test(
+      'role-aware skill selection prioritizes domain-matching missing skill',
+      () {
+        expect(
+          selectPrimaryPrescriptionSkill([
+            'PostgreSQL',
+            'Docker',
+            'TypeScript',
+          ], jobTitle: 'Associate User Interface'),
+          equals('TypeScript'),
+        );
+        expect(
+          selectPrimaryPrescriptionSkill([
+            'HTML',
+            'Docker',
+            'Figma',
+          ], jobTitle: 'DevOps Engineer'),
+          equals('Docker'),
+        );
+        expect(
+          selectPrimaryPrescriptionSkill([
+            'PostgreSQL',
+            'Unit Tests',
+            'CSS',
+          ], jobTitle: 'QA Automation Engineer'),
+          equals('Unit Tests'),
+        );
       },
     );
 
-    test('avoids false positive substring collisions for short abbreviations', () {
-      // 'Unit Tests' should NOT match 'ts' (TypeScript), it should match 'test' (QA)
-      final testsRx = resolveSkillPrescription('Unit Tests');
-      expect(testsRx.searchKeyword, equals('QA'));
-      expect(testsRx.globalCert, contains('ISTQB'));
-
-      // 'Email Support' should NOT match 'ai' (Data/AI), it should match 'support' (Support)
-      final supportRx = resolveSkillPrescription('Email Support');
-      expect(supportRx.searchKeyword, equals('Support'));
-      expect(supportRx.tesdaProgram, contains('Computer Systems Servicing'));
-
-      // 'Recruiting' should NOT match 'ui' (UI/Design)
-      final recruitRx = resolveSkillPrescription('Recruiting');
-      expect(recruitRx.searchKeyword, isNot(equals('Design')));
+    test('simulates the match gain of learning each missing skill', () async {
+      final actions = await prescribeActions(
+        jobTitle: 'Associate User Interface',
+        requiredSkills: ['HTML', 'CSS', 'PostgreSQL', 'Docker', 'TypeScript'],
+        user: {
+          'skills': ['HTML', 'CSS'],
+        },
+      );
+      expect(actions, hasLength(3));
+      for (final a in actions) {
+        expect(a.currentScore, 40);
+        expect(a.newScore, 60);
+        expect(a.matchGain, 20);
+        expect(a.isLevelUp, isFalse);
+      }
+      // Role relevance ranks TypeScript first for a UI job.
+      expect(actions.first.skill, 'TypeScript');
+      expect(actions.first.roleRelevant, isTrue);
+      expect(actions.first.certification, isNotNull);
+      final priorities = actions.map((a) => a.priority).toList();
+      expect(
+        priorities,
+        equals([...priorities]..sort((x, y) => y.compareTo(x))),
+      );
     });
 
-    test('role-aware skill selection prioritizes domain-matching missing skill', () {
-      // For "Associate User Interface" with ['PostgreSQL', 'Docker', 'TypeScript'],
-      // it should select 'TypeScript' because it aligns with UI/frontend, not PostgreSQL.
-      final selectedUi = selectPrimaryPrescriptionSkill([
-        'PostgreSQL',
-        'Docker',
-        'TypeScript',
-      ], jobTitle: 'Associate User Interface');
-      expect(selectedUi, equals('TypeScript'));
+    test(
+      'prescribes raising a skill that is below the required PSF level',
+      () async {
+        final actions = await prescribeActions(
+          jobTitle: 'Business Analyst',
+          requiredSkills: [
+            'Business Needs Analysis Level 3',
+            'Budgeting Level 2',
+          ],
+          user: {
+            'skills': ['Business Needs Analysis', 'Budgeting'],
+            'skillLevels': {'Business Needs Analysis': 2, 'Budgeting': 5},
+          },
+        );
+        expect(actions, hasLength(1));
+        final a = actions.single;
+        expect(a.skill, 'Business Needs Analysis');
+        expect(a.isLevelUp, isTrue);
+        expect(a.levelChange, 'Level 2 → Level 3');
+        expect(a.currentScore, 75); // (2/4 + 1) / 2
+        expect(a.newScore, 100);
+        final text = prescriptionText(score: 75, actions: actions);
+        expect(
+          text,
+          contains('raise Business Needs Analysis from Level 2 to Level 3'),
+        );
+      },
+    );
 
-      // For "DevOps Engineer" with ['HTML', 'Docker', 'Figma'], it should select 'Docker'.
-      final selectedDevops = selectPrimaryPrescriptionSkill([
-        'HTML',
-        'Docker',
-        'Figma',
-      ], jobTitle: 'DevOps Engineer');
-      expect(selectedDevops, equals('Docker'));
+    test(
+      'prefers skills with a free certification when impact is equal',
+      () async {
+        final actions = await prescribeActions(
+          jobTitle: 'Marketing Associate',
+          requiredSkills: ['Communication', 'Digital Marketing'],
+          user: const {'skills': <String>[]},
+        );
+        expect(actions.first.skill, 'Digital Marketing');
+        expect(actions.first.certification?.provider, contains('TESDA'));
+        expect(actions.last.certification, isNull);
+      },
+    );
 
-      // For "QA Automation Engineer" with ['PostgreSQL', 'Unit Tests', 'CSS'], it should select 'Unit Tests'.
-      final selectedQa = selectPrimaryPrescriptionSkill([
-        'PostgreSQL',
-        'Unit Tests',
-        'CSS',
-      ], jobTitle: 'QA Automation Engineer');
-      expect(selectedQa, equals('Unit Tests'));
-    });
+    test(
+      'recommends professional certifications for advanced levels',
+      () async {
+        final pathways = await allTrainingPathways();
+        final basic = bestCertificationFor(
+          pathways,
+          'Cloud Computing',
+          RequiredLevel.parse('Cloud Computing Level 2'),
+        );
+        final advanced = bestCertificationFor(
+          pathways,
+          'Cloud Computing',
+          RequiredLevel.parse('Cloud Computing Level 5'),
+        );
+        expect(basic?.cost, TrainingCost.free);
+        expect(advanced?.cost, TrainingCost.paid);
+      },
+    );
 
-    test('buildJobRecommendation produces role-aware prescription text', () {
-      final rec = buildJobRecommendation(0, [
-        'PostgreSQL',
-        'Docker',
-        'TypeScript',
-      ], jobTitle: 'Associate User Interface');
-
-      // Verify that the recommendation explicitly mentions the role and prioritizes TypeScript
-      expect(rec, contains('Associate User Interface role'));
-      expect(rec, contains('prioritize TypeScript'));
-      expect(rec, contains('TESDA Web Development NC III'));
-      expect(rec, isNot(contains('Oracle Database')));
-    });
+    test(
+      'prescription text names the best next step and its certification',
+      () async {
+        final actions = await prescribeActions(
+          jobTitle: 'Associate User Interface',
+          requiredSkills: ['HTML', 'CSS', 'PostgreSQL', 'Docker', 'TypeScript'],
+          user: {
+            'skills': ['HTML', 'CSS'],
+          },
+        );
+        final text = prescriptionText(score: 40, actions: actions);
+        expect(
+          text,
+          startsWith(
+            'Skill gap detected (40%). Best next step: learn TypeScript',
+          ),
+        );
+        expect(text, contains('raises your match to 60%'));
+        expect(text, contains('Recommended: '));
+        expect(
+          prescriptionText(score: 100, actions: const []),
+          contains('Ready to apply!'),
+        );
+      },
+    );
   });
 
   group('CollapsibleJobDescription Tests', () {

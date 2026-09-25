@@ -19,6 +19,14 @@ const experienceItemSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const skillItemSchema = new mongoose.Schema(
+    {
+        name: { type: String, required: true },
+        level: { type: Number, min: 1, max: 10, default: null },
+    },
+    { _id: false }
+);
+
 const mobileUserSchema = new mongoose.Schema({
     firstName: {
         type: String,
@@ -52,9 +60,17 @@ const mobileUserSchema = new mongoose.Schema({
     portfolioUrl: { type: String, default: "" },
     bio: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
-    skills: { type: [String], default: [] },
-    // Self-rated proficiency per skill, 1 (beginner) to 10 (expert).
-    skillLevels: { type: mongoose.Schema.Types.Mixed, default: {} },
+    // Skills sorted like the app's profile screen (PSF-SDS catalogs), each
+    // with the applicant's self-rated level, 1 (beginner) to 10 (expert).
+    // Build with toStoredSkills() in utils/skill_groups.js.
+    skills: {
+        techStack: { type: [skillItemSchema], default: [] },
+        functional: { type: [skillItemSchema], default: [] },
+        enabling: { type: [skillItemSchema], default: [] },
+    },
+    // Plain list of all skill names, for readers that expect a flat list
+    // (e.g. the employer web app). Kept in sync by toStoredSkills().
+    skillNames: { type: [String], default: [] },
     education: { type: [educationItemSchema], default: [] },
     experience: { type: [experienceItemSchema], default: [] },
 

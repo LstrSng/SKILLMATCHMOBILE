@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:skillmatch/models/training_pathway.dart';
 import 'package:skillmatch/pages/pathway_page.dart';
 import 'package:skillmatch/services/pathway_links_data.dart';
 import 'package:skillmatch/widgets/training_pathway_card.dart';
@@ -114,9 +115,10 @@ void main() {
       // Over 100 free certification and training options are available
       expect(freeLinks.length, greaterThanOrEqualTo(100));
 
-      // Every pathway has at least one verified free option
+      // Every pathway can be learned for free (fully free, or free to
+      // learn with a paid certificate/exam).
       final pathwaysWithFree = pathways.where(
-        (p) => p.links.any((l) => l.isFree),
+        (p) => p.links.any((l) => l.cost != TrainingCost.paid),
       ).toList();
       expect(pathwaysWithFree.length, equals(pathways.length));
 
@@ -192,18 +194,21 @@ void main() {
       expect(find.byType(TrainingPathwayCard), findsOneWidget);
 
       // Test tapping Free Certs category filter
+      await tester.ensureVisible(find.text('Free Certs'));
       await tester.tap(find.text('Free Certs'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));
       expect(find.text('FREE OPTIONS'), findsWidgets);
 
       // Test tapping Mobile category filter
+      await tester.ensureVisible(find.text('Mobile'));
       await tester.tap(find.text('Mobile'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));
       expect(find.text('Android Development'), findsOneWidget);
 
       // Test tapping Web category filter
+      await tester.ensureVisible(find.text('Web'));
       await tester.tap(find.text('Web'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));

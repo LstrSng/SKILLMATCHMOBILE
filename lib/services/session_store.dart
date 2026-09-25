@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'applications_api.dart';
@@ -19,6 +20,24 @@ class SessionStore {
 
   static String? get token => _token;
   static Map<String, dynamic>? get user => _user;
+
+  /// Bumped whenever the signed-in user's skills or skill levels change
+  /// (e.g. after editing
+  /// the profile), so screens showing skill matches and gaps can recompute.
+  static final skillsChanged = ValueNotifier<int>(0);
+
+  static String _skillsSignature(Map<String, dynamic>? user) {
+    final skills = user?['skills'];
+    final levels = user?['skillLevels'];
+    return '${skills is List ? skills.join('\u0000') : ''}|'
+        '${levels is Map ? levels.entries.map((e) => '${e.key}=${e.value}').join(',') : ''}';
+  }
+
+  static void _setUser(Map<String, dynamic>? user) {
+    final changed = _skillsSignature(_user) != _skillsSignature(user);
+    _user = user;
+    if (changed) skillsChanged.value++;
+  }
 
   static String? get deviceToken => _deviceToken;
 
@@ -59,7 +78,9 @@ class SessionStore {
     await prefs.setString(_kDeviceTokenKey, deviceToken);
   }
 
-  static Map<String, dynamic> _sanitizeUserForStorage(Map<String, dynamic> user) {
+  static Map<String, dynamic> _sanitizeUserForStorage(
+    Map<String, dynamic> user,
+  ) {
     try {
       final copy = Map<String, dynamic>.from(user);
       if (copy['profile'] is Map) {
@@ -72,7 +93,9 @@ class SessionStore {
           }
         }
         if (profile['certifications'] is List) {
-          profile['certifications'] = (profile['certifications'] as List).map((c) {
+          profile['certifications'] = (profile['certifications'] as List).map((
+            c,
+          ) {
             if (c is Map && c.containsKey('data')) {
               final cert = Map<String, dynamic>.from(c);
               cert.remove('data');
@@ -95,7 +118,7 @@ class SessionStore {
     bool remember = true,
   }) async {
     _token = token;
-    _user = user;
+    _setUser(user);
     final prefs = await SharedPreferences.getInstance();
     if (!remember) {
       await prefs.remove(_kTokenKey);
@@ -112,12 +135,15 @@ class SessionStore {
   }
 
   static Future<void> updateUser(Map<String, dynamic> user) async {
-    _user = user;
+    _setUser(user);
     final prefs = await SharedPreferences.getInstance();
     // Only touch disk if this session was persisted in the first place —
     // otherwise a "don't remember me" session would get silently persisted.
     if (prefs.containsKey(_kTokenKey)) {
-      await prefs.setString(_kUserKey, jsonEncode(_sanitizeUserForStorage(user)));
+      await prefs.setString(
+        _kUserKey,
+        jsonEncode(_sanitizeUserForStorage(user)),
+      );
     }
   }
 

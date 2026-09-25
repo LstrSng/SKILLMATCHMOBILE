@@ -16,6 +16,7 @@ import { normalizeJobDoc } from "./jobNormalize.js";
 import { generateNumericOtp, hashOtp } from "./utils/otp.js";
 import { generateDeviceToken, hashDeviceToken } from "./utils/device_token.js";
 import { sendMail } from "./utils/mailer.js";
+import { readStoredSkills, toStoredSkills } from "./utils/skill_groups.js";
 
 const DEFAULT_PORT = 5003;
 const PORT = Number(process.env.PORT) || DEFAULT_PORT;
@@ -185,17 +186,6 @@ async function verifyOtp({ email, purpose, otp, challengeId }) {
   return { ok: true };
 }
 
-// Keeps only the levels of listed skills, as whole numbers from 1 to 10.
-function normalizeSkillLevels(raw, skills) {
-  const out = {};
-  if (!raw || typeof raw !== "object" || !Array.isArray(skills)) return out;
-  for (const skill of skills) {
-    const level = Math.round(Number(raw[skill]));
-    if (Number.isFinite(level) && level >= 1) out[skill] = Math.min(10, level);
-  }
-  return out;
-}
-
 function userPublic(u) {
   if (!u) return null;
   const education = Array.isArray(u.education)
@@ -228,8 +218,10 @@ function userPublic(u) {
     portfolioUrl: u.portfolioUrl || "",
     bio: u.bio || "",
     avatarUrl: u.avatarUrl || "",
-    skills: Array.isArray(u.skills) ? u.skills : [],
-    skillLevels: normalizeSkillLevels(u.skillLevels, u.skills),
+    // The app works with a flat list plus a { name: level } map; the
+    // database stores them grouped (see toStoredSkills).
+    skills: readStoredSkills(u).names,
+    skillLevels: readStoredSkills(u).levels,
     education,
     experience,
     profile: u.profile && typeof u.profile === "object" ? u.profile : {},
@@ -297,9 +289,7 @@ app.get(
         }
       }
 
-      const applicantSkills = Array.isArray(applicant.skills)
-        ? applicant.skills.map((s) => String(s).trim()).filter(Boolean)
-        : [];
+      const applicantSkills = readStoredSkills(applicant).names;
 
       const lowerApplicant = new Set(
         applicantSkills.flatMap((s) => [s.toLowerCase(), stripLevelSuffix(s).toLowerCase()])
@@ -394,10 +384,10 @@ app.get("/api/jobs", requireDb, async (req, res) => {
       applicant = null;
     }
 
-    const applicantSkillsSet = applicant && Array.isArray(applicant.skills)
+    const applicantSkillsSet = applicant
       ? new Set(
-          applicant.skills
-            .map((s) => String(s).trim().toLowerCase())
+          readStoredSkills(applicant)
+            .names.map((s) => String(s).trim().toLowerCase())
             .filter(Boolean)
             .flatMap((s) => [s, stripLevelSuffix(s).toLowerCase()])
         )
@@ -1286,24 +1276,23 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
     ]) {
       if (body[k] !== undefined) patch[k] = String(body[k] ?? "").trim();
     }
-    if (body.skills !== undefined) {
+    if (body.skills !== undefined || body.skillLevels !== undefined) {
+      const current = readStoredSkills(req.user);
+      let names = current.names;
       if (Array.isArray(body.skills)) {
-        patch.skills = body.skills.map((s) => String(s).trim()).filter(Boolean);
+        names = body.skills.map((s) => String(s).trim()).filter(Boolean);
       } else if (typeof body.skills === "string") {
-        patch.skills = body.skills
+        names = body.skills
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean);
       }
-    }
-    if (body.skillLevels !== undefined) {
-      patch.skillLevels = normalizeSkillLevels(
-        body.skillLevels,
-        patch.skills ?? req.user.skills ?? []
-      );
-    } else if (patch.skills) {
-      // Drop levels of skills that were removed.
-      patch.skillLevels = normalizeSkillLevels(req.user.skillLevels, patch.skills);
+      const levels =
+        body.skillLevels && typeof body.skillLevels === "object"
+          ? body.skillLevels
+          : current.levels;
+      // Stores skills grouped with levels, plus the flat skillNames list.
+      Object.assign(patch, toStoredSkills(names, levels));
     }
     if (body.education !== undefined) {
       const normalizeItem = (it) => ({
@@ -1390,6 +1379,14 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
       } else if (existingProfile.resume !== undefined) {
         patch.profile.resume = existingProfile.resume;
       }
+    }
+    if (patch.skillNames) {
+      // Remove the old-format fields (no longer in the schema, so this
+      // goes straight to the collection).
+      await User.collection.updateOne(
+        { _id: req.user._id },
+        { $unset: { skillLevels: "", skillGroups: "" } }
+      );
     }
     const updated = await User.findByIdAndUpdate(req.user._id, patch, {
       new: true,

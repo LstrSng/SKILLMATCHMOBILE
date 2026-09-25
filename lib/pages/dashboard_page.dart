@@ -58,8 +58,25 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    SessionStore.skillsChanged.addListener(_onSkillsChanged);
     _recomputeDerivedMetrics();
     _initFromCacheAndLoad();
+  }
+
+  @override
+  void dispose() {
+    SessionStore.skillsChanged.removeListener(_onSkillsChanged);
+    super.dispose();
+  }
+
+  /// Re-matches jobs (and the stats built on them) after a skills edit.
+  void _onSkillsChanged() {
+    if (!mounted) return;
+    setState(() {
+      _profile = SessionStore.user ?? _profile;
+      _jobs = applyOwnSkillMatch(jobs: _jobs, user: _profile);
+      _recomputeDerivedMetrics();
+    });
   }
 
   Future<void> _initFromCacheAndLoad() async {
@@ -71,10 +88,7 @@ class _DashboardPageState extends State<DashboardPage> {
     if (cachedJobsRaw.isNotEmpty || _profile.isNotEmpty) {
       final rawJobs = cachedJobsRaw.map(Job.fromJson).toList();
       final applications = cachedAppsRaw.map(JobApplication.fromJson).toList();
-      final jobs = applyOwnSkillMatch(
-        jobs: rawJobs,
-        mySkillKeys: readMySkillKeys(_profile),
-      );
+      final jobs = applyOwnSkillMatch(jobs: rawJobs, user: _profile);
       setState(() {
         _jobs = jobs;
         _applications = applications;
@@ -129,10 +143,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ? _applications
           : rawAppsList.map(JobApplication.fromJson).toList();
 
-      final jobs = applyOwnSkillMatch(
-        jobs: rawJobs,
-        mySkillKeys: readMySkillKeys(profile),
-      );
+      final jobs = applyOwnSkillMatch(jobs: rawJobs, user: profile);
       setState(() {
         _profile = profile;
         _jobs = jobs;

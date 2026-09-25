@@ -4,77 +4,196 @@
       "name": "TESDA-Registered IT Programs & Providers",
       "links": [
         {
-          "label": "TESDA Web Development NC III (Full-Stack, JavaScript, PHP & MySQL)",
-          "url": "https://e-tesda.gov.ph",
+          "label": "Microsoft Cybersecurity: Security, Compliance, and Identity Fundamentals",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4459",
           "isFree": true,
-          "provider": "e-TESDA / TESDA Accredited Centers",
-          "type": "National Certificate (NC III)"
-        },
-        {
-          "label": "TESDA Computer Systems Servicing (CSS) NC II (Hardware, Network & Server Setup)",
-          "url": "https://e-tesda.gov.ph",
-          "isFree": true,
-          "provider": "TESDA Regional Training Center (RTC)",
-          "type": "National Certificate (NC II)"
-        },
-        {
-          "label": "TESDA Programming (Java) NC III (Core Java, OOP & Database Systems)",
-          "url": "https://e-tesda.gov.ph",
-          "isFree": true,
-          "provider": "e-TESDA / Informatics College TVET",
-          "type": "National Certificate (NC III)"
-        },
-        {
-          "label": "TESDA Programming (.NET Technology) NC III (C#, .NET Core & SQL Server)",
-          "url": "https://e-tesda.gov.ph",
-          "isFree": true,
-          "provider": "MFI Polytechnic Institute / TESDA",
-          "type": "National Certificate (NC III)"
-        },
-        {
-          "label": "TESDA Programming (Oracle Database) NC III (SQL, PL/SQL & Database Admin)",
-          "url": "https://e-tesda.gov.ph",
-          "isFree": true,
-          "provider": "e-TESDA / Oracle-Accredited TVET",
-          "type": "National Certificate (NC III)"
-        },
-        {
-          "label": "TESDA Animation (2D/3D Digital) NC III (Digital VFX, Asset Modeling & Rendering)",
-          "url": "https://e-tesda.gov.ph",
-          "isFree": true,
-          "provider": "TESDA Provincial Training Center / STI TVET",
-          "type": "National Certificate (NC III)"
-        },
-        {
-          "label": "TESDA Visual Graphic Design NC III (UI/UX Layouts, Adobe Photoshop & Illustrator)",
-          "url": "https://e-tesda.gov.ph",
-          "isFree": true,
-          "provider": "e-TESDA / Accredited Creative TVET",
-          "type": "National Certificate (NC III)"
-        },
-        {
-          "label": "TESDA Cybersecurity Essentials (Network Defense & Threat Analysis)",
-          "url": "https://e-tesda.gov.ph",
-          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course with a certificate of completion.",
           "provider": "TESDA Online Program (TOP)",
-          "type": "Online Certificate"
+          "type": "Online Course"
         },
         {
-          "label": "TESDA Data Analytics Essentials (Spreadsheet Modeling & Business Intelligence)",
-          "url": "https://e-tesda.gov.ph",
+          "label": "Microsoft Artificial Intelligence: Azure AI Fundamentals",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4297",
           "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course with a certificate of completion.",
           "provider": "TESDA Online Program (TOP)",
-          "type": "Online Certificate"
+          "type": "Online Course"
         },
         {
-          "label": "TESDA Contact Center Services NC II (Technical Support & Help Desk Operations)",
-          "url": "https://e-tesda.gov.ph",
+          "label": "IBM SkillsBuild",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=3331",
           "isFree": true,
-          "provider": "TESDA Regional Training Center / Industry TVET",
-          "type": "National Certificate (NC II)"
+          "cost": "free",
+          "costNote": "Free online course with a certificate of completion.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Online Course"
+        },
+        {
+          "label": "Amazon Web Services (AWS) Courses",
+          "url": "https://e-tesda.gov.ph/course/index.php?categoryid=2111",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online courses; sign in to e-TESDA to see the list.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Course Category"
+        },
+        {
+          "label": "Introduction to Visual Graphic Design (Visual Graphic Design NC III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=3365",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the NC III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Visual Graphic Design NC III"
+        },
+        {
+          "label": "Developing Designs for a Logo (Visual Graphic Design NC III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=3366",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the NC III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Visual Graphic Design NC III"
+        },
+        {
+          "label": "Developing Designs for Print Media (Visual Graphic Design NC III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=3367",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the NC III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Visual Graphic Design NC III"
+        },
+        {
+          "label": "Developing Designs for User Experience (Visual Graphic Design NC III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=3368",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the NC III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Visual Graphic Design NC III"
+        },
+        {
+          "label": "Developing Designs for User Interface (Visual Graphic Design NC III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=3369",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the NC III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Visual Graphic Design NC III"
+        },
+        {
+          "label": "Developing Designs for Product Packaging (Visual Graphic Design NC III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=3370",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the NC III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Visual Graphic Design NC III"
+        },
+        {
+          "label": "Designing Booth and Product/Window Display (Visual Graphic Design NC III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=3371",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the NC III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Visual Graphic Design NC III"
+        },
+        {
+          "label": "Introduction to Content Creation (Content Creation (Social Media) Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4068",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Content Creation (Social Media) Level III"
+        },
+        {
+          "label": "Creating Concepts for Social Media (Content Creation (Social Media) Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4069",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Content Creation (Social Media) Level III"
+        },
+        {
+          "label": "Translating Concepts into Multimedia Contents (Content Creation (Social Media) Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4079",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Content Creation (Social Media) Level III"
+        },
+        {
+          "label": "Propagating Content (Content Creation (Social Media) Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4070",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Content Creation (Social Media) Level III"
+        },
+        {
+          "label": "Introduction to Digital Marketing (Digital Marketing Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4747",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Digital Marketing Level III"
+        },
+        {
+          "label": "Designing a Digital Marketing Funnel (Digital Marketing Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4748",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Digital Marketing Level III"
+        },
+        {
+          "label": "Designing a Campaign Creative Brief (Digital Marketing Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4749",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Digital Marketing Level III"
+        },
+        {
+          "label": "Creating Content (Digital Marketing Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4750",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Digital Marketing Level III"
+        },
+        {
+          "label": "Optimizing Digital Marketing Campaign (Digital Marketing Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4751",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Digital Marketing Level III"
+        },
+        {
+          "label": "Conducting Data Analysis (Digital Marketing Level III)",
+          "url": "https://e-tesda.gov.ph/course/view.php?id=4752",
+          "isFree": true,
+          "cost": "free",
+          "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
+          "provider": "TESDA Online Program (TOP)",
+          "type": "Digital Marketing Level III"
         }
       ],
-      "note": "Official qualifications registered under the Technical Education and Skills Development Authority (TESDA) and delivered via e-TESDA Online or accredited TVET training centers.",
+      "note": "Free ICT courses from the TESDA Online Program (e-TESDA, Information and Communication Technology category).",
       "field": "TESDA"
     },
     {
@@ -85,42 +204,53 @@
           "url": "https://www.freecodecamp.org/learn/full-stack-developer/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "CS50W — Harvard: Web Programming with Python and JavaScript (Free Certificate)",
           "url": "https://cs50.harvard.edu/web/",
           "isFree": true,
           "provider": "Harvard",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "The Odin Project — Full Stack JavaScript Curriculum (Free)",
           "url": "https://www.theodinproject.com/paths/full-stack-javascript",
           "isFree": true,
           "provider": "The Odin Project",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "IBM Full Stack Software Developer Professional Certificate",
           "url": "https://www.coursera.org/professional-certificates/ibm-full-stack-cloud-developer",
           "isFree": false,
           "provider": "IBM",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "MDN Web Docs — Full Stack Web Development Curriculum (Free)",
           "url": "https://developer.mozilla.org/en-US/curriculum/",
           "isFree": true,
           "provider": "MDN",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "W3Schools — Certified Web Developer",
-          "url": "https://www.w3schools.com/cert/cert_web_dev.asp",
+          "url": "https://www.w3schools.com/cert/default.asp",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 95,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -134,14 +264,18 @@
           "url": "https://mylearn.oracle.com/ou/learning-path/java-explorer/79726",
           "isFree": true,
           "provider": "Oracle",
-          "type": "Badge"
+          "type": "Badge",
+          "cost": "free"
         },
         {
           "label": "Oracle Certified Professional: Java SE 21 Developer",
           "url": "https://education.oracle.com/java-se-21-developer-certified-professional/trackp_JSE21OCP",
           "isFree": false,
           "provider": "Oracle",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 245,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -155,49 +289,58 @@
           "url": "https://cs50.harvard.edu/python/",
           "isFree": true,
           "provider": "Harvard",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — Scientific Computing with Python Certification (Free)",
           "url": "https://www.freecodecamp.org/learn/scientific-computing-with-python/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "Kaggle — Python Certificate of Completion (Free)",
           "url": "https://www.kaggle.com/learn/python",
           "isFree": true,
           "provider": "Kaggle",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Cisco Skills for All — Python Essentials 1 (Free Certificate & Badge)",
           "url": "https://skillsforall.com/course/python-essentials-1",
           "isFree": true,
           "provider": "Cisco",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Python Institute — PCAP: Certified Associate in Python",
           "url": "https://pythoninstitute.org/pcap",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 295,
+          "priceUnit": "exam"
         },
         {
           "label": "Django Project — Official Web Framework Tutorial & Docs (Free)",
           "url": "https://docs.djangoproject.com/en/stable/intro/tutorial01/",
           "isFree": true,
           "provider": "Other",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         },
         {
           "label": "FastAPI — Official Documentation & Interactive Tutorials (Free)",
           "url": "https://fastapi.tiangolo.com/tutorial/",
           "isFree": true,
           "provider": "Other",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -211,14 +354,16 @@
           "url": "https://www.freecodecamp.org/learn/foundational-c-sharp-with-microsoft/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "Microsoft Learn — C# and .NET Applied Skills Credentials (Free)",
           "url": "https://learn.microsoft.com/en-us/training/dotnet/",
           "isFree": true,
           "provider": "Microsoft",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -232,28 +377,33 @@
           "url": "https://www.zend.com/training/php-certification-exam",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
           "label": "PHP: The Right Way — Modern Web Standards & Best Practices",
           "url": "https://phptherightway.com/",
-          "isFree": false,
+          "isFree": true,
           "provider": "Other",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "Laravel — Official Framework Documentation & Bootcamps",
           "url": "https://laravel.com/docs",
-          "isFree": false,
+          "isFree": true,
           "provider": "Other",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
-          "label": "freeCodeCamp — PHP & MySQL Full Course Tutorial (Free)",
-          "url": "https://www.freecodecamp.org/news/php-and-mysql-tutorial/",
+          "label": "freeCodeCamp — The PHP Handbook: Modern PHP for Beginners (Free)",
+          "url": "https://www.freecodecamp.org/news/the-php-handbook/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -267,70 +417,86 @@
           "url": "https://www.freecodecamp.org/learn/javascript-algorithms-and-data-structures-v8/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — Front End Development Libraries Certification (Free)",
           "url": "https://www.freecodecamp.org/learn/front-end-development-libraries/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — Responsive Web Design Certification (Free)",
           "url": "https://www.freecodecamp.org/learn/2022/responsive-web-design/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "Google / web.dev — Learn HTML, CSS, & Web Development (Free)",
           "url": "https://web.dev/learn",
           "isFree": true,
           "provider": "Google",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "Meta Front-End Developer Professional Certificate",
           "url": "https://www.coursera.org/professional-certificates/meta-front-end-developer",
           "isFree": false,
           "provider": "Meta",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "W3C / edX — Front-End Web Developer Professional Certificate",
           "url": "https://www.edx.org/certificates/professional-certificate/w3cx-front-end-web-developer",
           "isFree": false,
           "provider": "W3C",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
           "label": "Microsoft Learn — Build JavaScript Applications with TypeScript (Free)",
           "url": "https://learn.microsoft.com/en-us/training/paths/build-javascript-applications-typescript/",
           "isFree": true,
           "provider": "Microsoft",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — TypeScript for Beginners Certification Course (Free)",
           "url": "https://www.freecodecamp.org/news/learn-typescript-beginners-guide/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "TypeScript Official Handbook & Language Guide (Free)",
           "url": "https://www.typescriptlang.org/docs/handbook/intro.html",
           "isFree": true,
           "provider": "Microsoft",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         },
         {
           "label": "OpenJS Foundation — Node.js Application Developer (JSNAD)",
           "url": "https://training.linuxfoundation.org/certification/jsnad/",
           "isFree": false,
           "provider": "OpenJS",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 395,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -344,35 +510,43 @@
           "url": "https://learn.microsoft.com/en-us/training/paths/build-javascript-applications-typescript/",
           "isFree": true,
           "provider": "Microsoft",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — TypeScript for Beginners Certification Course (Free)",
           "url": "https://www.freecodecamp.org/news/learn-typescript-beginners-guide/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "TypeScript Official Documentation & Language Guide (Free)",
           "url": "https://www.typescriptlang.org/docs/handbook/intro.html",
           "isFree": true,
           "provider": "Microsoft",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         },
         {
           "label": "Meta — Advanced Front-End Development & React (Coursera)",
           "url": "https://www.coursera.org/professional-certificates/meta-front-end-developer",
           "isFree": false,
           "provider": "Meta",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "Total TypeScript — Professional TypeScript Essentials (Free Tutorials)",
           "url": "https://www.totaltypescript.com/tutorials",
           "isFree": true,
           "provider": "Total TypeScript",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         }
       ],
       "note": "TypeScript extends JavaScript with static type checking, essential for robust modern frontend, full-stack, and backend application development.",
@@ -386,42 +560,58 @@
           "url": "https://www.freecodecamp.org/learn/back-end-development-and-apis/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "Postman Student Expert — API Certification & Badge (Free)",
           "url": "https://academy.postman.com/",
           "isFree": true,
           "provider": "Postman",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "Meta Back-End Developer Professional Certificate",
           "url": "https://www.coursera.org/professional-certificates/meta-back-end-developer",
           "isFree": false,
           "provider": "Meta",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "IBM Back-End Development Professional Certificate",
           "url": "https://www.coursera.org/professional-certificates/ibm-backend-development",
           "isFree": false,
           "provider": "IBM",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "AWS Certified Developer – Associate",
           "url": "https://aws.amazon.com/certification/certified-developer-associate/",
           "isFree": false,
           "provider": "AWS",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 150,
+          "priceUnit": "exam"
         },
         {
           "label": "OpenJS Foundation — Node.js Services Developer (JSNSD)",
           "url": "https://training.linuxfoundation.org/certification/jsnsd/",
           "isFree": false,
           "provider": "OpenJS",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 395,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -433,30 +623,34 @@
         {
           "label": "MDN Web Docs — Learn Web Development",
           "url": "https://developer.mozilla.org/en-US/docs/Learn",
-          "isFree": false,
+          "isFree": true,
           "provider": "MDN",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — Complete Web Development Curriculum",
           "url": "https://www.freecodecamp.org/learn/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "Google — web.dev Performance & Core Web Vitals",
           "url": "https://web.dev/",
-          "isFree": false,
+          "isFree": true,
           "provider": "Google",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "HubSpot Academy — CMS for Developers Certification",
           "url": "https://academy.hubspot.com/courses/cms-for-developers",
-          "isFree": false,
+          "isFree": true,
           "provider": "HubSpot",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -468,30 +662,37 @@
         {
           "label": "WordPress.org — Official Developer Resources & Handbook",
           "url": "https://developer.wordpress.org/",
-          "isFree": false,
+          "isFree": true,
           "provider": "WordPress",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         },
         {
           "label": "WordPress.com — Advanced Professional Developer Certification",
           "url": "https://wordpress.com/education/certifications/",
           "isFree": false,
           "provider": "WordPress",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 250,
+          "priceUnit": "exam"
         },
         {
           "label": "Coursera — Build a Full Website using WordPress",
           "url": "https://www.coursera.org/learn/build-a-full-website-using-wordpress",
           "isFree": false,
           "provider": "Coursera",
-          "type": "Course"
+          "type": "Course",
+          "cost": "freeToLearn",
+          "costNote": "Free to audit; the certificate requires payment."
         },
         {
           "label": "WordPress.org — Learn WordPress: Beginner & Developer Tutorials (Free)",
           "url": "https://learn.wordpress.org/",
           "isFree": true,
           "provider": "WordPress.org",
-          "type": "Free Tutorials"
+          "type": "Free Tutorials",
+          "cost": "free"
         }
       ],
       "note": "WordPress is open-source; official developer handbooks along with recognized credentials provide the most complete pathway.",
@@ -505,21 +706,24 @@
           "url": "https://guides.rubyonrails.org/getting_started.html",
           "isFree": true,
           "provider": "Other",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         },
         {
           "label": "The Odin Project — Full Stack Ruby on Rails Curriculum (Free)",
           "url": "https://www.theodinproject.com/paths/full-stack-ruby-on-rails",
           "isFree": true,
           "provider": "The Odin Project",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "Ruby-Lang.org — Official Documentation & Language Guide",
           "url": "https://www.ruby-lang.org/en/documentation/",
-          "isFree": false,
+          "isFree": true,
           "provider": "Other",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         }
       ],
       "note": "No formal vendor-neutral certification exists for Rails — these are the canonical training and guide paths.",
@@ -533,14 +737,19 @@
           "url": "https://www.coursera.org/professional-certificates/ibm-z-mainframe",
           "isFree": false,
           "provider": "IBM",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "IBM Z Xplore (free, self-paced)",
           "url": "https://www.ibm.com/z/resources/mainframe-skills",
           "isFree": true,
           "provider": "IBM",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -554,21 +763,26 @@
           "url": "https://aws.amazon.com/education/awseducate/",
           "isFree": true,
           "provider": "AWS",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "AWS Skill Builder — Cloud Practitioner Essentials & Free Badges",
           "url": "https://explore.skillbuilder.aws/learn/course/external/view/elearning/11458/aws-cloud-practitioner-essentials",
           "isFree": true,
           "provider": "AWS",
-          "type": "Badge"
+          "type": "Badge",
+          "cost": "free"
         },
         {
           "label": "AWS Certified Solutions Architect – Associate",
           "url": "https://aws.amazon.com/certification/certified-solutions-architect-associate/",
           "isFree": false,
           "provider": "AWS",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 150,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -578,18 +792,23 @@
       "name": "Cloud Administration (Azure)",
       "links": [
         {
-          "label": "Microsoft Learn — Azure Fundamentals (AZ-900) & Applied Skills (Free)",
+          "label": "Microsoft Learn — Azure Fundamentals (AZ-900) & Applied Skills",
           "url": "https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/",
-          "isFree": true,
+          "isFree": false,
           "provider": "Microsoft",
-          "type": "Course"
+          "type": "Course",
+          "cost": "freeToLearn",
+          "costNote": "Training is free; the certification exam is paid."
         },
         {
           "label": "Microsoft Certified: Azure Administrator Associate",
           "url": "https://learn.microsoft.com/en-us/credentials/certifications/azure-administrator/",
           "isFree": false,
           "provider": "Microsoft",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 165,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -603,14 +822,18 @@
           "url": "https://www.cloudskillsboost.google/",
           "isFree": true,
           "provider": "Google",
-          "type": "Badge"
+          "type": "Badge",
+          "cost": "free"
         },
         {
           "label": "Google Cloud Associate Cloud Engineer",
           "url": "https://cloud.google.com/learn/certification/cloud-engineer",
           "isFree": false,
           "provider": "Google",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 125,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -624,28 +847,36 @@
           "url": "https://aws.amazon.com/certification/certified-devops-engineer-professional/",
           "isFree": false,
           "provider": "AWS",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 300,
+          "priceUnit": "exam"
         },
         {
-          "label": "GitLab — GitLab Certified Associate Training & Handbook (Free)",
-          "url": "https://about.gitlab.com/handbook/customer-success/professional-services-engineering/education-services/gitlabcertified.html",
-          "isFree": true,
+          "label": "GitLab University — Courses & GitLab Certified Associate",
+          "url": "https://university.gitlab.com/pages/certifications",
+          "isFree": false,
           "provider": "GitLab",
-          "type": "Free Guide"
+          "type": "Free Guide",
+          "cost": "freeToLearn",
+          "costNote": "Training is free; the certification exam is paid."
         },
         {
-          "label": "Linux Foundation / edX — Introduction to DevOps and SRE (LFS162x) (Free Course)",
+          "label": "Linux Foundation / edX — Introduction to DevOps and SRE (LFS162x)",
           "url": "https://www.edx.org/learn/devops/the-linux-foundation-introduction-to-devops-and-site-reliability-engineering",
-          "isFree": true,
+          "isFree": false,
           "provider": "Linux Foundation",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "freeToLearn",
+          "costNote": "Free to audit; the verified certificate is paid."
         },
         {
           "label": "GitHub Skills — Continuous Integration with GitHub Actions (Free Certificate & Badge)",
           "url": "https://skills.github.com/",
           "isFree": true,
           "provider": "GitHub",
-          "type": "Free Certificate & Badge"
+          "type": "Free Certificate & Badge",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -655,32 +886,41 @@
       "name": "Site Reliability & Kubernetes",
       "links": [
         {
-          "label": "Linux Foundation / edX — Introduction to Kubernetes (LFS158x) (Free Course)",
+          "label": "Linux Foundation / edX — Introduction to Kubernetes (LFS158x)",
           "url": "https://www.edx.org/learn/kubernetes/the-linux-foundation-introduction-to-kubernetes",
-          "isFree": true,
+          "isFree": false,
           "provider": "Linux Foundation",
-          "type": "Course"
+          "type": "Course",
+          "cost": "freeToLearn",
+          "costNote": "Free to audit; the verified certificate is paid."
         },
         {
           "label": "Docker — Docker 101 Tutorial & Free Digital Badges",
           "url": "https://www.docker.com/101-tutorial/",
           "isFree": true,
           "provider": "Docker",
-          "type": "Badge"
+          "type": "Badge",
+          "cost": "free"
         },
         {
           "label": "Certified Kubernetes Administrator (CKA)",
           "url": "https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/",
           "isFree": false,
           "provider": "NIST",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 445,
+          "priceUnit": "exam"
         },
         {
           "label": "Docker Certified Associate",
           "url": "https://training.mirantis.com/certification/dca-certification-exam/",
           "isFree": false,
           "provider": "Docker",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 199,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -694,14 +934,18 @@
           "url": "https://developer.hashicorp.com/certifications",
           "isFree": false,
           "provider": "HashiCorp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 70.5,
+          "priceUnit": "exam"
         },
         {
           "label": "HashiCorp Developer — Terraform Associate Tutorials & Hands-on Labs (Free)",
           "url": "https://developer.hashicorp.com/terraform/tutorials/certification-003",
           "isFree": true,
           "provider": "HashiCorp",
-          "type": "Free Tutorials"
+          "type": "Free Tutorials",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -715,14 +959,17 @@
           "url": "https://www.redhat.com/en/services/certification/red-hat-certified-specialist-managing-automation-ansible-automation-platform",
           "isFree": false,
           "provider": "Red Hat",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
-          "label": "Red Hat — Getting Started with Ansible Automation (Free Hands-on Labs)",
-          "url": "https://www.redhat.com/en/technologies/management/ansible/free-trial",
+          "label": "Red Hat — Ansible Interactive Labs (Free)",
+          "url": "https://www.redhat.com/en/interactive-labs/ansible",
           "isFree": true,
           "provider": "Red Hat",
-          "type": "Free Labs"
+          "type": "Free Labs",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -734,16 +981,18 @@
         {
           "label": "Jenkins — official documentation & tutorials",
           "url": "https://www.jenkins.io/doc/",
-          "isFree": false,
+          "isFree": true,
           "provider": "Other",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         },
         {
-          "label": "GitLab — CI/CD Pipeline Foundations & Badges (Free)",
-          "url": "https://about.gitlab.com/learn/",
+          "label": "GitLab University — CI/CD & DevOps Courses (Free)",
+          "url": "https://university.gitlab.com/",
           "isFree": true,
           "provider": "GitLab",
-          "type": "Free Badges"
+          "type": "Free Badges",
+          "cost": "free"
         }
       ],
       "note": "No single vendor-neutral certification covers this whole toolchain — start with Jenkins, the most widely used.",
@@ -757,14 +1006,18 @@
           "url": "https://skills.github.com/",
           "isFree": true,
           "provider": "GitHub",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "GitHub Foundations Certification",
           "url": "https://education.github.com/experiences/foundations_certificate",
           "isFree": false,
           "provider": "GitHub",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 99,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -778,21 +1031,25 @@
           "url": "https://university.atlassian.com/student/catalog/list?category_ids=21578-certifications",
           "isFree": false,
           "provider": "Atlassian",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
           "label": "Atlassian University — Jira Fundamentals Certification & Badge (Free)",
           "url": "https://university.atlassian.com/student/catalog/list?category_ids=21737-fundamentals-badges",
           "isFree": true,
           "provider": "Atlassian",
-          "type": "Free Certification & Badge"
+          "type": "Free Certification & Badge",
+          "cost": "free"
         },
         {
           "label": "Atlassian University — Confluence Fundamentals Badge (Free)",
           "url": "https://university.atlassian.com/student/activity/858693-confluence-fundamentals",
           "isFree": true,
           "provider": "Atlassian",
-          "type": "Free Badge"
+          "type": "Free Badge",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -806,28 +1063,37 @@
           "url": "https://www.splunk.com/en_us/training/certification-track/splunk-core-certified-power-user.html",
           "isFree": false,
           "provider": "Splunk",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 130,
+          "priceUnit": "exam"
         },
         {
           "label": "Elastic Certified Engineer",
           "url": "https://www.elastic.co/training/certification",
           "isFree": false,
           "provider": "Elastic",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 500,
+          "priceUnit": "exam"
         },
         {
-          "label": "Dynatrace University — Associate Certification Learning Track (Free Modules)",
+          "label": "Dynatrace University — Associate Certification Learning Track",
           "url": "https://university.dynatrace.com/",
-          "isFree": true,
+          "isFree": false,
           "provider": "Dynatrace",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "freeToLearn",
+          "costNote": "Training is free; the certification exam is paid."
         },
         {
           "label": "Grafana Tutorials & Getting Started Guides (Free)",
           "url": "https://grafana.com/tutorials/",
           "isFree": true,
           "provider": "Grafana",
-          "type": "Free Guide"
+          "type": "Free Guide",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -841,14 +1107,17 @@
           "url": "https://training.linuxfoundation.org/certification-catalog/",
           "isFree": false,
           "provider": "Linux Foundation",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Catalog of paid certification exams."
         },
         {
           "label": "Istio Docs — Getting Started & Interactive Service Mesh Tasks (Free)",
           "url": "https://istio.io/latest/docs/setup/getting-started/",
           "isFree": true,
           "provider": "Istio",
-          "type": "Free Guide"
+          "type": "Free Guide",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -862,35 +1131,45 @@
           "url": "https://www.freecodecamp.org/learn/data-analysis-with-python/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "Google Analytics Individual Qualification (Skillshop — Free Certification)",
           "url": "https://skillshop.docebosaas.com/learn/courses/14840/google-analytics-certification",
           "isFree": true,
           "provider": "Google",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "Kaggle — Data Analytics & Visualization Certificate (Free)",
           "url": "https://www.kaggle.com/learn/data-visualization",
           "isFree": true,
           "provider": "Kaggle",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Google Data Analytics Professional Certificate",
           "url": "https://www.coursera.org/professional-certificates/google-data-analytics",
           "isFree": false,
           "provider": "Google",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "Microsoft Certified: Power BI Data Analyst Associate",
           "url": "https://learn.microsoft.com/en-us/credentials/certifications/data-analyst-associate/",
           "isFree": false,
           "provider": "Microsoft",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 165,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -904,35 +1183,42 @@
           "url": "https://cloud.google.com/learn/certification/data-engineer",
           "isFree": false,
           "provider": "Google",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 200,
+          "priceUnit": "exam"
         },
         {
-          "label": "Databricks Academy — Generative AI Fundamentals & Lakehouse (Free Accreditation & Badge)",
-          "url": "https://www.databricks.com/learn/training/free-training",
+          "label": "Databricks Academy — Free Self-Paced Training & Accreditations",
+          "url": "https://www.databricks.com/learn/training/home",
           "isFree": true,
           "provider": "Databricks",
-          "type": "Free Accreditation & Badge"
+          "type": "Free Accreditation & Badge",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — Data Engineering with Apache Spark & Airflow (Free)",
           "url": "https://www.freecodecamp.org/news/tag/data-engineering/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "free"
         },
         {
           "label": "IBM Cognitive Class — Hadoop & Big Data Fundamentals (Free Certificate & Badge)",
           "url": "https://cognitiveclass.ai/courses/introduction-to-hadoop",
           "isFree": true,
           "provider": "IBM",
-          "type": "Free Certificate & Badge"
+          "type": "Free Certificate & Badge",
+          "cost": "free"
         },
         {
           "label": "AWS Skill Builder — Building Data Analytics Solutions on AWS (Free Badge)",
           "url": "https://explore.skillbuilder.aws/learn/course/external/view/elearning/14470/data-analytics-learning-plan",
           "isFree": true,
           "provider": "AWS",
-          "type": "Free Badge"
+          "type": "Free Badge",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -946,35 +1232,43 @@
           "url": "https://www.kaggle.com/learn/intro-to-machine-learning",
           "isFree": true,
           "provider": "Kaggle",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — Machine Learning with Python Certification (Free)",
           "url": "https://www.freecodecamp.org/learn/machine-learning-with-python/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "IBM Cognitive Class — Machine Learning with Python (Free Certificate & Badge)",
           "url": "https://cognitiveclass.ai/courses/machine-learning-with-python",
           "isFree": true,
           "provider": "IBM",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Google Cloud Professional Machine Learning Engineer",
           "url": "https://cloud.google.com/learn/certification/machine-learning-engineer",
           "isFree": false,
           "provider": "Google",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 200,
+          "priceUnit": "exam"
         },
         {
           "label": "IBM Data Science Professional Certificate",
           "url": "https://www.ibm.com/training/course/ibm-data-science-professional-certificate-CLP21001",
           "isFree": false,
           "provider": "IBM",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         }
       ],
       "note": "",
@@ -988,35 +1282,42 @@
           "url": "https://cs50.harvard.edu/sql/",
           "isFree": true,
           "provider": "Harvard",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — Relational Database Certification (Free)",
-          "url": "https://www.freecodecamp.org/learn/relational-database-v8/",
+          "url": "https://www.freecodecamp.org/learn/relational-database/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "MongoDB University — Proof of Completion Badges & Free Courses (Free)",
           "url": "https://learn.mongodb.com/",
           "isFree": true,
           "provider": "MongoDB",
-          "type": "Badge"
+          "type": "Badge",
+          "cost": "free"
         },
         {
           "label": "Kaggle — Intro to SQL Certificate (Free)",
           "url": "https://www.kaggle.com/learn/intro-to-sql",
           "isFree": true,
           "provider": "Kaggle",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Oracle Database SQL Certified Associate (1Z0-071)",
           "url": "https://education.oracle.com/oracle-database-sql/pexam_1Z0-071",
           "isFree": false,
           "provider": "Oracle",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 245,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1030,14 +1331,18 @@
           "url": "https://www.esri.com/training/certification/",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 250,
+          "priceUnit": "exam"
         },
         {
           "label": "QGIS Training Manual & Tutorials (Free)",
           "url": "https://docs.qgis.org/latest/en/docs/training_manual/",
           "isFree": true,
           "provider": "QGIS",
-          "type": "Free Guide"
+          "type": "Free Guide",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1051,35 +1356,43 @@
           "url": "https://www.isc2.org/landing/1mcc",
           "isFree": true,
           "provider": "ISC2",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free",
+          "costNote": "Free training and exam; a yearly maintenance fee applies after you pass."
         },
         {
           "label": "Cisco Skills for All — Introduction to Cybersecurity (Free Certificate & Badge)",
           "url": "https://skillsforall.com/course/introduction-to-cybersecurity",
           "isFree": true,
           "provider": "Cisco",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Cisco Skills for All — Cybersecurity Essentials (Free Certificate & Badge)",
           "url": "https://skillsforall.com/course/cybersecurity-essentials",
           "isFree": true,
           "provider": "Cisco",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — Information Security Certification (Free)",
           "url": "https://www.freecodecamp.org/learn/information-security/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "CompTIA Security+",
           "url": "https://www.comptia.org/en-us/certifications/security/",
           "isFree": false,
           "provider": "CompTIA",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 425,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1093,21 +1406,27 @@
           "url": "https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
-          "label": "PortSwigger — Web Security Academy (Free Burp Suite Certified Training & Badges)",
+          "label": "PortSwigger — Web Security Academy",
           "url": "https://portswigger.net/web-security",
-          "isFree": true,
+          "isFree": false,
           "provider": "PortSwigger",
-          "type": "Free Training & Badges"
+          "type": "Free Training & Badges",
+          "cost": "freeToLearn",
+          "costNote": "Training is free; the certification exam is paid."
         },
         {
-          "label": "TryHackMe — Pre-Security & Introduction to Cyber (Free Badges & Rooms)",
+          "label": "TryHackMe — Pre-Security & Introduction to Cyber",
           "url": "https://tryhackme.com/path/outline/presecurity",
-          "isFree": true,
+          "isFree": false,
           "provider": "TryHackMe",
-          "type": "Free Badges"
+          "type": "Free Badges",
+          "cost": "freeToLearn",
+          "costNote": "Some rooms need a paid subscription."
         }
       ],
       "note": "",
@@ -1121,21 +1440,26 @@
           "url": "https://www.isc2.org/certifications/cissp",
           "isFree": false,
           "provider": "ISC2",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 749,
+          "priceUnit": "exam"
         },
         {
           "label": "Cisco Skills for All — Cybersecurity Governance & Risk Management (Free Badge)",
           "url": "https://skillsforall.com/",
           "isFree": true,
           "provider": "Cisco",
-          "type": "Free Badge"
+          "type": "Free Badge",
+          "cost": "free"
         },
         {
           "label": "NIST — Computer Security Resource Center: CSF Framework Guides (Free)",
           "url": "https://csrc.nist.gov/",
           "isFree": true,
           "provider": "NIST",
-          "type": "Free Guide"
+          "type": "Free Guide",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1149,21 +1473,27 @@
           "url": "https://www.isc2.org/certifications/ccsp",
           "isFree": false,
           "provider": "ISC2",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 599,
+          "priceUnit": "exam"
         },
         {
           "label": "AWS Skill Builder — Security Learning Plan & Digital Badges (Free)",
           "url": "https://explore.skillbuilder.aws/learn/course/external/view/elearning/134/aws-security-fundamentals-second-edition",
           "isFree": true,
           "provider": "AWS",
-          "type": "Free Badge"
+          "type": "Free Badge",
+          "cost": "free"
         },
         {
-          "label": "Microsoft Learn — SC-900: Security, Compliance, and Identity Fundamentals (Free)",
+          "label": "Microsoft Learn — SC-900: Security, Compliance, and Identity Fundamentals",
           "url": "https://learn.microsoft.com/en-us/credentials/certifications/security-compliance-and-identity-fundamentals/",
-          "isFree": true,
+          "isFree": false,
           "provider": "Microsoft",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "freeToLearn",
+          "costNote": "Training is free; the certification exam is paid."
         }
       ],
       "note": "",
@@ -1177,21 +1507,26 @@
           "url": "https://skillsforall.com/course/networking-basics",
           "isFree": true,
           "provider": "Cisco",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Cisco Skills for All — Network Addressing & Troubleshooting (Free Certificate)",
           "url": "https://skillsforall.com/course/network-addressing-and-basic-troubleshooting",
           "isFree": true,
           "provider": "Cisco",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Cisco Certified Network Associate (CCNA)",
           "url": "https://www.cisco.com/site/us/en/learn/training-certifications/certifications/enterprise/ccna/index.html",
           "isFree": false,
           "provider": "Cisco",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 300,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1201,25 +1536,31 @@
       "name": "Linux & Systems Administration",
       "links": [
         {
-          "label": "Linux Foundation / edX — Introduction to Linux (LFS101x) (Free Course)",
+          "label": "Linux Foundation / edX — Introduction to Linux (LFS101x)",
           "url": "https://www.edx.org/learn/linux/the-linux-foundation-introduction-to-linux",
-          "isFree": true,
+          "isFree": false,
           "provider": "Linux Foundation",
-          "type": "Course"
+          "type": "Course",
+          "cost": "freeToLearn",
+          "costNote": "Free to audit; the verified certificate is paid."
         },
         {
           "label": "Cisco Skills for All — Operating Systems Basics (Free Certificate & Badge)",
           "url": "https://skillsforall.com/course/operating-systems-basics",
           "isFree": true,
           "provider": "Cisco",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Red Hat Certified System Administrator (RHCSA)",
           "url": "https://www.redhat.com/en/services/certification/rhcsa",
           "isFree": false,
           "provider": "Red Hat",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 500,
+          "priceUnit": "exam"
         }
       ],
       "note": "",
@@ -1233,28 +1574,35 @@
           "url": "https://www.comptia.org/en-us/certifications/a/",
           "isFree": false,
           "provider": "CompTIA",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 265,
+          "priceUnit": "exam (2 exams required)"
         },
         {
-          "label": "Google — Technical Support Fundamentals (Free Audit via Coursera)",
+          "label": "Google — Technical Support Fundamentals",
           "url": "https://www.coursera.org/learn/technical-support-fundamentals",
-          "isFree": true,
+          "isFree": false,
           "provider": "Google",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "freeToLearn",
+          "costNote": "Free to audit; the certificate requires payment."
         },
         {
           "label": "Cisco Skills for All — Computer Hardware Basics (Free Certificate & Badge)",
           "url": "https://skillsforall.com/course/computer-hardware-basics",
           "isFree": true,
           "provider": "Cisco",
-          "type": "Free Certificate & Badge"
+          "type": "Free Certificate & Badge",
+          "cost": "free"
         },
         {
-          "label": "Microsoft Learn — Supporting Windows & Modern Desktop (Free)",
-          "url": "https://learn.microsoft.com/en-us/training/modules/support-windows-10/",
+          "label": "Microsoft Learn — Windows Support & Desktop Training (Free)",
+          "url": "https://learn.microsoft.com/en-us/training/browse/?products=windows",
           "isFree": true,
           "provider": "Microsoft",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1268,14 +1616,18 @@
           "url": "https://www.peoplecert.org/browse-certifications/it-governance-and-service-management/ITIL-1/itil-4-foundation-2565",
           "isFree": false,
           "provider": "Other",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
-          "label": "Alison — ITIL Service Management & ISO 20000 Foundations (Free Certificate)",
+          "label": "Alison — ITIL Service Management & ISO 20000 Foundations",
           "url": "https://alison.com/course/understanding-information-technology-infrastructure-library-itil",
-          "isFree": true,
+          "isFree": false,
           "provider": "Alison",
-          "type": "Free Certificate"
+          "type": "Free Certificate",
+          "cost": "freeToLearn",
+          "costNote": "Free course; downloading the certificate is paid."
         }
       ],
       "note": "",
@@ -1289,21 +1641,28 @@
           "url": "https://www.coursera.org/specializations/internet-of-things",
           "isFree": false,
           "provider": "Coursera",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
-          "label": "Arm Education / edX — Embedded Systems Essentials (Free Course & Audit)",
-          "url": "https://www.edx.org/learn/computer-hardware/arm-education-embedded-systems-essentials-with-arm-mbed",
-          "isFree": true,
+          "label": "Arm Education / edX — Embedded Systems Essentials",
+          "url": "https://www.edx.org/learn/embedded-systems/arm-education-embedded-systems-essentials-with-arm-get-practical-with-hardware",
+          "isFree": false,
           "provider": "Arm / edX",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "freeToLearn",
+          "costNote": "Free to audit; the verified certificate is paid."
         },
         {
           "label": "Arduino Docs — Getting Started with Electronics & Embedded Programming (Free)",
           "url": "https://docs.arduino.cc/",
           "isFree": true,
           "provider": "Arduino",
-          "type": "Free Guide"
+          "type": "Free Guide",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1317,28 +1676,36 @@
           "url": "https://www.coursera.org/professional-certificates/google-ux-design",
           "isFree": false,
           "provider": "Google",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
-          "label": "Google — Foundations of User Experience (UX) Design (Free Course & Audit via Coursera)",
+          "label": "Google — Foundations of User Experience (UX) Design",
           "url": "https://www.coursera.org/learn/foundations-user-experience-design",
-          "isFree": true,
+          "isFree": false,
           "provider": "Google",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "freeToLearn",
+          "costNote": "Free to audit; the certificate requires payment."
         },
         {
           "label": "freeCodeCamp — UI / UX Design Principles and Wireframing (Free)",
           "url": "https://www.freecodecamp.org/news/ui-ux-design-guide/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "free"
         },
         {
-          "label": "Figma Learn — Figma for Beginners & UI Fundamentals (Free Certification & Badges)",
+          "label": "Figma Learn — Figma Design Tutorials for Beginners (Free)",
           "url": "https://help.figma.com/hc/en-us/categories/360002042553-Figma-Design",
           "isFree": true,
           "provider": "Figma",
-          "type": "Free Certification"
+          "type": "Free Certification",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1352,21 +1719,25 @@
           "url": "https://www.autodesk.com/certification/media-entertainment-certification",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
           "label": "Blender Studio — Blender Fundamentals & 3D Modeling (Free)",
           "url": "https://studio.blender.org/training/",
           "isFree": true,
           "provider": "Blender",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "free"
         },
         {
           "label": "Epic Games — Unreal Engine for Animation & Virtual Production (Free Badges)",
           "url": "https://dev.epicgames.com/community/animation",
           "isFree": true,
           "provider": "Epic Games",
-          "type": "Free Badges"
+          "type": "Free Badges",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1380,35 +1751,41 @@
           "url": "https://unity.com/products/unity-certifications/professional-programmer",
           "isFree": false,
           "provider": "Unity",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
           "label": "Harvard CS50G — Introduction to Game Development (Free Certificate)",
           "url": "https://cs50.harvard.edu/games/",
           "isFree": true,
           "provider": "Harvard",
-          "type": "Free Certificate"
+          "type": "Free Certificate",
+          "cost": "free"
         },
         {
           "label": "Unity Learn — Junior Programmer Pathway & Badges (Free Certification)",
           "url": "https://learn.unity.com/pathway/junior-programmer",
           "isFree": true,
           "provider": "Unity",
-          "type": "Free Certification"
+          "type": "Free Certification",
+          "cost": "free"
         },
         {
           "label": "Unreal Engine — Epic Games Developer Community Online Learning (Free Badges)",
           "url": "https://dev.epicgames.com/community/learning",
           "isFree": true,
           "provider": "Epic Games",
-          "type": "Free Badges"
+          "type": "Free Badges",
+          "cost": "free"
         },
         {
           "label": "Godot Engine — Official Step-by-Step Game Development Guides (Free)",
           "url": "https://docs.godotengine.org/en/stable/getting_started/introduction/index.html",
           "isFree": true,
           "provider": "Godot",
-          "type": "Free Guide"
+          "type": "Free Guide",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1422,21 +1799,27 @@
           "url": "https://www.accessibilityassociation.org/s/certified-professional",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 485,
+          "priceUnit": "exam (non-member)"
         },
         {
-          "label": "W3C / edX — Introduction to Web Accessibility (WAI0.1x) (Free Course & Audit)",
-          "url": "https://www.edx.org/learn/web-development/w3c-introduction-to-web-accessibility",
-          "isFree": true,
+          "label": "W3C / edX — Introduction to Web Accessibility (WAI0.1x)",
+          "url": "https://www.edx.org/learn/web-accessibility/the-world-wide-web-consortium-w3c-introduction-to-web-accessibility",
+          "isFree": false,
           "provider": "W3C",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "freeToLearn",
+          "costNote": "Free to audit; the verified certificate is paid."
         },
         {
           "label": "Google / web.dev — Learn Accessibility Course (Free)",
           "url": "https://web.dev/learn/accessibility",
           "isFree": true,
           "provider": "Google",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1450,35 +1833,46 @@
           "url": "https://developer.android.com/courses/android-basics-compose/course",
           "isFree": true,
           "provider": "Google",
-          "type": "Badge"
+          "type": "Badge",
+          "cost": "free"
         },
         {
           "label": "Google Developers — Android Training & Kotlin Courses (Free)",
           "url": "https://developer.android.com/courses",
           "isFree": true,
           "provider": "Google",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "Android Developers — Architecture & App Development Guides (Free)",
           "url": "https://developer.android.com/guide",
           "isFree": true,
           "provider": "Other",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         },
         {
           "label": "Meta Android Developer Professional Certificate",
           "url": "https://www.coursera.org/professional-certificates/meta-android-developer",
           "isFree": false,
           "provider": "Meta",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "Coursera — Android App Development Specialization",
           "url": "https://www.coursera.org/specializations/android-app-development",
           "isFree": false,
           "provider": "Coursera",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         }
       ],
       "note": "Google retired its standalone Associate Android Developer exam; Google's official Compose pathway and Meta's Professional Certificate are the current industry standard learning paths.",
@@ -1492,35 +1886,43 @@
           "url": "https://developer.apple.com/tutorials/develop-in-swift",
           "isFree": true,
           "provider": "Apple",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         },
         {
           "label": "Apple Developer — SwiftUI App Dev Training (Free)",
           "url": "https://developer.apple.com/tutorials/app-dev-training",
           "isFree": true,
           "provider": "Apple",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "Stanford CS193p — Developing Apps for iOS with SwiftUI (Free)",
           "url": "https://cs193p.sites.stanford.edu/",
           "isFree": true,
           "provider": "Apple",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "Meta iOS Developer Professional Certificate",
           "url": "https://www.coursera.org/professional-certificates/meta-ios-developer",
           "isFree": false,
           "provider": "Meta",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "Swift.org — Official Swift Programming Documentation (Free)",
           "url": "https://www.swift.org/documentation/",
           "isFree": true,
           "provider": "Apple",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         }
       ],
       "note": "Apple does not issue direct individual certifications; its official Swift/SwiftUI curricula and Meta's professional certificate provide the most recognized pathways.",
@@ -1531,45 +1933,54 @@
       "links": [
         {
           "label": "CS50M — Harvard: Mobile App Development with React Native (Free Certificate)",
-          "url": "https://cs50.harvard.edu/mobile/",
+          "url": "https://cs50.harvard.edu/mobile/2018/",
           "isFree": true,
           "provider": "Harvard",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Google — Flutter & Dart Official Learning Path (Free)",
           "url": "https://flutter.dev/learn",
           "isFree": true,
           "provider": "Google",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "freeCodeCamp — Mobile App Development with Flutter (Free)",
           "url": "https://www.freecodecamp.org/news/tag/flutter/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Course"
+          "type": "Course",
+          "cost": "free"
         },
         {
           "label": "Meta — React Native Official Guides & Architecture (Free)",
           "url": "https://reactnative.dev/docs/getting-started",
           "isFree": true,
           "provider": "Meta",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         },
         {
-          "label": "Coursera — Multiplatform Mobile App Development",
-          "url": "https://www.coursera.org/specializations/cross-platform-mobile-development",
+          "label": "Meta React Native Specialization (Coursera)",
+          "url": "https://www.coursera.org/specializations/meta-react-native",
           "isFree": false,
           "provider": "Coursera",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "costNote": "Paid subscription (financial aid available); individual courses can be audited free.",
+          "priceUsd": 49,
+          "priceUnit": "month"
         },
         {
           "label": "Flutter Docs — Cookbook: Useful Flutter Samples (Free)",
           "url": "https://docs.flutter.dev/cookbook",
           "isFree": true,
           "provider": "Other",
-          "type": "Guide"
+          "type": "Guide",
+          "cost": "free"
         }
       ],
       "note": "Covers leading cross-platform mobile frameworks (Flutter/Dart & React Native) for building high-performance iOS and Android applications from a single codebase.",
@@ -1583,21 +1994,25 @@
           "url": "https://www.freecodecamp.org/learn/quality-assurance/",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
-          "label": "Test Automation University — Free Automated Testing Certifications",
-          "url": "https://testautomationu.applitools.com/badge-rankings/",
+          "label": "Test Automation University — Free Automated Testing Courses & Badges",
+          "url": "https://testautomationu.applitools.com/",
           "isFree": true,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "ISTQB Certified Tester Foundation Level (CTFL)",
           "url": "https://istqb.org/certifications/certified-tester-foundation-level-ctfl-v4-0/",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         }
       ],
       "note": "",
@@ -1611,35 +2026,44 @@
           "url": "https://www.pmi.org/certifications/project-management-pmp",
           "isFree": false,
           "provider": "Other",
-          "type": "Course"
+          "type": "Course",
+          "cost": "paid",
+          "priceUsd": 575,
+          "priceUnit": "exam (non-member)"
         },
         {
           "label": "Certified ScrumMaster (CSM)",
           "url": "https://www.scrumalliance.org/get-certified/scrum-master-track/certified-scrummaster",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
           "label": "Scrum.org — Open Assessments: Scrum Master & Product Owner (Free Badges)",
           "url": "https://www.scrum.org/open-assessments",
           "isFree": true,
           "provider": "Scrum.org",
-          "type": "Free Badges"
+          "type": "Free Badges",
+          "cost": "free"
         },
         {
-          "label": "Google — Foundations of Project Management (Free Audit via Coursera)",
+          "label": "Google — Foundations of Project Management",
           "url": "https://www.coursera.org/learn/project-management-foundations",
-          "isFree": true,
+          "isFree": false,
           "provider": "Google",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "freeToLearn",
+          "costNote": "Free to audit; the certificate requires payment."
         },
         {
           "label": "Asana Academy — Asana Workflow Specialist (Free Certification)",
           "url": "https://academy.asana.com/",
           "isFree": true,
           "provider": "Asana",
-          "type": "Free Certification"
+          "type": "Free Certification",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1653,14 +2077,17 @@
           "url": "https://www.iiba.org/business-analysis-certifications/cbap/",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
-          "label": "freeCodeCamp — Business Analysis & Technical Requirements Guide (Free)",
-          "url": "https://www.freecodecamp.org/news/technical-requirements-and-business-analysis/",
+          "label": "freeCodeCamp — Requirements Analysis Guide & Case Study (Free)",
+          "url": "https://www.freecodecamp.org/news/how-to-analyze-the-requirements-of-a-new-product-a-startup-friendly-approach-and-a-case-study-833970e5c36c",
           "isFree": true,
           "provider": "freeCodeCamp",
-          "type": "Free Guide"
+          "type": "Free Guide",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1674,14 +2101,17 @@
           "url": "https://www.opengroup.org/certifications/togaf9",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
           "label": "Google Cloud — Digital Transformation with Google Cloud (Free Badges)",
           "url": "https://www.cloudskillsboost.google/course_templates/364",
           "isFree": true,
           "provider": "Google",
-          "type": "Free Badge"
+          "type": "Free Badge",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1695,21 +2125,26 @@
           "url": "https://trailhead.salesforce.com/credentials/administrator",
           "isFree": false,
           "provider": "Salesforce",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 200,
+          "priceUnit": "exam"
         },
         {
           "label": "Salesforce Trailhead — Admin Beginner Trail & Superbadges (Free Verified Credentials)",
           "url": "https://trailhead.salesforce.com/content/learn/trails/force_com_admin_beginner",
           "isFree": true,
           "provider": "Salesforce",
-          "type": "Free Credentials"
+          "type": "Free Credentials",
+          "cost": "free"
         },
         {
           "label": "Salesforce Trailhead — Developer Beginner Trail & Superbadges (Free Verified Credentials)",
           "url": "https://trailhead.salesforce.com/content/learn/trails/force_com_dev_beginner",
           "isFree": true,
           "provider": "Salesforce",
-          "type": "Free Credentials"
+          "type": "Free Credentials",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1723,14 +2158,18 @@
           "url": "https://learning.sap.com/get-certified",
           "isFree": false,
           "provider": "SAP",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
-          "label": "openSAP — Free Massive Open Online Courses & Records of Achievement (Free Badges)",
-          "url": "https://open.sap.com/",
-          "isFree": true,
+          "label": "SAP Learning — Free Learning Journeys (formerly openSAP)",
+          "url": "https://learning.sap.com/",
+          "isFree": false,
           "provider": "SAP",
-          "type": "Free Badges"
+          "type": "Free Badges",
+          "cost": "freeToLearn",
+          "costNote": "Training is free; the certification exam is paid."
         }
       ],
       "note": "",
@@ -1744,14 +2183,18 @@
           "url": "https://learn.microsoft.com/en-us/credentials/certifications/fundamentals",
           "isFree": false,
           "provider": "Microsoft",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "priceUsd": 99,
+          "priceUnit": "exam"
         },
         {
           "label": "Microsoft Learn — Microsoft Dynamics 365 & Power Platform Fundamentals (Free)",
           "url": "https://learn.microsoft.com/en-us/training/dynamics365/",
           "isFree": true,
           "provider": "Microsoft",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1765,14 +2208,17 @@
           "url": "https://trailhead.salesforce.com/credentials/mulesoftdeveloperi",
           "isFree": false,
           "provider": "Salesforce",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         },
         {
           "label": "MuleSoft Training — Getting Started with Anypoint Platform (Free Self-Paced)",
           "url": "https://training.mulesoft.com/course/development-fundamentals-mule4",
           "isFree": true,
           "provider": "MuleSoft",
-          "type": "Free Course"
+          "type": "Free Course",
+          "cost": "free"
         }
       ],
       "note": "",
@@ -1786,14 +2232,17 @@
           "url": "https://cognitiveclass.ai/courses/blockchain-course",
           "isFree": true,
           "provider": "IBM",
-          "type": "Certificate"
+          "type": "Certificate",
+          "cost": "free"
         },
         {
           "label": "Certified Blockchain Developer — Blockchain Council",
           "url": "https://www.blockchain-council.org/certifications/certified-blockchain-developer/",
           "isFree": false,
           "provider": "Other",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "paid",
+          "costNote": "Paid; check the official site for the current price."
         }
       ],
       "note": "No official standards body for blockchain exists — this is a widely used private-sector credential.",
@@ -1807,14 +2256,16 @@
           "url": "https://academy.hubspot.com/courses/inbound-sales",
           "isFree": true,
           "provider": "HubSpot",
-          "type": "Free Certification & Badge"
+          "type": "Free Certification & Badge",
+          "cost": "free"
         },
         {
           "label": "AWS Educate — Cloud for Technical Sales Foundations (Free Badge)",
           "url": "https://aws.amazon.com/education/awseducate/",
           "isFree": true,
           "provider": "AWS",
-          "type": "Free Badge"
+          "type": "Free Badge",
+          "cost": "free"
         }
       ],
       "note": "No widely-recognized individual certification exists for tech sales roles. The strongest credential is a technical certification (e.g. AWS or Azure) paired with the vendor's own sales-enablement training.",
@@ -1828,14 +2279,16 @@
           "url": "https://www.hubspot.com/resources/courses/seo",
           "isFree": true,
           "provider": "HubSpot",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         },
         {
           "label": "Google Skillshop — Digital Marketing & Analytics Certification (Free)",
           "url": "https://skillshop.docebosaas.com/",
           "isFree": true,
           "provider": "Google",
-          "type": "Certification"
+          "type": "Certification",
+          "cost": "free"
         }
       ],
       "note": "",

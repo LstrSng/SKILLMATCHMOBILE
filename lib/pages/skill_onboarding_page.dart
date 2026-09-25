@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/competency.dart';
 import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
@@ -677,7 +678,7 @@ class _SkillCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${skillLevelLabel(level)} · $level/10',
+                      '${datasetLevelLabel(skill, level) ?? skillLevelLabel(level)} · $level/10',
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,

@@ -7,6 +7,7 @@ import '../models/training_pathway.dart';
 import '../services/completed_certs.dart';
 import '../services/pathway_links_data.dart';
 import '../services/session_store.dart';
+import '../services/skill_gap_data.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/page_hero_header.dart';
@@ -55,22 +56,58 @@ class _PathwayPageState extends State<PathwayPage> {
   String? _error;
   List<TrainingPathway> _pathways = [];
   late String _selectedCategory = widget.initialCategory ?? 'All';
-  List<String> _suggestedSkills = [];
   Set<String> _completedKeys = completedCertificationKeys();
 
-  /// Recommended roles whose pathway the user hasn't completed a cert in yet.
-  List<String> _visibleSuggestions = [];
+  /// Skills the user is missing across posted jobs, with the pathways
+  /// whose certifications cover each one.
+  List<({SkillGap gap, List<TrainingPathway> pathways})> _gapMatches = [];
 
-  Future<void> _refreshSuggestions() async {
-    final visible = <String>[];
-    for (final role in _suggestedSkills) {
-      final pathway = await trainingPathwayForRole(role);
-      final done =
-          pathway != null &&
-          pathway.links.any((l) => isCertificationCompleted(l, _completedKeys));
-      if (!done) visible.add(role);
+  /// Gap chip the user tapped; filters the list to its certifications.
+  String? _selectedGap;
+
+  /// Gaps that still need a certification: ones with a completed
+  /// certification in any of their pathways drop off the list.
+  List<({SkillGap gap, List<TrainingPathway> pathways})> get _openGaps =>
+      _gapMatches
+          .where(
+            (m) => !m.pathways.any(
+              (p) => p.links.any(
+                (l) => isCertificationCompleted(l, _completedKeys),
+              ),
+            ),
+          )
+          .toList();
+
+  /// Pathway name -> the missing skills its certifications cover.
+  Map<String, List<String>> get _gapSkillsByPathway {
+    final out = <String, List<String>>{};
+    for (final m in _openGaps) {
+      for (final p in m.pathways) {
+        out.putIfAbsent(p.name, () => []).add(m.gap.skill);
+      }
     }
-    if (mounted) setState(() => _visibleSuggestions = visible);
+    return out;
+  }
+
+  Future<void> _loadGaps() async {
+    try {
+      final gaps = await loadSkillGapsFromPostedJobs();
+      final pathways = await allTrainingPathways();
+      final matches = [
+        for (final gap in gaps)
+          (gap: gap, pathways: pathwaysForSkill(pathways, gap.skill)),
+      ].where((m) => m.pathways.isNotEmpty).toList();
+      if (!mounted) return;
+      setState(() {
+        _gapMatches = matches;
+        // The selected gap may be closed now that the user has the skill.
+        if (!matches.any((m) => m.gap.skill == _selectedGap)) {
+          _selectedGap = null;
+        }
+      });
+    } catch (_) {
+      // No jobs or offline: the section just stays hidden.
+    }
   }
 
   Future<void> _toggleCompleted(
@@ -93,7 +130,6 @@ class _PathwayPageState extends State<PathwayPage> {
       );
       if (!mounted) return;
       setState(() => _completedKeys = keys);
-      _refreshSuggestions();
       showAppToast(
         context,
         completed
@@ -110,6 +146,7 @@ class _PathwayPageState extends State<PathwayPage> {
 
   static const _categories = [
     'All',
+    'My Skill Gaps',
     'TESDA Registered',
     'Free Certs',
     'Mobile',
@@ -133,28 +170,9 @@ class _PathwayPageState extends State<PathwayPage> {
       _debouncedQuery = widget.initialQuery!.trim().toLowerCase();
     }
 
-    final user = SessionStore.user;
-    if (user != null) {
-      final assessments = user['profile']?['skillAssessments'] as Map?;
-      if (assessments != null) {
-        for (final data in assessments.values) {
-          if (data is Map) {
-            final passed = data['passed'] == true;
-            final score = (data['scorePercentage'] as num?)?.toDouble() ?? 0.0;
-            final roleTitle = data['roleTitle'] as String?;
-            if (roleTitle != null && (!passed || score < 70)) {
-              if (!_suggestedSkills.contains(roleTitle)) {
-                _suggestedSkills.add(roleTitle);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    _visibleSuggestions = List.of(_suggestedSkills);
     _load();
-    _refreshSuggestions();
+    _loadGaps();
+    SessionStore.skillsChanged.addListener(_loadGaps);
   }
 
   void _onSearchChanged(String v) {
@@ -187,6 +205,7 @@ class _PathwayPageState extends State<PathwayPage> {
 
   @override
   void dispose() {
+    SessionStore.skillsChanged.removeListener(_loadGaps);
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -276,8 +295,21 @@ class _PathwayPageState extends State<PathwayPage> {
           );
     }
 
-    final filtered = _pathways.where((p) {
-      if (!isAllCat) {
+    final gapSkillsByPathway = _gapSkillsByPathway;
+    final selectedGapPathways = _selectedGap == null
+        ? null
+        : {
+            for (final m in _openGaps)
+              if (m.gap.skill == _selectedGap)
+                for (final p in m.pathways) p.name,
+          };
+
+    final unordered = _pathways.where((p) {
+      if (selectedGapPathways != null) {
+        if (!selectedGapPathways.contains(p.name)) return false;
+      } else if (cat == 'my skill gaps') {
+        if (!gapSkillsByPathway.containsKey(p.name)) return false;
+      } else if (!isAllCat) {
         final nameLower = p.name.toLowerCase();
         final fieldLower = (p.field ?? '').toLowerCase();
         bool matchesCategory = false;
@@ -292,9 +324,7 @@ class _PathwayPageState extends State<PathwayPage> {
                     l.label.toLowerCase().contains('tesda'),
               );
         } else if (cat == 'free certs') {
-          matchesCategory = p.links.any(
-            (l) => l.isFree || l.label.toLowerCase().contains('free'),
-          );
+          matchesCategory = p.links.any((l) => l.isFree);
         } else if (cat == 'mobile') {
           matchesCategory =
               fieldLower == 'mobile' ||
@@ -418,255 +448,222 @@ class _PathwayPageState extends State<PathwayPage> {
       }
       return false;
     }).toList();
+    // Pathways that cover the user's skill gaps come first (order kept).
+    final filtered = [
+      ...unordered.where((p) => gapSkillsByPathway.containsKey(p.name)),
+      ...unordered.where((p) => !gapSkillsByPathway.containsKey(p.name)),
+    ];
 
     final horizontalPadding = MediaQuery.of(context).size.width > 600
         ? 32.0
         : 16.0;
     final tokens = context.appColors;
 
+    // One scroll view for the whole page so the header, search and skill
+    // gap chips scroll away with the list instead of staying pinned.
     return RefreshIndicator(
       onRefresh: _load,
       color: tokens.primary,
-      child: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              horizontalPadding,
-              16,
-              horizontalPadding,
-              12,
-            ),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                PageHeroHeader(
-                  icon: Icons.workspace_premium_rounded,
-                  eyebrow: 'Level up',
-                  title: 'Certifications & Pathways',
-                  subtitle: 'Earn certifications that boost your job matches.',
-                  highlight: _completedKeys.isEmpty
-                      ? '${_pathways.length} pathways'
-                      : '${_pathways.length} pathways · ${_completedKeys.length} completed',
-                ),
-                const SizedBox(height: 16),
-
-                // Search field
-                Container(
-                  decoration: BoxDecoration(
-                    color: tokens.cardBackground,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: tokens.cardBorderSoft),
-                    boxShadow: tokens.cardShadows,
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    16,
+                    horizontalPadding,
+                    12,
                   ),
-                  child: TextField(
-                    controller: _searchController,
-                    style: TextStyle(color: tokens.textPrimary, fontSize: 14),
-                    onChanged: _onSearchChanged,
-                    decoration: InputDecoration(
-                      hintText: 'Search pathways (e.g. AWS, Cyber, Python)...',
-                      hintStyle: TextStyle(
-                        color: tokens.textFaint,
-                        fontSize: 14,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      PageHeroHeader(
+                        icon: Icons.workspace_premium_rounded,
+                        eyebrow: 'Level up',
+                        title: 'Certifications & Pathways',
+                        subtitle:
+                            'Earn certifications that boost your job matches.',
+                        highlight: _completedKeys.isEmpty
+                            ? '${_pathways.length} pathways'
+                            : '${_pathways.length} pathways · ${_completedKeys.length} completed',
                       ),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        color: tokens.textSecondary,
-                        size: 20,
-                      ),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(
-                                Icons.clear,
-                                size: 18,
-                                color: tokens.textSecondary,
-                              ),
-                              onPressed: () {
-                                _searchDebounce?.cancel();
-                                _searchController.clear();
-                                setState(() => _debouncedQuery = '');
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 14,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
+                      const SizedBox(height: 16),
 
-                // Category Chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _categories.map((cat) {
-                      final selected = _selectedCategory == cat;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() => _selectedCategory = cat);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(
+                      // Search field
+                      Container(
+                        decoration: BoxDecoration(
+                          color: tokens.cardBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: tokens.cardBorderSoft),
+                          boxShadow: tokens.cardShadows,
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          style: TextStyle(
+                            color: tokens.textPrimary,
+                            fontSize: 14,
+                          ),
+                          onChanged: _onSearchChanged,
+                          decoration: InputDecoration(
+                            hintText:
+                                'Search pathways (e.g. AWS, Cyber, Python)...',
+                            hintStyle: TextStyle(
+                              color: tokens.textFaint,
+                              fontSize: 14,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search_rounded,
+                              color: tokens.textSecondary,
+                              size: 20,
+                            ),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(
+                                      Icons.clear,
+                                      size: 18,
+                                      color: tokens.textSecondary,
+                                    ),
+                                    onPressed: () {
+                                      _searchDebounce?.cancel();
+                                      _searchController.clear();
+                                      setState(() => _debouncedQuery = '');
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
                               horizontal: 14,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? tokens.primary
-                                  : tokens.cardBackground,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: selected
-                                    ? tokens.primary
-                                    : tokens.cardBorderSoft,
-                              ),
-                              boxShadow: selected
-                                  ? const [
-                                      BoxShadow(
-                                        color: Color(0x332563EB),
-                                        blurRadius: 6,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ]
-                                  : tokens.cardShadows,
-                            ),
-                            child: Text(
-                              cat,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: selected
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                                color: selected
-                                    ? Colors.white
-                                    : tokens.textSecondary,
-                              ),
+                              vertical: 14,
                             ),
                           ),
                         ),
-                      );
-                    }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Category Chips
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _categories.map((cat) {
+                            final selected = _selectedCategory == cat;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _selectedCategory = cat);
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: selected
+                                        ? tokens.primary
+                                        : tokens.cardBackground,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: selected
+                                          ? tokens.primary
+                                          : tokens.cardBorderSoft,
+                                    ),
+                                    boxShadow: selected
+                                        ? const [
+                                            BoxShadow(
+                                              color: Color(0x332563EB),
+                                              blurRadius: 6,
+                                              offset: Offset(0, 2),
+                                            ),
+                                          ]
+                                        : tokens.cardShadows,
+                                  ),
+                                  child: Text(
+                                    cat,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: selected
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
+                                      color: selected
+                                          ? Colors.white
+                                          : tokens.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                if (_openGaps.isNotEmpty && widget.initialQuery == null)
+                  _GapSection(
+                    gaps: _openGaps.map((m) => m.gap).toList(),
+                    selected: _selectedGap,
+                    padding: horizontalPadding,
+                    onSelect: (skill) {
+                      HapticFeedback.selectionClick();
+                      setState(
+                        () =>
+                            _selectedGap = _selectedGap == skill ? null : skill,
+                      );
+                    },
+                  ),
               ],
             ),
           ),
-          if (_visibleSuggestions.isNotEmpty &&
-              widget.initialQuery == null) ...[
-            Padding(
+          if (filtered.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 48),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.search_off_rounded,
+                        size: 36,
+                        color: tokens.textFaint,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No matching certification pathways found.',
+                        style: TextStyle(
+                          color: tokens.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverPadding(
               padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                8,
                 horizontalPadding,
                 4,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Recommended for you',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: tokens.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
                 horizontalPadding,
-                0,
-                horizontalPadding,
-                0,
+                80,
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Based on your assessments',
-                  style: TextStyle(fontSize: 13, color: tokens.textSecondary),
+              sliver: SliverList.builder(
+                itemCount: filtered.length,
+                itemBuilder: (context, i) => _PathwayTile(
+                  key: ValueKey(filtered[i].name),
+                  pathway: filtered[i],
+                  gapSkills: gapSkillsByPathway[filtered[i].name] ?? const [],
+                  completedKeys: _completedKeys,
+                  onToggleCompleted: (link, done) =>
+                      _toggleCompleted(filtered[i], link, done),
                 ),
               ),
             ),
-            SizedBox(
-              height: 48,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  8,
-                  horizontalPadding,
-                  8,
-                ),
-                children: _visibleSuggestions.map((skill) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ActionChip(
-                      backgroundColor: tokens.cardBackground,
-                      side: BorderSide(color: tokens.primary),
-                      label: Text(skill),
-                      labelStyle: TextStyle(
-                        color: tokens.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      onPressed: () {
-                        _searchController.text = skill;
-                        setState(() => _debouncedQuery = skill.toLowerCase());
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          Expanded(
-            child: filtered.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 48),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            size: 36,
-                            color: tokens.textFaint,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No matching certification pathways found.',
-                            style: TextStyle(
-                              color: tokens.textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      4,
-                      horizontalPadding,
-                      80,
-                    ),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, i) => _PathwayTile(
-                      key: ValueKey(filtered[i].name),
-                      pathway: filtered[i],
-                      completedKeys: _completedKeys,
-                      onToggleCompleted: (link, done) =>
-                          _toggleCompleted(filtered[i], link, done),
-                    ),
-                  ),
-          ),
         ],
       ),
     );
@@ -675,12 +672,16 @@ class _PathwayPageState extends State<PathwayPage> {
 
 class _PathwayTile extends StatefulWidget {
   final TrainingPathway pathway;
+
+  /// Missing skills (from posted jobs) this pathway's certifications cover.
+  final List<String> gapSkills;
   final Set<String> completedKeys;
   final void Function(TrainingResource link, bool completed) onToggleCompleted;
 
   const _PathwayTile({
     super.key,
     required this.pathway,
+    this.gapSkills = const [],
     required this.completedKeys,
     required this.onToggleCompleted,
   });
@@ -699,9 +700,7 @@ class _PathwayTileState extends State<_PathwayTile> {
     final doneCount = pathway.links
         .where((l) => isCertificationCompleted(l, widget.completedKeys))
         .length;
-    final hasFree = pathway.links.any(
-      (l) => l.isFree || l.label.toLowerCase().contains('free'),
-    );
+    final hasFree = pathway.links.any((l) => l.isFree);
     final tokens = context.appColors;
 
     return AppCard(
@@ -852,6 +851,46 @@ class _PathwayTileState extends State<_PathwayTile> {
               ),
             ],
           ),
+          if (widget.gapSkills.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: tokens.warningBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.track_changes_rounded,
+                    size: 16,
+                    color: tokens.warning,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          const TextSpan(
+                            text: 'Fills your skill gaps: ',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          TextSpan(text: widget.gapSkills.join(', ')),
+                        ],
+                      ),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tokens.textPrimary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (_expanded) ...[
             const SizedBox(height: 16),
             Divider(height: 1, color: tokens.cardBorderSoft),
@@ -864,6 +903,106 @@ class _PathwayTileState extends State<_PathwayTile> {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// "Certifications for your skill gaps": one chip per skill the user is
+/// missing across posted jobs, most-demanded first. Tapping a chip filters
+/// the pathway list to certifications covering that skill.
+class _GapSection extends StatelessWidget {
+  const _GapSection({
+    required this.gaps,
+    required this.selected,
+    required this.padding,
+    required this.onSelect,
+  });
+
+  final List<SkillGap> gaps;
+  final String? selected;
+  final double padding;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(padding, 4, padding, 0),
+          child: Row(
+            children: [
+              Icon(
+                Icons.track_changes_rounded,
+                size: 18,
+                color: tokens.warning,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Certifications for your skill gaps',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: tokens.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(padding, 2, padding, 0),
+          child: Text(
+            selected == null
+                ? 'Skills posted jobs need that you don\'t have yet (↑ = you have it below the required PSF-SDS level). Tap one to see its certifications.'
+                : 'Showing certifications for $selected. Tap it again to show all.',
+            style: TextStyle(fontSize: 12.5, color: tokens.textSecondary),
+          ),
+        ),
+        SizedBox(
+          height: 52,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.fromLTRB(padding, 8, padding, 8),
+            children: [
+              for (final gap in gaps)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    selected: selected == gap.skill,
+                    onSelected: (_) => onSelect(gap.skill),
+                    showCheckmark: false,
+                    backgroundColor: tokens.cardBackground,
+                    selectedColor: tokens.warning,
+                    side: BorderSide(
+                      color: selected == gap.skill
+                          ? tokens.warning
+                          : tokens.warning.withValues(alpha: 0.45),
+                    ),
+                    tooltip: [
+                      if (gap.isLevelGap && gap.required != null)
+                        'You: ${gap.required!.labelForRating(gap.rating!)} · Required: ${gap.required!.label}',
+                      'Needed by: ${gap.jobTitles.join(', ')}',
+                    ].join('\n'),
+                    label: Text(
+                      '${gap.isLevelGap ? '↑ ' : ''}${gap.skill}'
+                      '${gap.required != null ? ' · ${gap.required!.label}' : ''}'
+                      ' · ${gap.jobCount} job${gap.jobCount == 1 ? '' : 's'}',
+                    ),
+                    labelStyle: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: selected == gap.skill
+                          ? Colors.white
+                          : tokens.textPrimary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
     );
   }
 }

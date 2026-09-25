@@ -50,7 +50,16 @@ class _JobsPageState extends State<JobsPage> {
   @override
   void initState() {
     super.initState();
+    SessionStore.skillsChanged.addListener(_onSkillsChanged);
     _initFromCacheAndLoad();
+  }
+
+  /// Re-matches the loaded jobs against the user's updated skills.
+  void _onSkillsChanged() {
+    if (!mounted) return;
+    setState(() {
+      _jobs = applyOwnSkillMatch(jobs: _jobs, user: SessionStore.user);
+    });
   }
 
   Future<void> _initFromCacheAndLoad() async {
@@ -71,7 +80,7 @@ class _JobsPageState extends State<JobsPage> {
       final allJobs = cached.map(Job.fromJson).toList();
       final list = applyOwnSkillMatch(
         jobs: allJobs.where((j) => !appliedJobIds.contains(j.id)).toList(),
-        mySkillKeys: readMySkillKeys(SessionStore.user),
+        user: SessionStore.user,
       );
       if (mounted) {
         setState(() {
@@ -110,7 +119,7 @@ class _JobsPageState extends State<JobsPage> {
       final allJobs = raw.map(Job.fromJson).toList();
       final list = applyOwnSkillMatch(
         jobs: allJobs.where((j) => !appliedJobIds.contains(j.id)).toList(),
-        mySkillKeys: readMySkillKeys(SessionStore.user),
+        user: SessionStore.user,
       );
       final savedIds = await SavedJobsStore.loadIds();
       if (!mounted) return;
@@ -363,6 +372,7 @@ class _JobsPageState extends State<JobsPage> {
 
   @override
   void dispose() {
+    SessionStore.skillsChanged.removeListener(_onSkillsChanged);
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();

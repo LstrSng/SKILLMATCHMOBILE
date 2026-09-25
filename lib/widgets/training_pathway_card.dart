@@ -32,8 +32,7 @@ class TrainingLinksList extends StatelessWidget {
 
   final TrainingPathway pathway;
   final Set<String> completedKeys;
-  final void Function(TrainingResource link, bool completed)?
-  onToggleCompleted;
+  final void Function(TrainingResource link, bool completed)? onToggleCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -43,182 +42,157 @@ class TrainingLinksList extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...pathway.links.map(
-          (link) {
-            final isFree = (link.isFree == true) || link.label.toLowerCase().contains('free');
-            final provider = link.provider;
-            final type = link.type;
-            final isTesda = (provider?.toLowerCase().contains('tesda') ?? false) ||
-                (type?.toLowerCase().contains('tesda') ?? false) ||
-                link.label.toLowerCase().contains('tesda');
-            final isDone = completedKeys.contains(
-              link.label.trim().toLowerCase(),
-            );
+        ...pathway.links.map((link) {
+          final provider = link.provider;
+          final type = link.type;
+          final isTesda =
+              (provider?.toLowerCase().contains('tesda') ?? false) ||
+              (type?.toLowerCase().contains('tesda') ?? false) ||
+              link.label.toLowerCase().contains('tesda');
+          final isDone = completedKeys.contains(
+            link.label.trim().toLowerCase(),
+          );
 
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: () => _launchTrainingLink(context, link.url),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isDone ? tokens.successBg : tokens.primarySoftBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDone
-                          ? tokens.success.withValues(alpha: 0.5)
-                          : tokens.cardBorderSoft,
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _launchTrainingLink(context, link.url),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDone ? tokens.successBg : tokens.primarySoftBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDone
+                        ? tokens.success.withValues(alpha: 0.5)
+                        : tokens.cardBorderSoft,
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 11,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.open_in_new_rounded,
+                      size: 16,
+                      color: tokens.primary,
                     ),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 11,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.open_in_new_rounded,
-                        size: 16,
-                        color: tokens.primary,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            link.label,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: isDone ? tokens.success : tokens.primary,
+                              height: 1.3,
+                            ),
+                          ),
+                          if (isDone) ...[
+                            const SizedBox(height: 3),
                             Text(
-                              link.label,
+                              '✓ Completed',
                               style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600,
-                                color: isDone ? tokens.success : tokens.primary,
-                                height: 1.3,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: tokens.success,
                               ),
                             ),
-                            if (isDone) ...[
-                              const SizedBox(height: 3),
-                              Text(
-                                '✓ Completed',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: tokens.success,
-                                ),
-                              ),
-                            ],
-                            if (provider != null || type != null) ...[
-                              const SizedBox(height: 3),
-                              Row(
-                                children: [
-                                  if (provider != null)
-                                    Flexible(
-                                      child: Text(
-                                        provider,
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.w500,
-                                          color: tokens.textSecondary,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
+                          ],
+                          const SizedBox(height: 5),
+                          _CostLine(link: link),
+                          if (provider != null || type != null) ...[
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                if (provider != null)
+                                  Flexible(
+                                    child: Text(
+                                      provider,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: tokens.textSecondary,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  if (provider != null && type != null)
-                                    Text(
-                                      ' • ',
+                                  ),
+                                if (provider != null && type != null)
+                                  Text(
+                                    ' • ',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: tokens.textSecondary,
+                                    ),
+                                  ),
+                                if (type != null)
+                                  Flexible(
+                                    child: Text(
+                                      type,
                                       style: TextStyle(
                                         fontSize: 11.5,
                                         color: tokens.textSecondary,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  if (type != null)
-                                    Flexible(
-                                      child: Text(
-                                        type,
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: tokens.textSecondary,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
+                                  ),
+                              ],
+                            ),
                           ],
+                        ],
+                      ),
+                    ),
+                    if (isTesda) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tokens.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: tokens.primary.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Text(
+                          'TESDA',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: tokens.primary,
+                            letterSpacing: 0.3,
+                          ),
                         ),
                       ),
-                      if (isTesda) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: tokens.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: tokens.primary.withValues(alpha: 0.35),
-                            ),
-                          ),
-                          child: Text(
-                            'TESDA',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: tokens.primary,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (isFree) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: tokens.successBg,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: tokens.success.withValues(alpha: 0.35),
-                            ),
-                          ),
-                          child: Text(
-                            'FREE',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: tokens.success,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (onToggleCompleted != null)
-                        IconButton(
-                          visualDensity: VisualDensity.compact,
-                          tooltip: isDone
-                              ? 'Mark as not completed'
-                              : 'Mark as completed',
-                          icon: Icon(
-                            isDone
-                                ? Icons.check_circle_rounded
-                                : Icons.radio_button_unchecked_rounded,
-                            color: isDone ? tokens.success : tokens.textFaint,
-                            size: 22,
-                          ),
-                          onPressed: () => onToggleCompleted!(link, !isDone),
-                        ),
                     ],
-                  ),
+                    if (onToggleCompleted != null)
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        tooltip: isDone
+                            ? 'Mark as not completed'
+                            : 'Mark as completed',
+                        icon: Icon(
+                          isDone
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: isDone ? tokens.success : tokens.textFaint,
+                          size: 22,
+                        ),
+                        onPressed: () => onToggleCompleted!(link, !isDone),
+                      ),
+                  ],
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        }),
         if (pathway.note.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(
@@ -253,8 +227,7 @@ class TrainingPathwayCard extends StatelessWidget {
   final String? subtitle;
 
   final Set<String> completedKeys;
-  final void Function(TrainingResource link, bool completed)?
-  onToggleCompleted;
+  final void Function(TrainingResource link, bool completed)? onToggleCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -292,6 +265,65 @@ class TrainingPathwayCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Cost badge (FREE / FREE TO LEARN / PAID) with its short explanation.
+class _CostLine extends StatelessWidget {
+  const _CostLine({required this.link});
+
+  final TrainingResource link;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    final (label, fg, bg) = switch (link.cost) {
+      TrainingCost.free => ('FREE', tokens.success, tokens.successBg),
+      TrainingCost.freeToLearn => ('FREE TO LEARN', tokens.info, tokens.infoBg),
+      TrainingCost.paid => ('PAID', tokens.warning, tokens.warningBg),
+    };
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 6,
+      runSpacing: 3,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: fg.withValues(alpha: 0.35)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: fg,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ),
+        if (link.pesoPrice != null)
+          Text(
+            link.pesoPrice!,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: fg,
+            ),
+          ),
+        if (link.costNote != null)
+          Text(
+            link.costNote!,
+            style: TextStyle(
+              fontSize: 11.5,
+              color: tokens.textSecondary,
+              height: 1.3,
+            ),
+          ),
+      ],
     );
   }
 }

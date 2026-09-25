@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
+import '../services/competency.dart';
 import '../services/job_roles_data.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import 'widgets.dart';
@@ -953,7 +954,7 @@ class _SkillLevelRow extends StatelessWidget {
                 ),
               ),
               Text(
-                '$level/10 · ${skillLevelLabel(level)}',
+                '$level/10 · ${datasetLevelLabel(skill, level) ?? skillLevelLabel(level)}',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,

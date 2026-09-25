@@ -9,6 +9,10 @@ const String _datasetAssetPath = 'assets/data/psf_sds_data.json';
 
 List<JobRoleSkills>? _cache;
 Future<List<JobRoleSkills>>? _loading;
+
+/// Lower-cased skill names from the dataset's functional/enabling catalogs.
+Set<String> _functionalSkillKeys = {};
+Set<String> _enablingSkillKeys = {};
 List<String>? _cachedSkillOptions;
 Future<List<String>>? _loadingSkillOptions;
 
@@ -166,6 +170,9 @@ JobRoleSkills? findBestRoleForTitle(
 /// e.g. "Business Needs Analysis Level 2" -> "Business Needs Analysis" and
 /// "Collaboration Basic" -> "Collaboration". Used to build a clean list of
 /// pickable skill names for the profile skills selector.
+/// Public form of [_stripLevelSuffix] for display, e.g. skill-gap lists.
+String plainSkillName(String s) => _stripLevelSuffix(s);
+
 String _stripLevelSuffix(String s) {
   var out = s.trim();
   out = out.replaceFirst(
@@ -269,30 +276,17 @@ Future<List<String>> loadSkillOptions() {
   }();
 }
 
-/// Splits [skills] into (matched, unmatched) based on whether each skill
-/// (case-insensitively) is present in [mySkillKeys].
-({List<String> matched, List<String> unmatched}) splitSkillsByOwnership(
-  List<String> skills,
-  Set<String> mySkillKeys,
-) {
-  final matched = <String>[];
-  final unmatched = <String>[];
-  for (final s in skills) {
-    final rawLower = s.trim().toLowerCase();
-    final baseLower = _stripLevelSuffix(s).toLowerCase();
-    if (mySkillKeys.contains(rawLower) ||
-        (baseLower.isNotEmpty && mySkillKeys.contains(baseLower))) {
-      matched.add(s);
-    } else {
-      unmatched.add(s);
-    }
-  }
-  return (matched: matched, unmatched: unmatched);
-}
-
 Future<List<JobRoleSkills>> _load() async {
   final raw = await rootBundle.loadString(_datasetAssetPath);
   final decoded = jsonDecode(raw) as Map<String, dynamic>;
+
+  Set<String> catalogKeys(String field) => {
+    for (final e in (decoded[field] as List? ?? const []))
+      if (e is Map)
+        _stripLevelSuffix((e['name'] ?? '').toString()).toLowerCase(),
+  }..remove('');
+  _functionalSkillKeys = catalogKeys('functionalSkillCatalog');
+  _enablingSkillKeys = catalogKeys('enablingSkillCatalog');
 
   final byKey = <String, JobRoleSkills>{};
   for (final entry in (decoded['roles'] as List? ?? const [])) {
@@ -318,4 +312,32 @@ Future<List<JobRoleSkills>> _load() async {
 
   return byKey.values.toList()
     ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+}
+
+/// How a profile skill is grouped on the profile screen.
+enum SkillCategory { techStack, functional, enabling }
+
+/// Soft skills from [_kCommonTechSkills] that belong with enabling skills.
+const _kExtraEnablingSkills = {
+  'leadership',
+  'time management',
+  'customer service',
+  'creativity',
+  'attention to detail',
+  'public speaking',
+  'negotiation',
+  'conflict resolution',
+};
+
+/// Groups [skill] using the PSF-SDS catalogs: enabling (soft) skills,
+/// functional (job-function) skills, and everything else — languages,
+/// frameworks, tools and custom entries — as tech stack. Call
+/// [loadJobRoles] first so the catalogs are loaded.
+SkillCategory categorizeSkill(String skill) {
+  final key = _stripLevelSuffix(skill).toLowerCase();
+  if (_enablingSkillKeys.contains(key) || _kExtraEnablingSkills.contains(key)) {
+    return SkillCategory.enabling;
+  }
+  if (_functionalSkillKeys.contains(key)) return SkillCategory.functional;
+  return SkillCategory.techStack;
 }

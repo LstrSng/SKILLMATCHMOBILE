@@ -4,7 +4,10 @@ import 'package:flutter/services.dart';
 import '../models/job_match_result.dart';
 import '../services/applications_api.dart';
 import '../services/coding_challenge_bank.dart';
+import '../models/training_pathway.dart';
+import '../services/competency.dart';
 import '../services/job_roles_data.dart';
+import '../services/prescriptive_engine.dart';
 import '../services/saved_jobs_store.dart';
 import '../services/session_store.dart';
 import '../widgets/coding_challenge_sheet.dart';
@@ -57,6 +60,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
   bool _loading = true;
   String? _error;
   JobMatchResult? _matchResult;
+  List<PrescribedAction> _actions = const [];
   String? _csvDescription;
 
   /// Prioritize the employer's custom posting description, falling back
@@ -126,21 +130,31 @@ class _JobDetailPageState extends State<JobDetailPage> {
       final roles = await loadJobRoles();
       final role = findBestRoleForTitle(roles, widget.title);
 
+      final competencies = assessCompetencies([
+        ...widget.matchedSkills,
+        ...widget.unmatchedSkills,
+      ], SessionStore.user);
+      // Same competency-weighted score as the Jobs list and action plan.
+      final score = competencies.isEmpty
+          ? widget.matchPercentage
+          : competencyMatchPercent(competencies);
+      final actions = await prescribeActions(
+        jobTitle: widget.title,
+        requiredSkills: [...widget.matchedSkills, ...widget.unmatchedSkills],
+        user: SessionStore.user,
+      );
       final result = JobMatchResult(
         jobTitle: widget.title,
-        matchScore: widget.matchPercentage,
+        matchScore: score,
         matchedSkills: widget.matchedSkills,
         missingSkills: widget.unmatchedSkills,
-        recommendation: _recommendationFor(
-          widget.matchPercentage,
-          widget.unmatchedSkills,
-          jobTitle: widget.title,
-        ),
+        recommendation: prescriptionText(score: score, actions: actions),
       );
 
       if (!mounted) return;
       setState(() {
         _matchResult = result;
+        _actions = actions;
         _csvDescription = role?.description;
         _loading = false;
       });
@@ -151,57 +165,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
         _error = e.toString();
       });
     }
-  }
-
-  static String _recommendationFor(
-    int score,
-    List<String> missing, {
-    String jobTitle = '',
-  }) {
-    if (score >= 85) {
-      if (missing.isEmpty) {
-        return 'Outstanding match ($score%)! You meet all required skills for this position. Ready to apply!';
-      }
-      final targetSkill = _selectPrimaryPrescriptionSkill(
-        missing,
-        jobTitle: jobTitle,
-      );
-      final rx = resolveSkillPrescription(targetSkill);
-      return 'Great fit ($score%). You match most requirements. Consider closing minor gaps in ${missing.take(2).join(', ')} with ${rx.tesdaProgram} or ${rx.globalCert} to maximize readiness.';
-    }
-    if (score >= 70) {
-      final targetSkill = _selectPrimaryPrescriptionSkill(
-        missing,
-        jobTitle: jobTitle,
-      );
-      final rx = resolveSkillPrescription(targetSkill);
-      return 'Good fit ($score%). Recommended upskilling: ${rx.tesdaProgram} (via e-TESDA/accredited TVET) or industry certs (${rx.globalCert}) to close gaps in ${missing.take(3).join(', ')}.';
-    }
-    if (score >= 50) {
-      final targetSkill = _selectPrimaryPrescriptionSkill(
-        missing,
-        jobTitle: jobTitle,
-      );
-      final rx = resolveSkillPrescription(targetSkill);
-      return 'Moderate fit ($score%). Focus on building ${missing.take(2).join(' and ')} skills through ${rx.tesdaProgram} or ${rx.globalCert} to strengthen your candidacy.';
-    }
-    if (missing.isNotEmpty) {
-      final targetSkill = _selectPrimaryPrescriptionSkill(
-        missing,
-        jobTitle: jobTitle,
-      );
-      final rx = resolveSkillPrescription(targetSkill);
-      final roleDesc = jobTitle.trim().isNotEmpty
-          ? 'this $jobTitle role'
-          : 'this position';
-      final cleanGaps = missing.take(3).join(', ');
-      if (missing.length == 1 ||
-          targetSkill.toLowerCase() == missing.first.toLowerCase()) {
-        return 'Skill gap detected in $cleanGaps. Recommended certification tracks for $roleDesc: ${rx.tesdaProgram} or ${rx.globalCert} to qualify.';
-      }
-      return 'Skill gap detected in $cleanGaps. For $roleDesc, prioritize $targetSkill via ${rx.tesdaProgram} or ${rx.globalCert} to qualify.';
-    }
-    return 'No recommendation available.';
   }
 
   Future<void> _applyNow() async {
@@ -442,13 +405,21 @@ class _JobDetailPageState extends State<JobDetailPage> {
               matchedSkills: result.matchedSkills,
               missingSkills: result.missingSkills,
               matchScore: result.matchScore,
+              competencies: assessCompetencies([
+                ...result.matchedSkills,
+                ...result.missingSkills,
+              ], SessionStore.user),
               onLearnSkill: _openSkillPathway,
               onTakeQuiz: _openSkillAssessment,
             ),
             const SizedBox(height: 16),
 
             // Recommendation Summary Card
-            RecommendationCard(recommendation: result.recommendation),
+            RecommendationCard(
+              recommendation: result.recommendation,
+              actions: _actions,
+              onOpenAction: _openSkillPathway,
+            ),
           ],
         ),
       ),
@@ -733,6 +704,7 @@ class SkillCompatibilityMatrix extends StatefulWidget {
     required this.matchedSkills,
     required this.missingSkills,
     required this.matchScore,
+    this.competencies,
     this.onLearnSkill,
     this.onTakeQuiz,
   });
@@ -740,6 +712,10 @@ class SkillCompatibilityMatrix extends StatefulWidget {
   final List<String> matchedSkills;
   final List<String> missingSkills;
   final int matchScore;
+
+  /// Applicant's level vs. the PSF-SDS level required for each skill (see
+  /// [assessCompetencies]); rows show both when given.
+  final List<SkillCompetency>? competencies;
   final ValueChanged<String>? onLearnSkill;
   final ValueChanged<String>? onTakeQuiz;
 
@@ -756,6 +732,11 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
     final tokens = context.appColors;
     final totalSkills =
         widget.matchedSkills.length + widget.missingSkills.length;
+    final byRaw = {for (final c in widget.competencies ?? const []) c.raw: c};
+    SkillCompetency? competencyFor(String skill) => byRaw[skill];
+    final belowCount = byRaw.values
+        .where((c) => c.status == CompetencyStatus.belowLevel)
+        .length;
 
     final displayedMatched =
         (_filter == _SkillMatrixFilter.all ||
@@ -820,7 +801,9 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '${widget.matchedSkills.length} Matched',
+                      belowCount == 0
+                          ? '${widget.matchedSkills.length} Matched'
+                          : '${widget.matchedSkills.length - belowCount} Matched · $belowCount Below level',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -903,9 +886,15 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
               ),
             )
           else ...[
-            ...displayedMatched.map((skill) => _MatchedSkillRow(skill: skill)),
+            ...displayedMatched.map(
+              (skill) => _MatchedSkillRow(
+                skill: skill,
+                competency: competencyFor(skill),
+              ),
+            ),
             ...displayedMissing.map(
               (skill) => _MissingSkillRow(
+                competency: competencyFor(skill),
                 skill: skill,
                 onLearn: widget.onLearnSkill != null
                     ? () => widget.onLearnSkill!(skill)
@@ -969,15 +958,47 @@ class _SkillCompatibilityMatrixState extends State<SkillCompatibilityMatrix> {
   }
 }
 
+/// "Required: Level 3 · You: Level 2" under a skill in the matrix.
+class _LevelLine extends StatelessWidget {
+  const _LevelLine({required this.competency});
+
+  final SkillCompetency competency;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    final required = competency.required;
+    final you = competency.applicantLevel;
+    final text = [
+      if (required != null) 'Required: ${required.label}',
+      you != null ? 'You: $you' : 'You: not in your skills',
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, left: 2),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
+          color: tokens.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
 class _MatchedSkillRow extends StatelessWidget {
-  const _MatchedSkillRow({required this.skill});
+  const _MatchedSkillRow({required this.skill, this.competency});
 
   final String skill;
+  final SkillCompetency? competency;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
     final isDark = context.isDarkMode;
+    final belowLevel = competency?.status == CompetencyStatus.belowLevel;
+    final badgeColor = belowLevel ? tokens.warning : tokens.success;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -990,37 +1011,51 @@ class _MatchedSkillRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: SkillChip(
-              label: skill,
-              status: SkillChipStatus.matched,
-              size: SkillChipSize.medium,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkillChip(
+                  label: competency?.skill ?? skill,
+                  status: belowLevel
+                      ? SkillChipStatus.neutral
+                      : SkillChipStatus.matched,
+                  size: SkillChipSize.medium,
+                ),
+                if (competency != null) _LevelLine(competency: competency!),
+              ],
             ),
           ),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.matchBgColor(100, isDark: isDark),
+              color: belowLevel
+                  ? tokens.warningBg
+                  : AppColors.matchBgColor(100, isDark: isDark),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: AppColors.matchBorderColor(100, isDark: isDark),
+                color: belowLevel
+                    ? tokens.warning.withValues(alpha: 0.4)
+                    : AppColors.matchBorderColor(100, isDark: isDark),
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.check_circle_rounded,
+                  belowLevel
+                      ? Icons.trending_up_rounded
+                      : Icons.check_circle_rounded,
                   size: 12,
-                  color: tokens.success,
+                  color: badgeColor,
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'Matched',
+                  belowLevel ? 'Below level' : 'Matched',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: tokens.success,
+                    color: badgeColor,
                   ),
                 ),
               ],
@@ -1033,9 +1068,10 @@ class _MatchedSkillRow extends StatelessWidget {
 }
 
 class _MissingSkillRow extends StatelessWidget {
-  const _MissingSkillRow({required this.skill, this.onLearn});
+  const _MissingSkillRow({required this.skill, this.competency, this.onLearn});
 
   final String skill;
+  final SkillCompetency? competency;
   final VoidCallback? onLearn;
 
   @override
@@ -1057,43 +1093,52 @@ class _MissingSkillRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: SkillChip(
-              label: skill,
-              status: SkillChipStatus.missing,
-              isMissingAlert: true,
-              size: SkillChipSize.medium,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.matchBgColor(0, isDark: isDark),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: AppColors.matchBorderColor(0, isDark: isDark),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  size: 12,
-                  color: tokens.danger,
+                SkillChip(
+                  label: competency?.skill ?? skill,
+                  status: SkillChipStatus.missing,
+                  isMissingAlert: true,
+                  size: SkillChipSize.medium,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  'Skill Gap',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: tokens.danger,
-                  ),
-                ),
+                if (competency != null) _LevelLine(competency: competency!),
               ],
             ),
           ),
+          // The level line already says the skill is missing.
+          if (competency == null) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.matchBgColor(0, isDark: isDark),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: AppColors.matchBorderColor(0, isDark: isDark),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 12,
+                    color: tokens.danger,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Skill Gap',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: tokens.danger,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (onLearn != null) ...[
             const SizedBox(width: 8),
             InkWell(
@@ -1274,438 +1319,21 @@ class _JobDetailBottomBar extends StatelessWidget {
   }
 }
 
-class SkillPrescription {
-  final String skill;
-  final String tesdaProgram;
-  final String globalCert;
-  final String providerSummary;
-  final String searchKeyword;
-
-  const SkillPrescription({
-    required this.skill,
-    required this.tesdaProgram,
-    required this.globalCert,
-    required this.providerSummary,
-    required this.searchKeyword,
-  });
-}
-
-bool _hasSkillKeyword(String text, String keyword) {
-  final lower = text.toLowerCase();
-  final k = keyword.toLowerCase();
-  if (k.length <= 2 && RegExp(r'^[a-z0-9]+$').hasMatch(k)) {
-    return RegExp(
-      r'\b' + RegExp.escape(k) + r'\b',
-      caseSensitive: false,
-    ).hasMatch(lower);
-  }
-  return lower.contains(k);
-}
-
-String _selectPrimaryPrescriptionSkill(
-  List<String> missing, {
-  String jobTitle = '',
-}) {
-  if (missing.isEmpty) return '';
-  if (missing.length == 1 || jobTitle.trim().isEmpty) return missing.first;
-
-  final titleLower = jobTitle.toLowerCase();
-
-  final isUiDesign =
-      titleLower.contains('ui') ||
-      titleLower.contains('ux') ||
-      titleLower.contains('interface') ||
-      titleLower.contains('design') ||
-      titleLower.contains('frontend') ||
-      titleLower.contains('front-end') ||
-      titleLower.contains('web');
-
-  final isMobile =
-      titleLower.contains('mobile') ||
-      titleLower.contains('android') ||
-      titleLower.contains('ios') ||
-      titleLower.contains('flutter');
-
-  final isDataAi =
-      titleLower.contains('data') ||
-      titleLower.contains('analytics') ||
-      titleLower.contains('machine learning') ||
-      titleLower.contains('ai');
-
-  final isDevOps =
-      titleLower.contains('devops') ||
-      titleLower.contains('cloud') ||
-      titleLower.contains('sysadmin') ||
-      titleLower.contains('infrastructure');
-
-  final isQa =
-      titleLower.contains('qa') ||
-      titleLower.contains('test') ||
-      titleLower.contains('quality');
-
-  final isCyber =
-      titleLower.contains('security') || titleLower.contains('cyber');
-
-  for (final skill in missing) {
-    final sLower = skill.toLowerCase();
-    if (isUiDesign) {
-      if (_hasSkillKeyword(sLower, 'typescript') ||
-          _hasSkillKeyword(sLower, 'ts') ||
-          _hasSkillKeyword(sLower, 'react') ||
-          _hasSkillKeyword(sLower, 'javascript') ||
-          _hasSkillKeyword(sLower, 'js') ||
-          _hasSkillKeyword(sLower, 'css') ||
-          _hasSkillKeyword(sLower, 'html') ||
-          _hasSkillKeyword(sLower, 'figma') ||
-          _hasSkillKeyword(sLower, 'design') ||
-          _hasSkillKeyword(sLower, 'ui') ||
-          _hasSkillKeyword(sLower, 'ux') ||
-          _hasSkillKeyword(sLower, 'web')) {
-        return skill;
-      }
-    }
-    if (isMobile) {
-      if (_hasSkillKeyword(sLower, 'flutter') ||
-          _hasSkillKeyword(sLower, 'dart') ||
-          _hasSkillKeyword(sLower, 'android') ||
-          _hasSkillKeyword(sLower, 'ios') ||
-          _hasSkillKeyword(sLower, 'swift') ||
-          _hasSkillKeyword(sLower, 'kotlin') ||
-          _hasSkillKeyword(sLower, 'mobile')) {
-        return skill;
-      }
-    }
-    if (isDataAi) {
-      if (_hasSkillKeyword(sLower, 'python') ||
-          _hasSkillKeyword(sLower, 'data') ||
-          _hasSkillKeyword(sLower, 'analytics') ||
-          _hasSkillKeyword(sLower, 'pandas') ||
-          _hasSkillKeyword(sLower, 'sql') ||
-          _hasSkillKeyword(sLower, 'ai')) {
-        return skill;
-      }
-    }
-    if (isDevOps) {
-      if (_hasSkillKeyword(sLower, 'docker') ||
-          _hasSkillKeyword(sLower, 'kubernetes') ||
-          _hasSkillKeyword(sLower, 'k8s') ||
-          _hasSkillKeyword(sLower, 'aws') ||
-          _hasSkillKeyword(sLower, 'cloud') ||
-          _hasSkillKeyword(sLower, 'devops')) {
-        return skill;
-      }
-    }
-    if (isQa) {
-      if (_hasSkillKeyword(sLower, 'qa') ||
-          _hasSkillKeyword(sLower, 'test') ||
-          _hasSkillKeyword(sLower, 'selenium') ||
-          _hasSkillKeyword(sLower, 'automation')) {
-        return skill;
-      }
-    }
-    if (isCyber) {
-      if (_hasSkillKeyword(sLower, 'security') ||
-          _hasSkillKeyword(sLower, 'cyber')) {
-        return skill;
-      }
-    }
-  }
-
-  return missing.first;
-}
-
-@visibleForTesting
-String selectPrimaryPrescriptionSkill(
-  List<String> missing, {
-  String jobTitle = '',
-}) => _selectPrimaryPrescriptionSkill(missing, jobTitle: jobTitle);
-
-@visibleForTesting
-String buildJobRecommendation(
-  int score,
-  List<String> missing, {
-  String jobTitle = '',
-}) =>
-    _JobDetailPageState._recommendationFor(score, missing, jobTitle: jobTitle);
-
-SkillPrescription resolveSkillPrescription(String skill) {
-  final lower = skill.toLowerCase();
-
-  bool has(List<String> keywords) =>
-      keywords.any((k) => _hasSkillKeyword(lower, k));
-
-  if (has([
-    'docker',
-    'kubernetes',
-    'k8s',
-    'container',
-    'ci/cd',
-    'devops',
-    'jenkins',
-    'ansible',
-    'terraform',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Computer Systems Servicing (CSS) NC II',
-      globalCert: 'Docker Certified Associate (DCA) • CKA Kubernetes',
-      providerSummary: 'Linux Foundation / Docker / Coursera',
-      searchKeyword: 'DevOps',
-    );
-  }
-
-  if (has(['typescript', 'ts'])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Web Development NC III',
-      globalCert: 'Microsoft Learn TypeScript • Meta Front-End Developer Cert',
-      providerSummary: 'Microsoft / Meta (Coursera) / freeCodeCamp',
-      searchKeyword: 'TypeScript',
-    );
-  }
-
-  if (has([
-    'react',
-    'vue',
-    'angular',
-    'frontend',
-    'front-end',
-    'html',
-    'css',
-    'javascript',
-    'js',
-    'web',
-    'tailwind',
-    'bootstrap',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Web Development NC III',
-      globalCert: 'Meta Front-End Developer Cert • freeCodeCamp Full Stack',
-      providerSummary: 'e-TESDA / Meta (Coursera) / freeCodeCamp',
-      searchKeyword: 'Web',
-    );
-  }
-
-  if (has([
-    'node',
-    'backend',
-    'back-end',
-    'express',
-    'django',
-    'fastapi',
-    'flask',
-    'api',
-    'rest',
-    'graphql',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Web Development NC III',
-      globalCert: 'Meta Back-End Developer Cert • IBM Full Stack Developer',
-      providerSummary: 'e-TESDA / Meta / IBM (Coursera)',
-      searchKeyword: 'Back-End',
-    );
-  }
-
-  if (has([
-    'flutter',
-    'dart',
-    'android',
-    'ios',
-    'swift',
-    'kotlin',
-    'mobile',
-    'react native',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Web Development NC III (Mobile & Web)',
-      globalCert: 'Google Associate Android Developer • Meta React Native',
-      providerSummary: 'e-TESDA / Google / Coursera',
-      searchKeyword: 'Mobile',
-    );
-  }
-
-  if (has(['aws', 'azure', 'gcp', 'cloud'])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Computer Systems Servicing (CSS) NC II',
-      globalCert:
-          'AWS Certified Cloud Practitioner • Azure Fundamentals (AZ-900)',
-      providerSummary: 'Amazon Web Services / Microsoft Learn',
-      searchKeyword: 'Cloud',
-    );
-  }
-
-  if (has([
-    'sql',
-    'database',
-    'db',
-    'oracle',
-    'postgres',
-    'postgresql',
-    'mysql',
-    'mongodb',
-    'nosql',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Programming (Oracle Database) NC III',
-      globalCert: 'Oracle Database SQL Associate • MongoDB Certified Developer',
-      providerSummary: 'e-TESDA / Oracle University / MongoDB',
-      searchKeyword: 'Database',
-    );
-  }
-
-  if (has([
-    'python',
-    'data',
-    'analytics',
-    'analysis',
-    'pandas',
-    'numpy',
-    'bi',
-    'tableau',
-    'power bi',
-    'powerbi',
-    'machine learning',
-    'ai',
-    'statistics',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Data Analytics Essentials (e-TESDA TOP)',
-      globalCert: 'Google Data Analytics Certificate • IBM Data Science',
-      providerSummary: 'e-TESDA / Google / IBM (Coursera)',
-      searchKeyword: 'Data',
-    );
-  }
-
-  if (has([
-    'security',
-    'cyber',
-    'infosec',
-    'penetration',
-    'ethical hacking',
-    'firewall',
-    'soc',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Cybersecurity Essentials (e-TESDA TOP)',
-      globalCert: 'CompTIA Security+ • Google Cybersecurity Professional Cert',
-      providerSummary: 'e-TESDA / CompTIA / Cisco / Google',
-      searchKeyword: 'Cybersecurity',
-    );
-  }
-
-  if (has(['java', 'spring', 'oop'])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Programming (Java) NC III',
-      globalCert: 'Oracle Certified Professional: Java SE Developer',
-      providerSummary: 'e-TESDA / Informatics / Oracle University',
-      searchKeyword: 'Java',
-    );
-  }
-
-  if (has(['.net', 'c#', 'csharp', 'asp.net'])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Programming (.NET Technology) NC III',
-      globalCert: 'Microsoft Certified: Azure Developer Associate',
-      providerSummary: 'MFI Polytechnic / Microsoft Learn',
-      searchKeyword: '.NET',
-    );
-  }
-
-  if (has([
-    'network',
-    'hardware',
-    'troubleshoot',
-    'sysadmin',
-    'linux',
-    'server',
-    'support',
-    'helpdesk',
-    'service desk',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Computer Systems Servicing (CSS) NC II',
-      globalCert: 'Google IT Support Professional • CompTIA A+ / Network+',
-      providerSummary: 'TESDA Regional Training Center / Google / CompTIA',
-      searchKeyword: 'Support',
-    );
-  }
-
-  if (has([
-    'design',
-    'ui',
-    'ux',
-    'figma',
-    'graphic',
-    'photoshop',
-    'illustrator',
-    'creative',
-    'interface',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Visual Graphic Design NC III',
-      globalCert:
-          'Google UX Design Professional Certificate • Interaction Design',
-      providerSummary: 'e-TESDA / Google (Coursera) / Adobe',
-      searchKeyword: 'Design',
-    );
-  }
-
-  if (has(['qa', 'test', 'testing', 'automation', 'selenium', 'cypress'])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Web Development NC III (Testing Track)',
-      globalCert: 'ISTQB Certified Tester Foundation Level (CTFL)',
-      providerSummary: 'e-TESDA / ISTQB / TestAutomationU',
-      searchKeyword: 'QA',
-    );
-  }
-
-  if (has([
-    'agile',
-    'scrum',
-    'project',
-    'product',
-    'jira',
-    'management',
-    'leadership',
-  ])) {
-    return SkillPrescription(
-      skill: skill,
-      tesdaProgram: 'TESDA Contact Center Services NC II / Project Support',
-      globalCert:
-          'Scrum.org Professional Scrum Master (PSM I) • Google Project Mgmt',
-      providerSummary: 'Scrum.org / Google / PMI',
-      searchKeyword: 'Management',
-    );
-  }
-
-  final cleanKeyword = skill
-      .replaceAll(RegExp(r'\blevel\s*\d+\b', caseSensitive: false), '')
-      .trim();
-  return SkillPrescription(
-    skill: skill,
-    tesdaProgram: 'TESDA Web Development NC III or CSS NC II',
-    globalCert: 'Professional Industry Certificate (Coursera / freeCodeCamp)',
-    providerSummary: 'TESDA / Coursera / freeCodeCamp / Harvard CS50',
-    searchKeyword: cleanKeyword.isNotEmpty ? cleanKeyword : 'All',
-  );
-}
-
 class RecommendationCard extends StatelessWidget {
-  const RecommendationCard({super.key, required this.recommendation});
+  const RecommendationCard({
+    super.key,
+    required this.recommendation,
+    this.actions = const [],
+    this.onOpenAction,
+  });
 
   final String recommendation;
+
+  /// Ranked actions from [prescribeActions]; shown as an action plan.
+  final List<PrescribedAction> actions;
+
+  /// Opens the certifications for an action's skill.
+  final ValueChanged<String>? onOpenAction;
 
   static const _kPlaceholders = {
     '',
@@ -1759,7 +1387,111 @@ class RecommendationCard extends StatelessWidget {
               ),
             ),
           ),
+          if (actions.length > 1) ...[
+            const SizedBox(height: 14),
+            Text(
+              'Action plan (ranked by impact)',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: tokens.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final (i, a) in actions.take(3).indexed)
+              _ActionRow(
+                rank: i + 1,
+                action: a,
+                onTap: onOpenAction == null
+                    ? null
+                    : () => onOpenAction!(a.skill),
+              ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// One ranked action: skill, match change, reach and certification cost.
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({required this.rank, required this.action, this.onTap});
+
+  final int rank;
+  final PrescribedAction action;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    final cert = action.certification;
+    final details = [
+      if (action.levelChange != null) action.levelChange!,
+      'match ${action.currentScore}% → ${action.newScore}%',
+      if (action.otherJobs.isNotEmpty)
+        '+${action.otherJobs.length} other job${action.otherJobs.length == 1 ? '' : 's'}',
+      if (cert == null)
+        'no cert needed'
+      else
+        switch (cert.cost) {
+          TrainingCost.free => 'free cert',
+          TrainingCost.freeToLearn => 'free to learn',
+          TrainingCost.paid => cert.pesoPrice ?? 'paid cert',
+        },
+    ].join(' · ');
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: rank == 1 ? tokens.primary : tokens.surfaceMuted,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '$rank',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: rank == 1 ? Colors.white : tokens.textSecondary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    action.isLevelUp ? '↑ Raise ${action.skill}' : action.skill,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: tokens.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    details,
+                    style: TextStyle(fontSize: 12, color: tokens.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(
+                Icons.chevron_right_rounded,
+                color: tokens.textFaint,
+                size: 20,
+              ),
+          ],
+        ),
       ),
     );
   }
