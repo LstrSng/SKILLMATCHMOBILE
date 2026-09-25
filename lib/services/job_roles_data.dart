@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/job_role_skills.dart';
 
-const String _csvAssetPath = 'assets/data/IT_Job_Roles_Skills.csv';
+/// PSF-SDS job roles dataset (the same data the web app uses).
+const String _datasetAssetPath = 'assets/data/psf_sds_data.json';
 
 List<JobRoleSkills>? _cache;
 Future<List<JobRoleSkills>>? _loading;
@@ -17,10 +20,8 @@ void resetJobRolesCache() {
   _loadingSkillOptions = null;
 }
 
-/// Loads and parses the bundled IT job-role/skills dataset. When the same
-/// job title (case-insensitively) appears on more than one CSV row, only
-/// the first row is kept — its skills and certifications are used exactly
-/// as listed, never merged with a later duplicate row's.
+/// Loads the bundled PSF-SDS job roles. If a title (case-insensitively)
+/// appears more than once, the first entry is kept.
 Future<List<JobRoleSkills>> loadJobRoles() {
   if (_cache != null) return Future.value(_cache);
   return _loading ??= _load().then((roles) {
@@ -121,7 +122,7 @@ String _stripSeniority(String normalized) {
 /// Finds the entry in [roles] whose canonical title best matches a real
 /// job posting's [jobTitle] — exact match first, then seniority-stripped
 /// match, then keyword overlap (same approach as
-/// `pathway_links_data.dart`'s pathway matching, applied to CSV roles
+/// `pathway_links_data.dart`'s pathway matching, applied to PSF-SDS roles
 /// instead). Returns null if nothing reasonable is found.
 JobRoleSkills? findBestRoleForTitle(
   List<JobRoleSkills> roles,
@@ -135,6 +136,11 @@ JobRoleSkills? findBestRoleForTitle(
   }
 
   final stripped = _stripSeniority(normalized);
+  // Prefer the base role ("Software Engineer") over a seniority variant
+  // ("Associate Software Engineer") when both strip to the same title.
+  for (final r in roles) {
+    if (r.title.toLowerCase() == stripped) return r;
+  }
   for (final r in roles) {
     if (_stripSeniority(r.title.toLowerCase()) == stripped) return r;
   }
@@ -285,112 +291,31 @@ Future<List<String>> loadSkillOptions() {
 }
 
 Future<List<JobRoleSkills>> _load() async {
-  final raw = await rootBundle.loadString(_csvAssetPath);
-  final lines = raw.split(RegExp(r'\r\n|\r|\n')).where((l) => l.isNotEmpty);
+  final raw = await rootBundle.loadString(_datasetAssetPath);
+  final decoded = jsonDecode(raw) as Map<String, dynamic>;
 
-  final byKey = <String, _MergingRole>{};
-  var first = true;
-  for (final line in lines) {
-    if (first) {
-      first = false;
-      continue; // header row
-    }
-    final fields = _parseCsvLine(line);
-    if (fields.length < 3) continue;
-    final title = fields[0].trim();
+  final byKey = <String, JobRoleSkills>{};
+  for (final entry in (decoded['roles'] as List? ?? const [])) {
+    if (entry is! Map) continue;
+    final title = (entry['title'] ?? '').toString().trim();
     if (title.isEmpty) continue;
-    final description = fields[1].trim();
-    final skills = _splitList(fields[2]);
-    final certifications = fields.length > 3
-        ? _splitList(fields[3])
-        : const <String>[];
-
     final key = title.toLowerCase();
-    // First occurrence wins: use that row's skills/certifications exactly
-    // as listed in the CSV. Don't union them with any later duplicate-title
-    // rows — a role's skill list should match one real CSV row, not a
-    // merged combination of several.
     if (byKey.containsKey(key)) continue;
-    byKey[key] = _MergingRole(title: title, description: description)
-      ..addSkills(skills)
-      ..addCertifications(certifications);
+
+    final seen = <String>{};
+    final skills = <String>[
+      for (final s in (entry['allSkillsCombined'] as List? ?? const []))
+        if (s.toString().trim().isNotEmpty &&
+            seen.add(s.toString().trim().toLowerCase()))
+          s.toString().trim(),
+    ];
+    byKey[key] = JobRoleSkills(
+      title: title,
+      description: (entry['description'] ?? '').toString().trim(),
+      skills: skills,
+    );
   }
 
-  final roles = byKey.values.map((m) => m.toJobRoleSkills()).toList()
+  return byKey.values.toList()
     ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
-  return roles;
-}
-
-class _MergingRole {
-  final String title;
-  String description;
-  final List<String> _skills = [];
-  final Set<String> _skillKeys = {};
-  final List<String> _certifications = [];
-  final Set<String> _certKeys = {};
-
-  _MergingRole({required this.title, required this.description});
-
-  void addSkills(List<String> skills) {
-    for (final s in skills) {
-      final key = s.toLowerCase();
-      if (_skillKeys.add(key)) _skills.add(s);
-    }
-  }
-
-  void addCertifications(List<String> certs) {
-    for (final c in certs) {
-      final key = c.toLowerCase();
-      if (_certKeys.add(key)) _certifications.add(c);
-    }
-  }
-
-  JobRoleSkills toJobRoleSkills() => JobRoleSkills(
-    title: title,
-    description: description,
-    skills: _skills,
-    certifications: _certifications,
-  );
-}
-
-List<String> _splitList(String field) {
-  return field
-      .split(';')
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList();
-}
-
-/// Minimal RFC4180-style CSV line parser: handles double-quoted fields,
-/// commas inside quotes, and "" as an escaped quote.
-List<String> _parseCsvLine(String line) {
-  final fields = <String>[];
-  final buffer = StringBuffer();
-  var inQuotes = false;
-  for (var i = 0; i < line.length; i++) {
-    final ch = line[i];
-    if (inQuotes) {
-      if (ch == '"') {
-        if (i + 1 < line.length && line[i + 1] == '"') {
-          buffer.write('"');
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        buffer.write(ch);
-      }
-    } else {
-      if (ch == '"') {
-        inQuotes = true;
-      } else if (ch == ',') {
-        fields.add(buffer.toString());
-        buffer.clear();
-      } else {
-        buffer.write(ch);
-      }
-    }
-  }
-  fields.add(buffer.toString());
-  return fields;
 }

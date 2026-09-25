@@ -4,10 +4,11 @@ import 'package:skillmatch/theme/app_colors.dart';
 import '../services/auth_api.dart';
 import '../services/session_store.dart';
 import '../widgets/app_password_field.dart';
+import '../widgets/auth_scaffold.dart';
 import '../widgets/centered_form_width.dart';
 import '../widgets/otp_code_field.dart';
 import '../widgets/resend_code_button.dart';
-import 'main_navigation_page.dart';
+import 'skill_onboarding_page.dart';
 import 'register_page.dart';
 
 InputDecoration _inputDec(AppThemeExtension tokens, String hint) {
@@ -88,7 +89,7 @@ class _SignInPageState extends State<SignInPage> {
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+          MaterialPageRoute(builder: (context) => const SignedInHome()),
           (route) => false,
         );
         return;
@@ -129,209 +130,167 @@ class _SignInPageState extends State<SignInPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    return Scaffold(
-      backgroundColor: tokens.scaffoldBackground,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: CenteredFormWidth(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Logo
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: tokens.primary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.bolt, color: Colors.white, size: 32),
+    return AuthScaffold(
+      title: 'Welcome back',
+      subtitle: 'Sign in to access your career dashboard',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Email Field
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Email',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: tokens.textPrimary,
                 ),
-                const SizedBox(height: 18),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _emailController,
+                style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                decoration: _inputDec(tokens, 'm@example.com'),
+                keyboardType: TextInputType.emailAddress,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-                // Heading
-                Text(
-                  'Welcome back',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: tokens.textPrimary,
-                    fontSize: 24,
+          // Password Field
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Password',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: tokens.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-
-                // Subtitle
-                Text(
-                  'Enter your email to access your career dashboard',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: tokens.textSecondary,
-                    fontSize: 15,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-
-                // Email Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Email',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const _ForgotPasswordPage(),
+                        ),
+                      );
+                    },
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                    child: Text(
+                      'Forgot password?',
+                      style: TextStyle(
+                        color: tokens.primary,
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: tokens.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _emailController,
-                      style: TextStyle(color: tokens.textPrimary, fontSize: 14),
-                      decoration: _inputDec(tokens, 'm@example.com'),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Password Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Password',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w500,
-                                color: tokens.textPrimary,
-                              ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const _ForgotPasswordPage(),
-                              ),
-                            );
-                          },
-                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                          child: Text(
-                            'Forgot password?',
-                            style: TextStyle(
-                              color: tokens.primary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    AppPasswordField(controller: _passwordController),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Remember Me Checkbox
-                MergeSemantics(
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: _rememberMe,
-                        activeColor: tokens.primary,
-                        checkColor: Colors.white,
-                        onChanged: (value) {
-                          setState(() {
-                            _rememberMe = value ?? false;
-                          });
-                        },
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        side: BorderSide(color: tokens.cardBorder),
-                      ),
-                      Text(
-                        'Remember me for 30 days',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: tokens.textSecondary,
-                        ),
-                      ),
-                    ],
                   ),
-                ),
-                const SizedBox(height: 18),
+                ],
+              ),
+              const SizedBox(height: 8),
+              AppPasswordField(controller: _passwordController),
+            ],
+          ),
+          const SizedBox(height: 12),
 
-                // Sign In Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: tokens.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: _submitting ? null : _signIn,
-                    child: _submitting
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Sign In',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+          // Remember Me Checkbox
+          MergeSemantics(
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _rememberMe,
+                  activeColor: tokens.primary,
+                  checkColor: Colors.white,
+                  onChanged: (value) {
+                    setState(() {
+                      _rememberMe = value ?? false;
+                    });
+                  },
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
                   ),
+                  side: BorderSide(color: tokens.cardBorder),
                 ),
-                const SizedBox(height: 16),
-
-                // Sign Up Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Don\'t have an account? ',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: tokens.textSecondary,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterPage(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'Sign up',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: tokens.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
+                Text(
+                  'Remember me for 30 days',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: tokens.textSecondary),
                 ),
               ],
             ),
           ),
-        ),
+          const SizedBox(height: 18),
+
+          // Sign In Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: tokens.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: _submitting ? null : _signIn,
+              child: _submitting
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Sign In',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Sign Up Link
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Don\'t have an account? ',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: tokens.textSecondary),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RegisterPage(),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Sign up',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: tokens.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -394,7 +353,7 @@ class _LoginOtpPageState extends State<_LoginOtpPage> {
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+        MaterialPageRoute(builder: (context) => const SignedInHome()),
         (route) => false,
       );
     } on AuthApiException catch (e) {

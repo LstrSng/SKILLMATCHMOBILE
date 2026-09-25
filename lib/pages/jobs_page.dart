@@ -428,6 +428,23 @@ class _JobsPageState extends State<JobsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            PageHeroHeader(
+                              icon: Icons.explore_rounded,
+                              eyebrow: 'Find your fit',
+                              title: 'Explore Jobs',
+                              subtitle:
+                                  'Jobs ranked by how well they match your skills.',
+                              highlight: _jobs.isEmpty
+                                  ? null
+                                  : () {
+                                      final strong = _jobs
+                                          .where((j) => j.matchPercentage >= 70)
+                                          .length;
+                                      final n = _jobs.length;
+                                      return '$n job${n == 1 ? '' : 's'} · $strong strong match${strong == 1 ? '' : 'es'}';
+                                    }(),
+                            ),
+                            const SizedBox(height: 16),
                             // Header & Search Bar
                             Row(
                               children: [

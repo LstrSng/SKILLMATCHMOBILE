@@ -4,7 +4,7 @@ import 'register_page.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/centered_form_width.dart';
-import 'main_navigation_page.dart';
+import 'skill_onboarding_page.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -25,7 +25,7 @@ class _LandingPageState extends State<LandingPage> {
       if (SessionStore.token != null && SessionStore.token!.isNotEmpty) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+          MaterialPageRoute(builder: (context) => const SignedInHome()),
         );
       }
     });
@@ -150,7 +150,7 @@ class _LandingPageState extends State<LandingPage> {
                     const SizedBox(height: 4),
                     ShaderMask(
                       shaderCallback: (bounds) =>
-                          AppColors.primaryGradient.createShader(bounds),
+                          AppColors.heroGradient.createShader(bounds),
                       child: Text(
                         'Skill Matching',
                         style: Theme.of(context).textTheme.headlineLarge

@@ -9,6 +9,7 @@ import '../services/pathway_links_data.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
+import '../widgets/page_hero_header.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/training_pathway_card.dart';
@@ -438,19 +439,14 @@ class _PathwayPageState extends State<PathwayPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Certifications & Pathways',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: tokens.textPrimary,
-                    letterSpacing: -0.4,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Browse industry certifications to boost your job matches',
-                  style: TextStyle(fontSize: 14, color: tokens.textSecondary),
+                PageHeroHeader(
+                  icon: Icons.workspace_premium_rounded,
+                  eyebrow: 'Level up',
+                  title: 'Certifications & Pathways',
+                  subtitle: 'Earn certifications that boost your job matches.',
+                  highlight: _completedKeys.isEmpty
+                      ? '${_pathways.length} pathways'
+                      : '${_pathways.length} pathways · ${_completedKeys.length} completed',
                 ),
                 const SizedBox(height: 16),
 

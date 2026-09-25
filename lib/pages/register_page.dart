@@ -4,11 +4,12 @@ import 'package:flutter/services.dart';
 import '../services/auth_api.dart';
 import '../services/session_store.dart';
 import '../widgets/app_password_field.dart';
+import '../widgets/auth_scaffold.dart';
 import '../widgets/centered_form_width.dart';
 import '../widgets/otp_code_field.dart';
 import '../widgets/resend_code_button.dart';
 import 'package:skillmatch/theme/app_colors.dart';
-import 'main_navigation_page.dart';
+import 'skill_onboarding_page.dart';
 import 'sign_in_page.dart';
 
 class _SignupDraft {
@@ -312,129 +313,21 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     final tokens = context.appColors;
 
-    return Scaffold(
-      backgroundColor: tokens.scaffoldBackground,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: CenteredFormWidth(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Logo
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: tokens.primary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.bolt, color: Colors.white, size: 32),
-                ),
-                const SizedBox(height: 18),
-
-                // Heading
-                Text(
-                  'Create an account',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: tokens.textPrimary,
-                    fontSize: 24,
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                // Subtitle
-                Text(
-                  'Join SkillMatch+ to optimize your career path',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: tokens.textSecondary,
-                    fontSize: 15,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-
-                // First Name and Last Name
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'First name',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  color: tokens.textPrimary,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _firstNameController,
-                            style: TextStyle(
-                              color: tokens.textPrimary,
-                              fontSize: 14,
-                            ),
-                            textCapitalization: TextCapitalization.words,
-                            inputFormatters: [
-                              _kNameInputFormatter,
-                              LengthLimitingTextInputFormatter(50),
-                            ],
-                            decoration: _inputDec(
-                              tokens,
-                              'Juan',
-                              errorText: _err('firstName'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Last name',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  color: tokens.textPrimary,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _lastNameController,
-                            style: TextStyle(
-                              color: tokens.textPrimary,
-                              fontSize: 14,
-                            ),
-                            textCapitalization: TextCapitalization.words,
-                            inputFormatters: [
-                              _kNameInputFormatter,
-                              LengthLimitingTextInputFormatter(50),
-                            ],
-                            decoration: _inputDec(
-                              tokens,
-                              'Dela Cruz',
-                              errorText: _err('lastName'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Email Field
-                Column(
+    return AuthScaffold(
+      title: 'Create an account',
+      subtitle: 'Join SkillMatch+ and find jobs that fit your skills',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // First Name and Last Name
+          Row(
+            children: [
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Email',
+                      'First name',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
                         color: tokens.textPrimary,
@@ -442,29 +335,29 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 8),
                     TextField(
-                      controller: _emailController,
+                      controller: _firstNameController,
                       style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [
+                        _kNameInputFormatter,
+                        LengthLimitingTextInputFormatter(50),
+                      ],
                       decoration: _inputDec(
                         tokens,
-                        'm@example.com',
-                        errorText: _err('email'),
+                        'Juan',
+                        errorText: _err('firstName'),
                       ),
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-
-                // Contact Number Field
-                Column(
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Contact number',
+                      'Last name',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
                         color: tokens.textPrimary,
@@ -472,278 +365,333 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 8),
                     TextField(
-                      controller: _phoneController,
+                      controller: _lastNameController,
                       style: TextStyle(color: tokens.textPrimary, fontSize: 14),
-                      keyboardType: TextInputType.number,
+                      textCapitalization: TextCapitalization.words,
                       inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(11),
+                        _kNameInputFormatter,
+                        LengthLimitingTextInputFormatter(50),
                       ],
                       decoration: _inputDec(
                         tokens,
-                        '09XXXXXXXXX',
-                        errorText: _err('phone'),
+                        'Dela Cruz',
+                        errorText: _err('lastName'),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-                // Password Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Password',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: tokens.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    AppPasswordField(
-                      controller: _passwordController,
-                      errorText: _err('password'),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Use 8+ characters with uppercase, lowercase, number, and symbol.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: tokens.textSecondary,
-                      ),
-                    ),
-                  ],
+          // Email Field
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Email',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: tokens.textPrimary,
                 ),
-                const SizedBox(height: 16),
-
-                // Confirm Password Field
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Confirm password',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: tokens.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    AppPasswordField(
-                      controller: _confirmPasswordController,
-                      hintText: 'Re-enter your password',
-                      errorText: _err('confirmPassword'),
-                      onSubmitted: (_) => (_submitting || !_agreeToTerms)
-                          ? null
-                          : _createAccount(),
-                    ),
-                    if (_passwordController.text.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            _passwordController.text.length >= 8
-                                ? Icons.check_circle_rounded
-                                : Icons.info_outline_rounded,
-                            size: 16,
-                            color: _passwordController.text.length >= 8
-                                ? Colors.green
-                                : tokens.textSecondary,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'At least 8 characters',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: _passwordController.text.length >= 8
-                                      ? Colors.green
-                                      : tokens.textSecondary,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (_confirmPasswordController.text.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            _confirmPasswordController.text ==
-                                    _passwordController.text
-                                ? Icons.check_circle_rounded
-                                : Icons.cancel_outlined,
-                            size: 16,
-                            color:
-                                _confirmPasswordController.text ==
-                                    _passwordController.text
-                                ? Colors.green
-                                : Colors.amber,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _confirmPasswordController.text ==
-                                    _passwordController.text
-                                ? 'Passwords match'
-                                : 'Passwords do not match',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color:
-                                      _confirmPasswordController.text ==
-                                          _passwordController.text
-                                      ? Colors.green
-                                      : Colors.amber,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _emailController,
+                style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                decoration: _inputDec(
+                  tokens,
+                  'm@example.com',
+                  errorText: _err('email'),
                 ),
-                const SizedBox(height: 16),
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-                // Terms Agreement
-                MergeSemantics(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Checkbox(
-                        value: _agreeToTerms,
-                        activeColor: tokens.primary,
-                        checkColor: Colors.white,
-                        onChanged: (value) {
-                          final nextValue = value ?? false;
-                          setState(() {
-                            _agreeToTerms = nextValue;
-                          });
-                        },
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        side: BorderSide(color: tokens.cardBorder),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Wrap(
-                            children: [
-                              Text(
-                                'I agree to the ',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: tokens.textSecondary),
-                              ),
-                              InkWell(
-                                onTap: _showTermsOfService,
-                                child: Text(
-                                  'Terms of Service',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: tokens.primary,
-                                        fontWeight: FontWeight.w600,
-                                        decoration: TextDecoration.underline,
-                                        decorationColor: tokens.primary,
-                                      ),
-                                ),
-                              ),
-                              Text(
-                                ' and ',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: tokens.textSecondary),
-                              ),
-                              InkWell(
-                                onTap: _showPrivacyPolicy,
-                                child: Text(
-                                  'Privacy Policy',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: tokens.primary,
-                                        fontWeight: FontWeight.w600,
-                                        decoration: TextDecoration.underline,
-                                        decorationColor: tokens.primary,
-                                      ),
-                                ),
-                              ),
-                              Text(
-                                '.',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: tokens.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+          // Contact Number Field
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Contact number',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: tokens.textPrimary,
                 ),
-                const SizedBox(height: 16),
-
-                // Create Account Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: tokens.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    // Prevent submitting before the checkbox state has updated.
-                    onPressed: (_submitting || !_agreeToTerms)
-                        ? null
-                        : _createAccount,
-                    child: _submitting
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Create Account',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _phoneController,
+                style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(11),
+                ],
+                decoration: _inputDec(
+                  tokens,
+                  '09XXXXXXXXX',
+                  errorText: _err('phone'),
                 ),
-                const SizedBox(height: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-                // Sign In Link
+          // Password Field
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Password',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: tokens.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              AppPasswordField(
+                controller: _passwordController,
+                errorText: _err('password'),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Use 8+ characters with uppercase, lowercase, number, and symbol.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: tokens.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Confirm Password Field
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Confirm password',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: tokens.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              AppPasswordField(
+                controller: _confirmPasswordController,
+                hintText: 'Re-enter your password',
+                errorText: _err('confirmPassword'),
+                onSubmitted: (_) =>
+                    (_submitting || !_agreeToTerms) ? null : _createAccount(),
+              ),
+              if (_passwordController.text.isNotEmpty) ...[
+                const SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Already have an account? ',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: tokens.textSecondary,
-                      ),
+                    Icon(
+                      _passwordController.text.length >= 8
+                          ? Icons.check_circle_rounded
+                          : Icons.info_outline_rounded,
+                      size: 16,
+                      color: _passwordController.text.length >= 8
+                          ? Colors.green
+                          : tokens.textSecondary,
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignInPage(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'Sign in',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: tokens.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'At least 8 characters',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _passwordController.text.length >= 8
+                            ? Colors.green
+                            : tokens.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ],
+              if (_confirmPasswordController.text.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      _confirmPasswordController.text ==
+                              _passwordController.text
+                          ? Icons.check_circle_rounded
+                          : Icons.cancel_outlined,
+                      size: 16,
+                      color:
+                          _confirmPasswordController.text ==
+                              _passwordController.text
+                          ? Colors.green
+                          : Colors.amber,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _confirmPasswordController.text ==
+                              _passwordController.text
+                          ? 'Passwords match'
+                          : 'Passwords do not match',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color:
+                            _confirmPasswordController.text ==
+                                _passwordController.text
+                            ? Colors.green
+                            : Colors.amber,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Terms Agreement
+          MergeSemantics(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: _agreeToTerms,
+                  activeColor: tokens.primary,
+                  checkColor: Colors.white,
+                  onChanged: (value) {
+                    final nextValue = value ?? false;
+                    setState(() {
+                      _agreeToTerms = nextValue;
+                    });
+                  },
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  side: BorderSide(color: tokens.cardBorder),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Wrap(
+                      children: [
+                        Text(
+                          'I agree to the ',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: tokens.textSecondary),
+                        ),
+                        InkWell(
+                          onTap: _showTermsOfService,
+                          child: Text(
+                            'Terms of Service',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: tokens.primary,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: tokens.primary,
+                                ),
+                          ),
+                        ),
+                        Text(
+                          ' and ',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: tokens.textSecondary),
+                        ),
+                        InkWell(
+                          onTap: _showPrivacyPolicy,
+                          child: Text(
+                            'Privacy Policy',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: tokens.primary,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: tokens.primary,
+                                ),
+                          ),
+                        ),
+                        Text(
+                          '.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: tokens.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
+          const SizedBox(height: 16),
+
+          // Create Account Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: tokens.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              // Prevent submitting before the checkbox state has updated.
+              onPressed: (_submitting || !_agreeToTerms)
+                  ? null
+                  : _createAccount,
+              child: _submitting
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Sign In Link
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Already have an account? ',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: tokens.textSecondary),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SignInPage()),
+                  );
+                },
+                child: Text(
+                  'Sign in',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: tokens.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -802,7 +750,7 @@ class _RegisterOtpPageState extends State<_RegisterOtpPage> {
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+        MaterialPageRoute(builder: (context) => const SignedInHome()),
         (route) => false,
       );
     } on AuthApiException catch (e) {

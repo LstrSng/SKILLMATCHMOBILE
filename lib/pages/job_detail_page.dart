@@ -60,7 +60,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
   String? _csvDescription;
 
   /// Prioritize the employer's custom posting description, falling back
-  /// to the PSF/CSV framework role description if none was provided.
+  /// to the PSF-SDS role description if none was provided.
   String get _displayDescription {
     final raw = widget.description.trim();
     if (raw.isNotEmpty) return raw;

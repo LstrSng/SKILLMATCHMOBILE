@@ -9,7 +9,7 @@ import '../services/jobs_api.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import 'landing_page.dart';
-import 'main_navigation_page.dart';
+import 'skill_onboarding_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -64,7 +64,7 @@ class _SplashPageState extends State<SplashPage>
       context,
       MaterialPageRoute(
         builder: (context) =>
-            signedIn ? const MainNavigationPage() : const LandingPage(),
+            signedIn ? const SignedInHome() : const LandingPage(),
       ),
     );
   }

@@ -10,6 +10,7 @@ import '../services/skill_assessment_bank.dart';
 import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
+import '../widgets/page_hero_header.dart';
 import '../widgets/match_score_badge.dart';
 
 enum _Step { categories, question, result }
@@ -648,34 +649,15 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header Hero
-                  const Text(
-                    'Philippine Skills Framework (PSF-SDS)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Verify Your Competencies',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: tokens.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Take standardized multiple-choice assessments designed for IT & Design roles. '
-                    'Scores and verified badges are saved to your profile and displayed directly to employers.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: tokens.textSecondary,
-                      height: 1.4,
-                    ),
+                  PageHeroHeader(
+                    icon: Icons.verified_rounded,
+                    eyebrow: 'Philippine Skills Framework (PSF-SDS)',
+                    title: 'Verify Your Competencies',
+                    subtitle:
+                        'Take quick assessments for IT & Design roles. Passed results earn a verified badge employers can see.',
+                    highlight: _categories.isEmpty
+                        ? null
+                        : '${_categories.length} assessments available',
                   ),
                   const SizedBox(height: 16),
 

@@ -7,6 +7,7 @@ import '../services/theme_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import 'sign_in_page.dart';
 import '../widgets/app_card.dart';
+import '../widgets/page_hero_header.dart';
 import '../widgets/app_password_field.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/centered_form_width.dart';
@@ -142,16 +143,12 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Settings',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+            const PageHeroHeader(
+              icon: Icons.tune_rounded,
+              title: 'Settings',
+              subtitle: 'Manage your appearance, notifications and account.',
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Manage your appearance and notification preferences',
-              style: TextStyle(fontSize: 16, color: tokens.textSecondary),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

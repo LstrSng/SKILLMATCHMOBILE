@@ -10,3 +10,4 @@ export 'otp_code_field.dart';
 export 'resend_code_button.dart';
 export 'skill_chip.dart';
 export 'training_pathway_card.dart';
+export 'page_hero_header.dart';

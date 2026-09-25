@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:skillmatch/theme/app_colors.dart';
 
+/// App-wide font. Component styles below repeat it because a style set on
+/// a component (buttons, app bar titles) doesn't inherit [ThemeData.fontFamily].
+const _kFontFamily = 'Roboto';
+
 /// Central Material 3 Theme configuration for SkillMatch+.
 /// Supports full Light & Dark mode parity with responsive typography,
 /// adaptive component styles, and [AppThemeExtension] token integration.
@@ -41,7 +45,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     ),
     splashFactory: InkSparkle.splashFactory,
     visualDensity: VisualDensity.standard,
-    fontFamily: 'Roboto',
+    fontFamily: _kFontFamily,
     extensions: [ext],
 
     // -------------------------------------------------------------------------
@@ -166,6 +170,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       scrolledUnderElevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
+        fontFamily: _kFontFamily,
         fontSize: 18,
         fontWeight: FontWeight.w700,
         color: textPrimary,
@@ -198,7 +203,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
         elevation: 0,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
         shape: shape,
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontFamily: _kFontFamily, fontSize: 15, fontWeight: FontWeight.w700),
       ),
     ),
 
@@ -209,7 +214,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
         elevation: 0,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
         shape: shape,
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontFamily: _kFontFamily, fontSize: 15, fontWeight: FontWeight.w700),
       ),
     ),
 
@@ -219,7 +224,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
         side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
         shape: shape,
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontFamily: _kFontFamily, fontSize: 15, fontWeight: FontWeight.w700),
       ),
     ),
 
@@ -227,7 +232,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       style: TextButton.styleFrom(
         foregroundColor: isDark ? AppColors.primaryLight : AppColors.primary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontFamily: _kFontFamily, fontSize: 14, fontWeight: FontWeight.w600),
       ),
     ),
 
@@ -313,7 +318,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
-      contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      contentTextStyle: const TextStyle(fontFamily: _kFontFamily, color: Colors.white, fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
 

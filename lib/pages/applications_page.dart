@@ -252,23 +252,15 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Header
-                            Text(
-                              'Applications',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                color: tokens.textPrimary,
-                                letterSpacing: -0.4,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Track stages and view timestamped milestones for your job submissions',
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                color: tokens.textSecondary,
-                              ),
+                            PageHeroHeader(
+                              icon: Icons.business_center_rounded,
+                              eyebrow: 'Your job hunt',
+                              title: 'Applications',
+                              subtitle:
+                                  'Track every stage of your job applications in one place.',
+                              highlight: applications.isEmpty
+                                  ? null
+                                  : '${_activeApplications.length} active · ${applications.length} total',
                             ),
                             const SizedBox(height: 16),
 
@@ -862,14 +854,14 @@ class _StatusBadge extends StatelessWidget {
         break;
       case 'Screening':
         bg = isDark ? const Color(0xFF2A200B) : const Color(0xFFFEF3C7);
-        fg = const Color(0xFFD97706);
-        border = const Color(0xFFFDE68A);
+        fg = isDark ? AppColors.warningLight : const Color(0xFFD97706);
+        border = isDark ? const Color(0xFF92400E) : const Color(0xFFFDE68A);
         break;
       case 'Interview':
       case 'Interviewing':
         bg = isDark ? const Color(0xFF1E1B4B) : const Color(0xFFEEF2FF);
-        fg = const Color(0xFF4F46E5);
-        border = const Color(0xFFC7D2FE);
+        fg = isDark ? AppColors.verifiedDark : const Color(0xFF4F46E5);
+        border = isDark ? const Color(0xFF4338CA) : const Color(0xFFC7D2FE);
         break;
       case 'Offer':
       case 'Hired':

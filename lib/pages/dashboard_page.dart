@@ -288,12 +288,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+                  gradient: AppColors.heroGradient,
+                  borderRadius: BorderRadius.circular(22),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x332563EB),
@@ -815,7 +811,11 @@ class _StatCard extends StatelessWidget {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: iconBgColor,
+                      // Pastel backgrounds glare in dark mode; tint the
+                      // icon color instead.
+                      color: context.appColors.isDark
+                          ? iconColor.withValues(alpha: 0.18)
+                          : iconBgColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, color: iconColor, size: 18),

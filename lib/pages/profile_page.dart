@@ -1247,7 +1247,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       Container(
                         height: 96,
                         decoration: BoxDecoration(
-                          gradient: tokens.primaryGradient,
+                          gradient: AppColors.heroGradient,
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16),
                           ),
@@ -1553,9 +1553,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     iconBg: isDark
                         ? AppColors.verifiedDarkSoft
                         : AppColors.verifiedSoft,
-                    title: 'Skill Assessment',
+                    title: 'Assessments',
                     badgeText: assessmentResults.isNotEmpty
-                        ? '${assessmentResults.length}/${kAssessmentCategories.length} Verified'
+                        ? '${assessmentResults.length} Verified'
                         : null,
                     badgeColor: tokens.verified,
                     actionLabel: assessmentResults.isEmpty
