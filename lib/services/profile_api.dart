@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import 'authed_http.dart';
+import 'job_roles_data.dart' show plainSkillName;
 import 'session_store.dart';
 
 Uri _meUri() => Uri.parse('$kApiBaseUrl/api/me');
@@ -91,4 +92,29 @@ Future<Map<String, dynamic>> updateMyProfile(Map<String, dynamic> patch) async {
     await SessionStore.updateUser(map);
     return map;
   });
+}
+
+/// Adds [skill] to the user's skills at a 1–10 [level], or updates its
+/// level if the user already has it (matched by plain name, ignoring case).
+Future<Map<String, dynamic>> setMySkillLevel(String skill, int level) {
+  final name = skill.trim();
+  final key = plainSkillName(name).toLowerCase();
+  final user = SessionStore.user;
+  final rawSkills = user?['skills'];
+  final skills = [
+    if (rawSkills is List)
+      for (final s in rawSkills)
+        if (s.toString().trim().isNotEmpty) s.toString().trim(),
+  ];
+  final levels = <String, dynamic>{
+    if (user?['skillLevels'] case final Map raw)
+      for (final e in raw.entries) e.key.toString(): e.value,
+  };
+  final existing = skills.firstWhere(
+    (s) => plainSkillName(s).toLowerCase() == key,
+    orElse: () => '',
+  );
+  if (existing.isEmpty) skills.add(name);
+  levels[existing.isEmpty ? name : existing] = level.clamp(1, 10);
+  return updateMyProfile({'skills': skills, 'skillLevels': levels});
 }

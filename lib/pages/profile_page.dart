@@ -12,6 +12,7 @@ import '../config/cloudinary_config.dart';
 import '../models/skill_assessment.dart';
 import '../services/cloudinary_service.dart';
 import '../services/competency.dart';
+import '../services/completed_certs.dart' show completionsChanged;
 import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
@@ -113,6 +114,12 @@ Map<String, dynamic>? parseProfileFileItem(
       : (int.tryParse(sizeRaw?.toString() ?? '') ?? 0);
   final updatedAt = (raw['updatedAt'] as Object?)?.toString().trim() ?? '';
   if (name.isEmpty && url.isEmpty && data.isEmpty) return null;
+  // Extra details of certificates added from an upskilling pathway.
+  String? extra(String key) {
+    final v = (raw[key] as Object?)?.toString().trim() ?? '';
+    return v.isEmpty ? null : v;
+  }
+
   return {
     'id': id.isNotEmpty ? id : (publicId.isNotEmpty ? publicId : name),
     'name': name.isNotEmpty ? name : fallbackName,
@@ -122,6 +129,8 @@ Map<String, dynamic>? parseProfileFileItem(
     'publicId': publicId,
     'size': size,
     'updatedAt': updatedAt,
+    for (final key in const ['title', 'issuer', 'skill', 'source'])
+      key: ?extra(key),
   };
 }
 
@@ -167,6 +176,20 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _load(silent: _user.isNotEmpty);
+    completionsChanged.addListener(_onProfileChangedElsewhere);
+  }
+
+  @override
+  void dispose() {
+    completionsChanged.removeListener(_onProfileChangedElsewhere);
+    super.dispose();
+  }
+
+  /// Picks up skills and certificates saved from an upskilling pathway
+  /// while this tab stays alive in the background.
+  void _onProfileChangedElsewhere() {
+    final user = SessionStore.user;
+    if (mounted && user != null) setState(() => _user = user);
   }
 
   Future<void> _load({bool silent = false}) async {
@@ -2062,7 +2085,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         final cert = certifications[index];
                         final certUrl = (cert['url'] as String? ?? '').trim();
                         final certName =
-                            cert['name'] ?? 'Certification ${index + 1}';
+                            cert['title'] ??
+                            cert['name'] ??
+                            'Certification ${index + 1}';
+                        final issuer = cert['issuer'] as String?;
+                        final pathwaySkill = cert['source'] == 'pathway'
+                            ? cert['skill'] as String?
+                            : null;
                         return Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -2094,15 +2123,30 @@ class _ProfilePageState extends State<ProfilePage> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      _fileSubtitle(
-                                        cert,
-                                        fallback: 'PDF, DOC, DOCX, PNG, or JPG',
-                                      ),
+                                      [
+                                        ?issuer,
+                                        _fileSubtitle(
+                                          cert,
+                                          fallback:
+                                              'PDF, DOC, DOCX, PNG, or JPG',
+                                        ),
+                                      ].join(' • '),
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: tokens.textSecondary,
                                       ),
                                     ),
+                                    if (pathwaySkill != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'From upskilling pathway • $pathwaySkill',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: tokens.success,
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),

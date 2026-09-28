@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/training_pathway.dart';
+import '../services/competency.dart';
 import '../services/completed_certs.dart';
+import '../services/pathway_certification.dart';
 import '../services/pathway_links_data.dart';
 import '../services/prescriptive_engine.dart';
+import '../services/profile_api.dart';
+import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/widgets.dart';
 
@@ -45,8 +49,9 @@ class _JobPathwayPageState extends State<JobPathwayPage> {
     bool completed,
     VoidCallback apply,
     VoidCallback revert,
-    Future<void> Function() persist,
-  ) async {
+    Future<void> Function() persist, {
+    String? completedMessage,
+  }) async {
     HapticFeedback.selectionClick();
     setState(apply);
     try {
@@ -54,7 +59,9 @@ class _JobPathwayPageState extends State<JobPathwayPage> {
       if (!mounted) return;
       showAppToast(
         context,
-        completed ? 'Marked "$label" as completed.' : 'Removed completed mark.',
+        completed
+            ? completedMessage ?? 'Marked "$label" as completed.'
+            : 'Removed completed mark.',
         type: AppToastType.success,
       );
     } catch (e) {
@@ -64,23 +71,63 @@ class _JobPathwayPageState extends State<JobPathwayPage> {
     }
   }
 
-  void _toggleStep(String skill, bool completed) {
+  /// Completing a step first offers an optional certificate upload, then
+  /// asks for the user's level in the skill (starting at their current
+  /// rating, or 1 if they don't have it yet); both are saved to the
+  /// profile. Undoing only clears the mark.
+  Future<void> _toggleStep(SkillCompetency competency, bool completed) async {
+    final skill = competency.skill;
+    CertificationDraft? cert;
+    int? level;
+    if (completed) {
+      final suggested = certificationsFor(
+        _pathways ?? const [],
+        skill,
+        competency.required,
+      ).firstOrNull;
+      final upload = await showCertificationUploadSheet(
+        context,
+        skill: skill,
+        suggestedTitle: suggested?.label,
+        suggestedIssuer: suggested?.provider,
+      );
+      if (upload == null || !mounted) return;
+      cert = upload.draft;
+      level = await showSkillLevelSheet(
+        context,
+        skill: skill,
+        initialLevel: _currentCompetency(competency).rating ?? 1,
+        required: competency.required,
+      );
+      if (level == null || !mounted) return;
+    }
     final previous = _completedSteps;
     final key = skill.toLowerCase();
-    _save(
+    await _save(
       skill,
       completed,
       () => _completedSteps = {...previous}..toggle(key, add: completed),
       () => _completedSteps = previous,
       () async {
+        if (cert != null) await addPathwayCertification(cert, skill: skill);
+        if (level != null) await setMySkillLevel(skill, level);
         final keys = await setPathwayCompleted(
           name: skill,
           completed: completed,
         );
         if (mounted) setState(() => _completedSteps = keys);
       },
+      completedMessage: cert == null
+          ? 'Marked "$skill" as completed and updated your skills.'
+          : 'Marked "$skill" as completed. Skill and certificate added to your profile.',
     );
   }
+
+  /// [competency] re-assessed against the latest profile, so a level saved
+  /// from this page shows up right away.
+  SkillCompetency _currentCompetency(SkillCompetency competency) =>
+      assessCompetencies([competency.raw], SessionStore.user).firstOrNull ??
+      competency;
 
   void _toggleCert(String skill, TrainingResource link, bool completed) {
     final previous = _completedCerts;
@@ -152,6 +199,7 @@ class _JobPathwayPageState extends State<JobPathwayPage> {
               _StepCard(
                 step: i + 1,
                 action: action,
+                competency: _currentCompetency(action.competency),
                 certifications: certificationsFor(
                   pathways,
                   action.skill,
@@ -159,7 +207,7 @@ class _JobPathwayPageState extends State<JobPathwayPage> {
                 ),
                 completed: _completedSteps.contains(action.skill.toLowerCase()),
                 completedCerts: _completedCerts,
-                onToggle: (done) => _toggleStep(action.skill, done),
+                onToggle: (done) => _toggleStep(action.competency, done),
                 onToggleCert: (link, done) =>
                     _toggleCert(action.skill, link, done),
               ),
@@ -173,6 +221,7 @@ class _StepCard extends StatelessWidget {
   const _StepCard({
     required this.step,
     required this.action,
+    required this.competency,
     required this.certifications,
     required this.completed,
     required this.completedCerts,
@@ -182,6 +231,9 @@ class _StepCard extends StatelessWidget {
 
   final int step;
   final PrescribedAction action;
+
+  /// The applicant's standing on this skill as of the latest profile.
+  final SkillCompetency competency;
   final List<TrainingResource> certifications;
 
   /// Whether this step's pathway is marked completed.
@@ -193,8 +245,9 @@ class _StepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    final c = action.competency;
+    final c = competency;
     final you = c.applicantDescription ?? 'Not in your skills yet';
+    final meets = c.status == CompetencyStatus.meets;
     final needs = c.required?.label ?? 'Any level';
 
     return AppCard(
@@ -249,7 +302,11 @@ class _StepCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          _LevelRow(label: 'You', value: you, color: tokens.warning),
+          _LevelRow(
+            label: 'You',
+            value: you,
+            color: meets ? tokens.success : tokens.warning,
+          ),
           const SizedBox(height: 4),
           _LevelRow(label: 'Needs', value: needs, color: tokens.primary),
           const SizedBox(height: 12),

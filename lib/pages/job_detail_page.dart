@@ -77,6 +77,19 @@ class _JobDetailPageState extends State<JobDetailPage> {
     _checkIfApplied();
     _loadMatchResult();
     _loadBookmarkState();
+    SessionStore.skillsChanged.addListener(_onSkillsChanged);
+  }
+
+  @override
+  void dispose() {
+    SessionStore.skillsChanged.removeListener(_onSkillsChanged);
+    super.dispose();
+  }
+
+  /// Recomputes qualification after skills change (e.g. a pathway step
+  /// completed with a new skill level).
+  void _onSkillsChanged() {
+    if (mounted) _loadMatchResult();
   }
 
   bool _isApplied = false;
