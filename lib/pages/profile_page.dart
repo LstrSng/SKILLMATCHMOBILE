@@ -381,7 +381,7 @@ class _ProfilePageState extends State<ProfilePage> {
       await _saveExperienceProof(index, proof);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Proof of employment uploaded.')),
+        const SnackBar(content: Text('Certificate of Employment uploaded.')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -1641,9 +1641,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     icon: Icons.psychology_outlined,
                     title: 'Skills',
                     badgeText: skills.isNotEmpty ? '${skills.length}' : null,
+                    // Empty sections use the empty-state button instead.
                     actionLabel: 'Edit',
                     actionIcon: Icons.edit_outlined,
-                    onAction: _openEdit,
+                    onAction: skills.isEmpty ? null : _openEdit,
                   ),
                   const SizedBox(height: 16),
                   if (skills.isEmpty)
@@ -1731,11 +1732,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         ? '${assessmentResults.length} Verified'
                         : null,
                     badgeColor: tokens.verified,
-                    actionLabel: assessmentResults.isEmpty
-                        ? 'Take Quiz'
-                        : 'Retake',
-                    actionIcon: Icons.play_arrow_rounded,
-                    onAction: _openAssessment,
+                    actionLabel: 'Retake',
+                    actionIcon: Icons.refresh_rounded,
+                    onAction: assessmentResults.isEmpty
+                        ? null
+                        : _openAssessment,
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -1876,23 +1877,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         );
                       }).toList(),
                     ),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _openAssessment,
-                        icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: const Text('Retake or Try Another Topic'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: tokens.primary,
-                          side: BorderSide(color: tokens.cardBorder),
-                          padding: const EdgeInsets.symmetric(vertical: 11),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ],
               ),
@@ -1910,9 +1894,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     badgeText: experience.isNotEmpty
                         ? '${experience.length} ${experience.length == 1 ? "Role" : "Roles"}'
                         : null,
-                    actionLabel: 'Add',
-                    actionIcon: Icons.add,
-                    onAction: () => _openSection(showExperienceSheet),
+                    // Empty sections use the empty-state button instead.
+                    actionLabel: 'Edit',
+                    actionIcon: Icons.edit_outlined,
+                    onAction: experience.isEmpty
+                        ? null
+                        : () => _openSection(showExperienceSheet),
                   ),
                   const SizedBox(height: 16),
                   _BackgroundFact(
@@ -1983,9 +1970,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     badgeText: education.isNotEmpty
                         ? '${education.length}'
                         : null,
-                    actionLabel: 'Add',
-                    actionIcon: Icons.add,
-                    onAction: () => _openSection(showEducationSheet),
+                    // Empty sections use the empty-state button instead.
+                    actionLabel: 'Edit',
+                    actionIcon: Icons.edit_outlined,
+                    onAction: education.isEmpty
+                        ? null
+                        : () => _openSection(showEducationSheet),
                   ),
                   const SizedBox(height: 16),
                   _BackgroundFact(
@@ -2113,9 +2103,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         : (isDark
                               ? AppColors.warningDarkBg
                               : AppColors.warning),
-                    actionLabel: resume != null ? 'Replace' : 'Upload',
+                    actionLabel: 'Replace',
                     actionIcon: Icons.upload_file,
-                    onAction: _uploadingResume ? null : _uploadResume,
+                    onAction: resume == null || _uploadingResume
+                        ? null
+                        : _uploadResume,
                   ),
                   const SizedBox(height: 16),
                   if (resume == null)
@@ -2216,11 +2208,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     badgeText: certifications.isNotEmpty
                         ? '${certifications.length}'
                         : null,
-                    actionLabel: certifications.isNotEmpty
-                        ? 'Add Files'
-                        : 'Upload',
+                    actionLabel: 'Add Files',
                     actionIcon: Icons.add,
-                    onAction: _uploadingCertification
+                    onAction: certifications.isEmpty || _uploadingCertification
                         ? null
                         : _uploadCertifications,
                   ),
@@ -2362,25 +2352,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         );
                       },
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _uploadingCertification
-                            ? null
-                            : _uploadCertifications,
-                        icon: const Icon(Icons.upload_file, size: 16),
-                        label: const Text('Add More Certifications'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: tokens.primary,
-                          side: BorderSide(color: tokens.cardBorder),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                      ),
                     ),
                   ],
                 ],
@@ -2947,7 +2918,7 @@ class _ExperienceItem extends StatelessWidget {
         ),
         icon: const Icon(Icons.upload_file_rounded, size: 18),
         label: const Text(
-          'Upload proof of employment',
+          'Upload Certificate of Employment',
           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
       );
@@ -2972,7 +2943,7 @@ class _ExperienceItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  (proof['name'] as String?) ?? 'Proof of employment',
+                  (proof['name'] as String?) ?? 'Certificate of Employment',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -2982,7 +2953,7 @@ class _ExperienceItem extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Proof of employment • $proofSubtitle',
+                  'Certificate of Employment • $proofSubtitle',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 11, color: tokens.textSecondary),
@@ -2991,13 +2962,13 @@ class _ExperienceItem extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'View proof of employment',
+            tooltip: 'View Certificate of Employment',
             visualDensity: VisualDensity.compact,
             icon: Icon(Icons.open_in_new, size: 18, color: tokens.primary),
             onPressed: () => onViewProof(proof),
           ),
           IconButton(
-            tooltip: 'Remove proof of employment',
+            tooltip: 'Remove Certificate of Employment',
             visualDensity: VisualDensity.compact,
             icon: const Icon(
               Icons.delete_outline,
