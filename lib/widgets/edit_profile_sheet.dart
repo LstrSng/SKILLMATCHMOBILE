@@ -605,43 +605,6 @@ class SkillsSelectorState extends State<SkillsSelector> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_selected.isNotEmpty && _withLevels) ...[
-          Text(
-            'Rate each skill from 1 (beginner) to 10 (expert).',
-            style: TextStyle(fontSize: 12, color: tokens.textSecondary),
-          ),
-          const SizedBox(height: 6),
-          ..._selected.map(
-            (s) => _SkillLevelRow(
-              skill: s,
-              level: _levels[s] ?? kDefaultSkillLevel,
-              onChanged: (v) => _setLevel(s, v),
-              onRemove: () => _toggle(s),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ] else if (_selected.isNotEmpty) ...[
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _selected
-                .map(
-                  (s) => InputChip(
-                    label: Text(
-                      s,
-                      style: TextStyle(fontSize: 13, color: tokens.primary),
-                    ),
-                    onDeleted: () => _toggle(s),
-                    backgroundColor: tokens.primarySoftBg,
-                    side: BorderSide(color: tokens.cardBorderSoft),
-                    labelStyle: TextStyle(color: tokens.primary),
-                    deleteIconColor: tokens.primary,
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 8),
-        ],
         TextField(
           controller: _searchController,
           style: TextStyle(color: tokens.textPrimary),
@@ -740,6 +703,44 @@ class SkillsSelectorState extends State<SkillsSelector> {
               ),
             ),
           ),
+        const SizedBox(height: 16),
+        if (_selected.isNotEmpty && _withLevels) ...[
+          Text(
+            'Rate each skill from 1 (beginner) to 10 (expert).',
+            style: TextStyle(fontSize: 12, color: tokens.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          ..._selected.map(
+            (s) => _SkillLevelRow(
+              skill: s,
+              level: _levels[s] ?? kDefaultSkillLevel,
+              onChanged: (v) => _setLevel(s, v),
+              onRemove: () => _toggle(s),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ] else if (_selected.isNotEmpty) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _selected
+                .map(
+                  (s) => InputChip(
+                    label: Text(
+                      s,
+                      style: TextStyle(fontSize: 13, color: tokens.primary),
+                    ),
+                    onDeleted: () => _toggle(s),
+                    backgroundColor: tokens.primarySoftBg,
+                    side: BorderSide(color: tokens.cardBorderSoft),
+                    labelStyle: TextStyle(color: tokens.primary),
+                    deleteIconColor: tokens.primary,
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+        ],
       ],
     );
   }

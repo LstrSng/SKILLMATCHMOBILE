@@ -214,43 +214,46 @@ class _SectionSheetState extends State<_SectionSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              widget.title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: tokens.textPrimary,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: tokens.textPrimary,
+                    ),
+                  ),
+                ),
+                FilledButton(
+                  onPressed: enabled ? _save : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: tokens.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    minimumSize: const Size(0, 38),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Save',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             widget.body(setState),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: enabled ? _save : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: tokens.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Save',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-              ),
-            ),
           ],
         ),
       ),
