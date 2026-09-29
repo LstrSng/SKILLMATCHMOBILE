@@ -1,6 +1,9 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../services/applicant_background.dart';
+import '../services/employment_proof.dart';
+import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import 'background_fields.dart';
@@ -44,28 +47,38 @@ Future<Map<String, dynamic>?> showHighestEducationSheet(
   );
 }
 
-Future<Map<String, dynamic>?> showExperienceSheet(
+Future<Map<String, dynamic>?> showSkillsSheet(
   BuildContext context,
   Map<String, dynamic> user,
 ) {
-  final controller = TextEditingController(
-    text: experienceToText(user['experience']),
-  );
+  var skills = [
+    for (final s in (user['skills'] as List? ?? const []))
+      if (s.toString().trim().isNotEmpty) s.toString(),
+  ];
+  var levels = readSkillLevels(user);
+  final options = loadSkillOptions();
   return _showSectionSheet(
     context,
-    title: 'Experience',
-    body: (_) => _LinesField(
-      controller: controller,
-      hint: 'One per line: Years | Title | Company | Description',
-      example: '2023–2024 | Junior Developer | Acme Inc. | Built web apps',
-    ),
-    save: () => updateMyProfile({
-      'experience': keepExperienceProofs(
-        user['experience'],
-        parseExperienceText(controller.text),
+    title: 'Skills',
+    body: (setState) => FutureBuilder<List<String>>(
+      future: options,
+      builder: (context, snap) => SkillsSelector(
+        options: snap.data ?? const [],
+        initialSelected: skills,
+        initialLevels: levels,
+        // Only add/remove refreshes the sheet (for the Save button);
+        // dragging a level slider stays inside the selector.
+        onChanged: (list) => setState(() => skills = list),
+        onLevelsChanged: (map) => levels = map,
       ),
+    ),
+    canSave: () => skills.isNotEmpty,
+    save: () => updateMyProfile({
+      'skills': skills,
+      'skillLevels': {
+        for (final s in skills) s: levels[s] ?? kDefaultSkillLevel,
+      },
     }),
-    onDispose: controller.dispose,
   );
 }
 
@@ -309,6 +322,394 @@ class _LinesField extends StatelessWidget {
           style: TextStyle(fontSize: 11.5, color: tokens.textSecondary),
         ),
       ],
+    );
+  }
+}
+
+/// Add (index == null) or edit one job, including its Certificate of
+/// Employment PDF. Returns the updated user on save/delete.
+Future<Map<String, dynamic>?> showExperienceEntrySheet(
+  BuildContext context,
+  Map<String, dynamic> user, {
+  int? index,
+}) {
+  return showModalBottomSheet<Map<String, dynamic>>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: context.appColors.cardBackground,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => _ExperienceEntrySheet(user: user, index: index),
+  );
+}
+
+class _ExperienceEntrySheet extends StatefulWidget {
+  const _ExperienceEntrySheet({required this.user, this.index});
+
+  final Map<String, dynamic> user;
+  final int? index;
+
+  @override
+  State<_ExperienceEntrySheet> createState() => _ExperienceEntrySheetState();
+}
+
+class _ExperienceEntrySheetState extends State<_ExperienceEntrySheet> {
+  late final List<Map<String, dynamic>> _items = storedExperienceItems(
+    widget.user,
+  );
+  late final Map<String, dynamic> _existing =
+      widget.index != null && widget.index! < _items.length
+      ? _items[widget.index!]
+      : const {};
+
+  String _field(String k) => (_existing[k] as Object?)?.toString() ?? '';
+
+  late final _title = TextEditingController(text: _field('title'));
+  late final _company = TextEditingController(text: _field('company'));
+  late final _year = TextEditingController(text: _field('year'));
+  late final _description = TextEditingController(text: _field('description'));
+
+  /// The saved certificate, kept unless removed or replaced.
+  late Map<String, dynamic>? _proof = _existing['proof'] is Map
+      ? Map<String, dynamic>.from(_existing['proof'] as Map)
+      : null;
+  PlatformFile? _newFile;
+  String? _titleError;
+  String? _fileError;
+  bool _saving = false;
+
+  bool get _isEdit => _existing.isNotEmpty;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _company.dispose();
+    _year.dispose();
+    _description.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      withData: true,
+    );
+    final file = picked?.files.firstOrNull;
+    if (file == null || !mounted) return;
+    setState(() {
+      if ((file.extension ?? '').toLowerCase() != 'pdf') {
+        _fileError = 'Choose a PDF file.';
+      } else if (file.bytes == null) {
+        _fileError = "Couldn't read that file. Try another.";
+      } else if (file.size > kMaxEmploymentProofBytes) {
+        _fileError = 'The PDF must be 10 MB or smaller.';
+      } else {
+        _newFile = file;
+        _fileError = null;
+      }
+    });
+  }
+
+  Future<void> _persist(List<Map<String, dynamic>> items) async {
+    setState(() => _saving = true);
+    try {
+      final user = await updateMyProfile({'experience': items});
+      if (mounted) Navigator.pop(context, user);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _save() async {
+    final title = _title.text.trim();
+    if (title.isEmpty) {
+      setState(() => _titleError = 'Enter your job title.');
+      return;
+    }
+    setState(() => _saving = true);
+    Map<String, dynamic>? proof = _proof;
+    final file = _newFile;
+    if (file != null) {
+      try {
+        proof = await uploadEmploymentProofPdf(
+          fileName: file.name,
+          bytes: file.bytes!,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        return;
+      }
+    }
+    final item = {
+      'year': _year.text.trim(),
+      'title': title,
+      'company': _company.text.trim(),
+      'description': _description.text.trim(),
+      'proof': proof,
+    };
+    final items = List.of(_items);
+    if (_isEdit) {
+      items[widget.index!] = item;
+    } else {
+      // Newest role first, matching how the profile lists them.
+      items.insert(0, item);
+    }
+    await _persist(items);
+  }
+
+  Future<void> _delete() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this job?'),
+        content: const Text(
+          'This removes the job and its Certificate of Employment from your profile.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _persist(List.of(_items)..removeAt(widget.index!));
+  }
+
+  InputDecoration _dec(String label, {String? hint, String? error}) {
+    final tokens = context.appColors;
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      errorText: error,
+      labelStyle: TextStyle(color: tokens.textSecondary, fontSize: 14),
+      hintStyle: TextStyle(color: tokens.textFaint, fontSize: 14),
+      filled: true,
+      fillColor: tokens.surfaceMuted,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: tokens.cardBorderSoft),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: tokens.cardBorderSoft),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: tokens.primary, width: 2),
+      ),
+    );
+  }
+
+  Widget _buildCertificate() {
+    final tokens = context.appColors;
+    final name = _newFile?.name ?? (_proof?['name'] as String?);
+    final Widget box;
+    if (name == null) {
+      box = OutlinedButton.icon(
+        onPressed: _saving ? null : _pickFile,
+        icon: const Icon(Icons.upload_file_rounded, size: 18),
+        label: const Text('Choose PDF'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: tokens.primary,
+          side: BorderSide(color: tokens.primary.withValues(alpha: 0.4)),
+          minimumSize: const Size.fromHeight(46),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } else {
+      box = Container(
+        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+        decoration: BoxDecoration(
+          color: tokens.surfaceMuted,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: tokens.cardBorderSoft),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.picture_as_pdf_rounded,
+              size: 20,
+              color: AppColors.danger,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: tokens.textPrimary,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Remove file',
+              icon: Icon(Icons.close_rounded, color: tokens.textSecondary),
+              onPressed: _saving
+                  ? null
+                  : () => setState(() {
+                      _newFile = null;
+                      _proof = null;
+                    }),
+            ),
+          ],
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Label('Certificate of Employment (optional)'),
+        const SizedBox(height: 8),
+        box,
+        const SizedBox(height: 6),
+        Text(
+          _fileError ?? 'PDF only, up to 10 MB.',
+          style: TextStyle(
+            fontSize: 11.5,
+            color: _fileError != null ? AppColors.danger : tokens.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: tokens.cardBorderSoft,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _isEdit ? 'Edit experience' : 'Add experience',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: tokens.textPrimary,
+                    ),
+                  ),
+                ),
+                if (_isEdit)
+                  IconButton(
+                    tooltip: 'Delete job',
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: AppColors.danger,
+                    ),
+                    onPressed: _saving ? null : _delete,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _title,
+              textCapitalization: TextCapitalization.words,
+              style: TextStyle(color: tokens.textPrimary),
+              onChanged: (_) {
+                if (_titleError != null) setState(() => _titleError = null);
+              },
+              decoration: _dec(
+                'Job title',
+                hint: 'e.g. Junior Web Developer',
+                error: _titleError,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _company,
+              textCapitalization: TextCapitalization.words,
+              style: TextStyle(color: tokens.textPrimary),
+              decoration: _dec('Company', hint: 'e.g. Accenture Philippines'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _year,
+              style: TextStyle(color: tokens.textPrimary),
+              decoration: _dec('Years', hint: 'e.g. 2022 – 2024'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _description,
+              maxLines: 3,
+              style: TextStyle(color: tokens.textPrimary),
+              decoration: _dec(
+                'Description (optional)',
+                hint: 'What you did in this role',
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildCertificate(),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                style: FilledButton.styleFrom(
+                  backgroundColor: tokens.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Save',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

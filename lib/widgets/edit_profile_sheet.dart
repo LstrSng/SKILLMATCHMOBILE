@@ -4,12 +4,9 @@ import '../services/cloudinary_service.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/applicant_background.dart';
 import '../services/profile_api.dart';
 import '../services/competency.dart';
-import '../services/job_roles_data.dart';
 import 'package:skillmatch/theme/app_colors.dart';
-import 'background_fields.dart';
 
 String _phoneDigitsOnly(String raw) {
   var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
@@ -97,24 +94,6 @@ String educationToText(Object? items) {
   return lines.join('\n');
 }
 
-/// Experience items as editable lines: "Year | Title | Company | Description".
-String experienceToText(Object? items) {
-  if (items is! List) return '';
-  final lines = <String>[];
-  for (final it in items) {
-    if (it is! Map) continue;
-    final year = (it['year'] as Object?)?.toString().trim() ?? '';
-    final title = (it['title'] as Object?)?.toString().trim() ?? '';
-    final company = (it['company'] as Object?)?.toString().trim() ?? '';
-    final desc = (it['description'] as Object?)?.toString().trim() ?? '';
-    if (year.isEmpty && title.isEmpty && company.isEmpty && desc.isEmpty) {
-      continue;
-    }
-    lines.add('$year | $title | $company | $desc'.trim());
-  }
-  return lines.join('\n');
-}
-
 List<Map<String, String>> parseEducationText(String text) {
   final lines = text
       .split('\n')
@@ -131,63 +110,6 @@ List<Map<String, String>> parseEducationText(String text) {
     out.add({'degree': degree, 'school': school, 'years': years});
   }
   return out;
-}
-
-List<Map<String, String>> parseExperienceText(String text) {
-  final lines = text
-      .split('\n')
-      .map((l) => l.trim())
-      .where((l) => l.isNotEmpty)
-      .toList();
-  final out = <Map<String, String>>[];
-  for (final line in lines) {
-    final parts = line.split('|').map((p) => p.trim()).toList();
-    final year = (parts.isNotEmpty ? parts[0] : '').trim();
-    final title = (parts.length > 1 ? parts[1] : '').trim();
-    final company = (parts.length > 2 ? parts[2] : '').trim();
-    final description = (parts.length > 3 ? parts[3] : '').trim();
-    if (year.isEmpty &&
-        title.isEmpty &&
-        company.isEmpty &&
-        description.isEmpty) {
-      continue;
-    }
-    out.add({
-      'year': year,
-      'title': title,
-      'company': company,
-      'description': description,
-    });
-  }
-  return out;
-}
-
-/// Carries each role's uploaded proof of employment over to the edited
-/// list: matched by title + company, else by position when the number of
-/// roles didn't change. The text editor itself can't show the files.
-List<Map<String, dynamic>> keepExperienceProofs(
-  Object? previous,
-  List<Map<String, String>> items,
-) {
-  final before = [
-    for (final it in (previous as List? ?? const []))
-      if (it is Map) it,
-  ];
-  String key(Map it) =>
-      '${it['title'] ?? ''}|${it['company'] ?? ''}'.trim().toLowerCase();
-  final byKey = {
-    for (final it in before)
-      if (it['proof'] is Map) key(it): it['proof'],
-  };
-  return [
-    for (final (i, it) in items.indexed)
-      {
-        ...it,
-        'proof':
-            byKey[key(it)] ??
-            (items.length == before.length ? before[i]['proof'] : null),
-      },
-  ];
 }
 
 class EditProfileSheet extends StatefulWidget {
@@ -221,51 +143,9 @@ class EditProfileSheetState extends State<EditProfileSheet> {
     text: (widget.initial['bio'] as String?) ?? '',
   );
   late String _avatarUrl = (widget.initial['avatarUrl'] as String?) ?? '';
-  late List<String> _selectedSkills = (() {
-    final v = widget.initial['skills'];
-    if (v is List) {
-      return v
-          .map((e) => e.toString())
-          .where((s) => s.trim().isNotEmpty)
-          .toList();
-    }
-    return <String>[];
-  })();
-  late final List<String> _initialSkills = List.of(_selectedSkills);
-  late Map<String, int> _skillLevels = readSkillLevels(widget.initial);
-  late final Map<String, int> _initialSkillLevels = Map.of(_skillLevels);
-  List<String> _skillOptions = [];
-  late String? _highestEducation = readHighestEducation(widget.initial);
-  late final String? _initialHighestEducation = _highestEducation;
-  late int? _yearsOfExperience = readYearsOfExperience(widget.initial);
-  late final int? _initialYearsOfExperience = _yearsOfExperience;
-  late final TextEditingController _education = TextEditingController(
-    text: educationToText(widget.initial['education']),
-  );
-  late final TextEditingController _experience = TextEditingController(
-    text: experienceToText(widget.initial['experience']),
-  );
-
   final _imagePicker = ImagePicker();
   bool _saving = false;
   bool _uploadingAvatar = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSkillOptions();
-  }
-
-  Future<void> _loadSkillOptions() async {
-    try {
-      final options = await loadSkillOptions();
-      if (!mounted) return;
-      setState(() => _skillOptions = options);
-    } catch (_) {
-      // Skill list failed to load; the picker's search box still works
-      // once retried, so fail quietly rather than blocking the form.
-    }
-  }
 
   late final Map<String, String> _initialValues = {
     'firstName': _firstName.text,
@@ -276,22 +156,7 @@ class EditProfileSheetState extends State<EditProfileSheet> {
     'portfolio': _portfolio.text,
     'bio': _bio.text,
     'avatarUrl': _avatarUrl,
-    'education': _education.text,
-    'experience': _experience.text,
   };
-
-  bool _skillsChanged() {
-    final a = List<String>.of(_selectedSkills)..sort();
-    final b = List<String>.of(_initialSkills)..sort();
-    if (a.length != b.length) return true;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return true;
-    }
-    for (final skill in _selectedSkills) {
-      if (_skillLevels[skill] != _initialSkillLevels[skill]) return true;
-    }
-    return false;
-  }
 
   bool _hasChanges() {
     return _firstName.text != _initialValues['firstName'] ||
@@ -301,12 +166,7 @@ class EditProfileSheetState extends State<EditProfileSheet> {
         _phone.text != _initialValues['phone'] ||
         _portfolio.text != _initialValues['portfolio'] ||
         _bio.text != _initialValues['bio'] ||
-        _avatarUrl != _initialValues['avatarUrl'] ||
-        _skillsChanged() ||
-        _highestEducation != _initialHighestEducation ||
-        _yearsOfExperience != _initialYearsOfExperience ||
-        _education.text != _initialValues['education'] ||
-        _experience.text != _initialValues['experience'];
+        _avatarUrl != _initialValues['avatarUrl'];
   }
 
   /// Returns true if it's OK to close the sheet now: either nothing
@@ -417,8 +277,6 @@ class EditProfileSheetState extends State<EditProfileSheet> {
     _phone.dispose();
     _portfolio.dispose();
     _bio.dispose();
-    _education.dispose();
-    _experience.dispose();
     super.dispose();
   }
 
@@ -450,18 +308,6 @@ class EditProfileSheetState extends State<EditProfileSheet> {
         'portfolioUrl': _portfolio.text.trim(),
         'bio': _bio.text.trim(),
         'avatarUrl': _avatarUrl.trim(),
-        'skills': _selectedSkills,
-        'skillLevels': {
-          for (final skill in _selectedSkills)
-            skill: _skillLevels[skill] ?? kDefaultSkillLevel,
-        },
-        'education': parseEducationText(_education.text),
-        'experience': keepExperienceProofs(
-          widget.initial['experience'],
-          parseExperienceText(_experience.text),
-        ),
-        'yearsOfExperience': _yearsOfExperience,
-        'highestEducation': _highestEducation ?? '',
       });
       if (!mounted) return;
       Navigator.pop(context, user);
@@ -647,68 +493,6 @@ class EditProfileSheetState extends State<EditProfileSheet> {
               TextField(
                 controller: _portfolio,
                 decoration: _dec('Portfolio URL'),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Skills',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: tokens.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              SkillsSelector(
-                options: _skillOptions,
-                initialSelected: _selectedSkills,
-                initialLevels: _skillLevels,
-                onChanged: (list) => setState(() => _selectedSkills = list),
-                onLevelsChanged: (levels) =>
-                    setState(() => _skillLevels = levels),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Years of work experience',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: tokens.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              ExperienceYearsStepper(
-                value: _yearsOfExperience ?? 0,
-                onChanged: (v) => setState(() => _yearsOfExperience = v),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Highest education',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: tokens.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              EducationLevelPicker(
-                value: _highestEducation,
-                onChanged: (v) => setState(() => _highestEducation = v),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _education,
-                decoration: _dec(
-                  'Education (one per line: Degree | School | Years)',
-                ),
-                maxLines: 4,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _experience,
-                decoration: _dec(
-                  'Experience (one per line: Years | Title | Company | Description)',
-                ),
-                maxLines: 5,
               ),
               const SizedBox(height: 12),
               TextField(controller: _bio, decoration: _dec('Bio'), maxLines: 4),

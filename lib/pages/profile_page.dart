@@ -13,6 +13,7 @@ import '../models/skill_assessment.dart';
 import '../services/applicant_background.dart';
 import '../services/cloudinary_service.dart';
 import '../services/competency.dart';
+import '../services/employment_proof.dart';
 import '../services/completed_certs.dart' show completionsChanged;
 import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
@@ -170,7 +171,6 @@ class _ProfilePageState extends State<ProfilePage> {
       (SessionStore.user == null || SessionStore.user!.isEmpty);
   bool _uploadingResume = false;
   bool _uploadingCertification = false;
-  int? _uploadingProofIndex;
   String? _certUploadStatus;
   String? _error;
   Map<String, dynamic> _user = SessionStore.user ?? {};
@@ -275,145 +275,16 @@ class _ProfilePageState extends State<ProfilePage> {
     return out;
   }
 
-  /// The stored experience items (same filtering and order as
-  /// [_experience]), with every field kept, including `proof`.
-  List<Map<String, dynamic>> _experienceItems() {
-    final v = _user['experience'];
-    if (v is! List) return [];
-    String f(Map it, String k) => (it[k] as Object?)?.toString().trim() ?? '';
-    return [
-      for (final it in v)
-        if (it is Map &&
-            [
-              'year',
-              'title',
-              'company',
-              'description',
-            ].any((k) => f(it, k).isNotEmpty))
-          Map<String, dynamic>.from(it),
-    ];
-  }
-
   Map<String, dynamic>? _experienceProof(int index) {
-    final items = _experienceItems();
+    final items = storedExperienceItems(_user);
     if (index >= items.length) return null;
     final proof = items[index]['proof'];
     return proof is Map ? Map<String, dynamic>.from(proof) : null;
   }
 
-  Future<void> _saveExperienceProof(
-    int index,
-    Map<String, dynamic>? proof,
-  ) async {
-    final items = _experienceItems();
-    if (index >= items.length) return;
-    items[index]['proof'] = proof;
-    final updated = await updateMyProfile({'experience': items});
-    if (!mounted) return;
-    setState(() => _user = updated);
-  }
-
-  Future<void> _uploadExperienceProof(int index) async {
-    if (_uploadingProofIndex != null) return;
-    try {
-      final picked = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-        allowMultiple: false,
-        withData: true,
-        withReadStream: true,
-      );
-      if (picked == null || picked.files.isEmpty) return;
-      final file = picked.files.first;
-      const allowed = {'pdf'};
-      if (!allowed.contains((file.extension ?? '').toLowerCase())) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please choose a PDF file.')),
-        );
-        return;
-      }
-      final bytes = await _resumeBytesFromPick(file);
-      if (bytes == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read selected file.')),
-        );
-        return;
-      }
-      const maxBytes = 10 * 1024 * 1024; // 10MB
-      if (bytes.length > maxBytes) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File must be 10MB or smaller.')),
-        );
-        return;
-      }
-
-      setState(() => _uploadingProofIndex = index);
-      final now = DateTime.now().toUtc().toIso8601String();
-      final Map<String, dynamic> proof;
-      if (CloudinaryConfig.isConfigured) {
-        final result = await CloudinaryService.uploadEmploymentProof(
-          bytes: bytes,
-          fileName: file.name,
-        );
-        proof = {
-          'name': file.name,
-          'url': result.secureUrl,
-          'publicId': result.publicId,
-          'resourceType': result.resourceType,
-          'format': result.format,
-          'mimeType': _resumeMimeType(file.name),
-          'size': bytes.length,
-          'updatedAt': now,
-        };
-      } else {
-        // Fallback to base64 encoding if Cloudinary is not configured yet
-        proof = {
-          'name': file.name,
-          'mimeType': _resumeMimeType(file.name),
-          'data': base64Encode(bytes),
-          'size': bytes.length,
-          'updatedAt': now,
-        };
-      }
-      await _saveExperienceProof(index, proof);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Certificate of Employment uploaded.')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      final message = e.toString();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message.contains('(413)')
-                ? 'Upload failed: File is too large.'
-                : 'Upload failed: $message',
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _uploadingProofIndex = null);
-    }
-  }
-
-  Future<void> _removeExperienceProof(int index) async {
-    if (_uploadingProofIndex != null) return;
-    setState(() => _uploadingProofIndex = index);
-    try {
-      await _saveExperienceProof(index, null);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not remove file: $e')));
-    } finally {
-      if (mounted) setState(() => _uploadingProofIndex = null);
-    }
-  }
+  Future<void> _openExperienceEntry({int? index}) => _openSection(
+    (context, user) => showExperienceEntrySheet(context, user, index: index),
+  );
 
   Map<String, dynamic> _profileData() {
     final raw = _user['profile'];
@@ -1257,11 +1128,13 @@ class _ProfilePageState extends State<ProfilePage> {
         if (!_uploadingResume) _uploadResume();
         break;
       case 'skills':
+        _openSection(showSkillsSheet);
+        break;
       case 'headline':
         _openEdit();
         break;
       case 'experience':
-        _openSection(showExperienceSheet);
+        _openExperienceEntry();
         break;
       case 'education':
         _openSection(showEducationSheet);
@@ -1644,7 +1517,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     // Empty sections use the empty-state button instead.
                     actionLabel: 'Edit',
                     actionIcon: Icons.edit_outlined,
-                    onAction: skills.isEmpty ? null : _openEdit,
+                    onAction: skills.isEmpty
+                        ? null
+                        : () => _openSection(showSkillsSheet),
                   ),
                   const SizedBox(height: 16),
                   if (skills.isEmpty)
@@ -1654,7 +1529,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       subtitle:
                           'Add your core skills to unlock accurate AI job recommendations and compatibility scoring.',
                       buttonLabel: 'Add Skills',
-                      onAction: _openEdit,
+                      onAction: () => _openSection(showSkillsSheet),
                     )
                   else
                     _SkillGroups(
@@ -1670,45 +1545,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                 (s.toLowerCase().contains(
                                   res.roleTitle?.toLowerCase() ?? '___',
                                 ))),
-                      ),
-                      addMore: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _openEdit,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tokens.surfaceMuted,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: tokens.primary.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.add,
-                                  size: 14,
-                                  color: tokens.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Add more',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: tokens.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ),
                     ),
                 ],
@@ -1894,12 +1730,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     badgeText: experience.isNotEmpty
                         ? '${experience.length} ${experience.length == 1 ? "Role" : "Roles"}'
                         : null,
-                    // Empty sections use the empty-state button instead.
-                    actionLabel: 'Edit',
-                    actionIcon: Icons.edit_outlined,
+                    // Empty sections use the empty-state button instead;
+                    // each job has its own edit button.
+                    actionLabel: 'Add',
+                    actionIcon: Icons.add,
                     onAction: experience.isEmpty
                         ? null
-                        : () => _openSection(showExperienceSheet),
+                        : () => _openExperienceEntry(),
                   ),
                   const SizedBox(height: 16),
                   _BackgroundFact(
@@ -1919,7 +1756,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       subtitle:
                           'Highlight your past roles, internships, or freelance projects.',
                       buttonLabel: 'Add Experience',
-                      onAction: () => _openSection(showExperienceSheet),
+                      onAction: () => _openExperienceEntry(),
                     )
                   else
                     ...experience.asMap().entries.map((entry) {
@@ -1946,11 +1783,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             _experienceProof(idx),
                             fallback: 'PDF only (max 10MB)',
                           ),
-                          uploadingProof: _uploadingProofIndex == idx,
-                          proofBusy: _uploadingProofIndex != null,
-                          onUploadProof: () => _uploadExperienceProof(idx),
                           onViewProof: (doc) => _viewResumeFile(doc),
-                          onRemoveProof: () => _removeExperienceProof(idx),
+                          onEdit: () => _openExperienceEntry(index: idx),
                         ),
                       );
                     }),
@@ -2866,13 +2700,8 @@ class _ExperienceItem extends StatelessWidget {
   /// Uploaded certificate/proof of employment, or null if none yet.
   final Map<String, dynamic>? proof;
   final String proofSubtitle;
-  final bool uploadingProof;
-
-  /// True while any proof upload/removal is running (disables actions).
-  final bool proofBusy;
-  final VoidCallback onUploadProof;
   final ValueChanged<Map<String, dynamic>> onViewProof;
-  final VoidCallback onRemoveProof;
+  final VoidCallback onEdit;
 
   const _ExperienceItem({
     required this.year,
@@ -2883,44 +2712,22 @@ class _ExperienceItem extends StatelessWidget {
     this.isLast = false,
     required this.proof,
     required this.proofSubtitle,
-    required this.uploadingProof,
-    required this.proofBusy,
-    required this.onUploadProof,
     required this.onViewProof,
-    required this.onRemoveProof,
+    required this.onEdit,
   });
 
   Widget _buildProof(AppThemeExtension tokens) {
     final proof = this.proof;
-    if (uploadingProof) {
+    if (proof == null) {
       return Row(
         children: [
-          const SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          const SizedBox(width: 8),
+          Icon(Icons.description_outlined, size: 15, color: tokens.textFaint),
+          const SizedBox(width: 6),
           Text(
-            proof == null ? 'Uploading…' : 'Updating…',
-            style: TextStyle(fontSize: 12.5, color: tokens.textSecondary),
+            'No Certificate of Employment yet',
+            style: TextStyle(fontSize: 12, color: tokens.textFaint),
           ),
         ],
-      );
-    }
-    if (proof == null) {
-      return TextButton.icon(
-        onPressed: proofBusy ? null : onUploadProof,
-        style: TextButton.styleFrom(
-          padding: EdgeInsets.zero,
-          minimumSize: const Size(0, 32),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        icon: const Icon(Icons.upload_file_rounded, size: 18),
-        label: const Text(
-          'Upload Certificate of Employment',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        ),
       );
     }
     return Container(
@@ -2966,16 +2773,6 @@ class _ExperienceItem extends StatelessWidget {
             visualDensity: VisualDensity.compact,
             icon: Icon(Icons.open_in_new, size: 18, color: tokens.primary),
             onPressed: () => onViewProof(proof),
-          ),
-          IconButton(
-            tooltip: 'Remove Certificate of Employment',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.delete_outline,
-              size: 18,
-              color: AppColors.danger,
-            ),
-            onPressed: proofBusy ? null : onRemoveProof,
           ),
         ],
       ),
@@ -3049,6 +2846,16 @@ class _ExperienceItem extends StatelessWidget {
                           ),
                         ),
                       ),
+                    IconButton(
+                      tooltip: 'Edit $title',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        size: 18,
+                        color: tokens.primary,
+                      ),
+                      onPressed: onEdit,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -3111,19 +2918,20 @@ class _SkillGroups extends StatefulWidget {
     required this.skills,
     required this.levels,
     required this.isVerified,
-    required this.addMore,
   });
 
   final List<String> skills;
   final Map<String, int> levels;
   final bool Function(String skill) isVerified;
-  final Widget addMore;
 
   @override
   State<_SkillGroups> createState() => _SkillGroupsState();
 }
 
 class _SkillGroupsState extends State<_SkillGroups> {
+  /// Groups the user has opened; all start collapsed to keep the card short.
+  final Set<SkillCategory> _expanded = {};
+
   @override
   void initState() {
     super.initState();
@@ -3169,59 +2977,88 @@ class _SkillGroupsState extends State<_SkillGroups> {
       if (sections.isNotEmpty) {
         sections.add(
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(vertical: 10),
             child: Divider(height: 1, color: tokens.cardBorderSoft),
           ),
         );
       }
+      final open = _expanded.contains(g.category);
       sections.add(
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(g.icon, size: 16, color: tokens.primary),
-                const SizedBox(width: 6),
-                Text(
-                  g.title,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: tokens.textPrimary,
-                  ),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() {
+                if (!_expanded.remove(g.category)) _expanded.add(g.category);
+              }),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(g.icon, size: 16, color: tokens.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          g.title,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: tokens.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${items.length}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: tokens.textSecondary,
+                          ),
+                        ),
+                        const Spacer(),
+                        AnimatedRotation(
+                          turns: open ? 0.5 : 0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            Icons.expand_more_rounded,
+                            color: tokens.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 22),
+                      child: Text(
+                        g.subtitle,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: tokens.textFaint,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  '${items.length}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: tokens.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Padding(
-              padding: const EdgeInsets.only(left: 22),
-              child: Text(
-                g.subtitle,
-                style: TextStyle(fontSize: 11.5, color: tokens.textFaint),
               ),
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final s in items)
-                  _SkillTag(
-                    skill: s,
-                    level: widget.levels[s],
-                    isVerified: widget.isVerified(s),
-                  ),
-              ],
-            ),
+            if (open) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final s in items)
+                    _SkillTag(
+                      skill: s,
+                      level: widget.levels[s],
+                      isVerified: widget.isVerified(s),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       );
@@ -3229,7 +3066,7 @@ class _SkillGroupsState extends State<_SkillGroups> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [...sections, const SizedBox(height: 14), widget.addMore],
+      children: sections,
     );
   }
 }
