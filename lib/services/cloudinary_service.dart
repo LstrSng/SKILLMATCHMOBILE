@@ -217,6 +217,19 @@ class CloudinaryService {
     );
   }
 
+  /// Uploads a certificate/proof of employment (document or image).
+  static Future<CloudinaryUploadResult> uploadEmploymentProof({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    return uploadBytes(
+      bytes: bytes,
+      fileName: fileName,
+      folder: CloudinaryConfig.employmentProofFolder,
+      resourceType: 'auto',
+    );
+  }
+
   /// Uploads a certification document or image to Cloudinary.
   static Future<CloudinaryUploadResult> uploadCertification({
     required Uint8List bytes,

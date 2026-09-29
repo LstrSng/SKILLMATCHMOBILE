@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/applicant_background.dart';
 import '../services/competency.dart';
 import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
+import '../widgets/background_fields.dart';
 import '../widgets/centered_form_width.dart';
 import '../widgets/edit_profile_sheet.dart' show kDefaultSkillLevel;
 import 'main_navigation_page.dart';
@@ -60,6 +62,34 @@ class _SignedInHomeState extends State<SignedInHome> {
   }
 }
 
+/// Quick-add suggestions shown under the search box. Names match the
+/// skill-options vocabulary so they line up with job-posting skills.
+const List<String> _kSuggestedTechSkills = [
+  'HTML',
+  'CSS',
+  'JavaScript',
+  'Python',
+  'Java',
+  'SQL',
+  'Git',
+  'React',
+  'Node.js',
+  'Flutter',
+  'MySQL',
+  'Figma',
+];
+
+const List<String> _kSuggestedSoftSkills = [
+  'Communication',
+  'Teamwork',
+  'Problem Solving',
+  'Critical Thinking',
+  'Time Management',
+  'Adaptability',
+  'Leadership',
+  'Attention to Detail',
+];
+
 /// Color for a 1–10 level: orange (beginner) → blue → indigo → green (expert).
 Color _levelColor(int level) {
   if (level <= 3) return AppColors.warning;
@@ -85,6 +115,8 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
   final List<String> _skills = [];
   final Map<String, int> _levels = {};
   String _query = '';
+  String? _education = readHighestEducation(SessionStore.user);
+  int _years = readYearsOfExperience(SessionStore.user) ?? 0;
   bool _saving = false;
 
   @override
@@ -126,6 +158,12 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
     });
   }
 
+  /// [suggestions] minus the skills already added (case-insensitive).
+  List<String> _unpicked(List<String> suggestions) {
+    final picked = _skills.map((s) => s.toLowerCase()).toSet();
+    return suggestions.where((s) => !picked.contains(s.toLowerCase())).toList();
+  }
+
   void _removeSkill(String skill) {
     HapticFeedback.lightImpact();
     setState(() {
@@ -141,7 +179,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
   }
 
   Future<void> _save() async {
-    if (_skills.isEmpty || _saving) return;
+    if (_skills.isEmpty || _education == null || _saving) return;
     setState(() => _saving = true);
     try {
       await updateMyProfile({
@@ -150,6 +188,8 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
           for (final skill in _skills)
             skill: _levels[skill] ?? kDefaultSkillLevel,
         },
+        'yearsOfExperience': _years,
+        'highestEducation': _education,
       });
       if (!mounted) return;
       widget.onDone();
@@ -186,8 +226,29 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                   children: [
                     CenteredFormWidth(child: _buildSearch(tokens)),
+                    if (_query.trim().isEmpty) ...[
+                      const SizedBox(height: 18),
+                      CenteredFormWidth(
+                        child: _SuggestionGroup(
+                          title: 'Tech stack',
+                          icon: Icons.code_rounded,
+                          skills: _unpicked(_kSuggestedTechSkills),
+                          onTap: _addSkill,
+                        ),
+                      ),
+                      CenteredFormWidth(
+                        child: _SuggestionGroup(
+                          title: 'Soft skills',
+                          icon: Icons.groups_rounded,
+                          skills: _unpicked(_kSuggestedSoftSkills),
+                          onTap: _addSkill,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     CenteredFormWidth(child: _buildSelected(tokens)),
+                    const SizedBox(height: 8),
+                    CenteredFormWidth(child: _buildBackground(tokens)),
                   ],
                 ),
               ),
@@ -388,8 +449,45 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
     );
   }
 
+  Widget _buildBackground(AppThemeExtension tokens) {
+    TextStyle label() => TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+      color: tokens.textPrimary,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your background',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: tokens.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text('Years of work experience', style: label()),
+        const SizedBox(height: 8),
+        ExperienceYearsStepper(
+          value: _years,
+          onChanged: (v) => setState(() => _years = v),
+        ),
+        const SizedBox(height: 18),
+        Text('Highest education', style: label()),
+        const SizedBox(height: 8),
+        EducationLevelPicker(
+          value: _education,
+          onChanged: (v) => setState(() => _education = v),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBottomBar(AppThemeExtension tokens) {
     final count = _skills.length;
+    final ready = count > 0 && _education != null;
     return Container(
       decoration: BoxDecoration(
         color: tokens.cardBackground,
@@ -411,7 +509,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                onPressed: count == 0 || _saving ? null : _save,
+                onPressed: !ready || _saving ? null : _save,
                 child: _saving
                     ? const SizedBox(
                         height: 22,
@@ -428,19 +526,19 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
                             child: Text(
                               count == 0
                                   ? 'Add at least 1 skill'
+                                  : _education == null
+                                  ? 'Pick your highest education'
                                   : 'Continue with $count skill${count == 1 ? '' : 's'}',
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontFamily: 'Roboto',
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: count == 0
-                                    ? tokens.textFaint
-                                    : Colors.white,
+                                color: ready ? Colors.white : tokens.textFaint,
                               ),
                             ),
                           ),
-                          if (count > 0) ...[
+                          if (ready) ...[
                             const SizedBox(width: 8),
                             const Icon(Icons.arrow_forward_rounded, size: 20),
                           ],
@@ -549,6 +647,90 @@ class _Header extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A titled wrap of tap-to-add skill chips. Hidden once every chip is added.
+class _SuggestionGroup extends StatelessWidget {
+  const _SuggestionGroup({
+    required this.title,
+    required this.icon,
+    required this.skills,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<String> skills;
+  final ValueChanged<String> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (skills.isEmpty) return const SizedBox.shrink();
+    final tokens = context.appColors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: tokens.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: tokens.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final skill in skills)
+                Material(
+                  color: tokens.cardBackground,
+                  shape: StadiumBorder(
+                    side: BorderSide(color: tokens.cardBorderSoft),
+                  ),
+                  child: InkWell(
+                    customBorder: const StadiumBorder(),
+                    onTap: () => onTap(skill),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 7, 12, 7),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.add_rounded,
+                            size: 16,
+                            color: tokens.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            skill,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: tokens.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

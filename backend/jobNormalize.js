@@ -112,7 +112,22 @@ export function normalizeJobDoc(d, poster) {
     matchedSkills,
     unmatchedSkills,
     postedDate: String(postedDate),
+    // Machine-readable post time so clients can sort by newest.
+    postedAt: postedAtIso(d),
   };
+}
+
+/** ISO time the job was posted: explicit timestamps, else the ObjectId's. */
+function postedAtIso(d) {
+  for (const raw of [d.postedAt, d.createdAt, d.datePosted, d.postedDate]) {
+    if (!raw) continue;
+    const date = raw instanceof Date ? raw : new Date(raw);
+    if (!Number.isNaN(date.getTime())) return date.toISOString();
+  }
+  if (typeof d._id?.getTimestamp === "function") {
+    return d._id.getTimestamp().toISOString();
+  }
+  return "";
 }
 
 function formatPostedFromTimestamps(d) {

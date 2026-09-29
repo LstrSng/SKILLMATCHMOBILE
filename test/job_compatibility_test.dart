@@ -298,7 +298,7 @@ void main() {
         final text = prescriptionText(score: 75, actions: actions);
         expect(
           text,
-          contains('raise Business Needs Analysis from Level 2 to Level 3'),
+          contains('Raise Business Needs Analysis from Level 2 to Level 3'),
         );
       },
     );
@@ -349,14 +349,9 @@ void main() {
           },
         );
         final text = prescriptionText(score: 40, actions: actions);
-        expect(
-          text,
-          startsWith(
-            'Skill gap detected (40%). Best next step: learn TypeScript',
-          ),
-        );
-        expect(text, contains('raises your match to 60%'));
-        expect(text, contains('Recommended: '));
+        expect(text, startsWith('Learn TypeScript'));
+        expect(text, contains('to reach a 60% match.'));
+        expect(text, contains('Try: '));
         expect(
           prescriptionText(score: 100, actions: const []),
           contains('Ready to apply!'),

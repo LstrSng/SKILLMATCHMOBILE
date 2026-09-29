@@ -34,6 +34,7 @@ class CloudinaryConfig {
   static const String avatarFolder = '$folderPrefix/avatars';
   static const String resumeFolder = '$folderPrefix/resumes';
   static const String certificationFolder = '$folderPrefix/certifications';
+  static const String employmentProofFolder = '$folderPrefix/employment_proofs';
 
   /// Checks whether Cloudinary credentials have been configured.
   static bool get isConfigured {

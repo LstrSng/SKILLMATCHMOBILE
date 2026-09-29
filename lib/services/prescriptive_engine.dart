@@ -204,13 +204,6 @@ Future<List<PrescribedAction>> prescribeActions({
   return [for (final (_, a) in indexed) a];
 }
 
-String _fitLabel(int score) {
-  if (score >= 85) return 'Great fit';
-  if (score >= 70) return 'Good fit';
-  if (score >= 50) return 'Moderate fit';
-  return 'Skill gap detected';
-}
-
 String _costText(TrainingResource cert) => switch (cert.cost) {
   TrainingCost.free => 'Free',
   TrainingCost.freeToLearn => 'free to learn',
@@ -224,23 +217,24 @@ String prescriptionText({
   required List<PrescribedAction> actions,
 }) {
   if (actions.isEmpty) {
-    return 'Outstanding match ($score%)! You meet all required skills at the required levels. Ready to apply!';
+    return 'You meet every required skill. Ready to apply!';
   }
   final top = actions.first;
   final required = top.competency.required;
   final step = top.isLevelUp
-      ? 'raise ${top.skill} from ${top.competency.applicantLevel} to ${required!.label}'
-      : 'learn ${top.skill}${required != null ? ' up to ${required.label}' : ''}';
-  final reach = top.otherJobs.isEmpty
+      ? 'Raise ${top.skill} from ${top.competency.applicantLevel} to ${required!.label}'
+      : 'Learn ${top.skill}${required != null ? ' to ${required.label}' : ''}';
+  final others = top.otherJobs.length;
+  final reach = others == 0
       ? ''
-      : ' and closes the same gap in ${top.otherJobs.length} other posted job${top.otherJobs.length == 1 ? '' : 's'}';
+      : ' Also helps in $others other job${others == 1 ? '' : 's'}.';
   final cert = top.certification;
   final certText = cert == null
-      ? ' Build it through projects and practice.'
+      ? ''
       : cert.isFree && cert.label.toLowerCase().contains('free')
-      ? ' Recommended: ${cert.label}.'
-      : ' Recommended: ${cert.label} (${_costText(cert)}).';
-  return '${_fitLabel(score)} ($score%). Best next step: $step — it raises your match to ${top.newScore}%$reach.$certText';
+      ? ' Try: ${cert.label}.'
+      : ' Try: ${cert.label} (${_costText(cert)}).';
+  return '$step to reach a ${top.newScore}% match.$reach$certText';
 }
 
 bool _hasSkillKeyword(String text, String keyword) {

@@ -186,6 +186,21 @@ async function verifyOtp({ email, purpose, otp, challengeId }) {
   return { ok: true };
 }
 
+/** An experience item's proof-of-employment file, or null if missing/invalid. */
+function employmentProof(p) {
+  if (!p || typeof p !== "object") return null;
+  const url = String(p.url ?? "").trim();
+  const data = String(p.data ?? "").trim();
+  if (!url && !data) return null;
+  const out = { name: String(p.name ?? "Proof of employment").trim() };
+  for (const k of ["url", "publicId", "resourceType", "format", "mimeType", "updatedAt"]) {
+    if (p[k] != null && String(p[k]).trim()) out[k] = String(p[k]).trim();
+  }
+  if (data) out.data = data;
+  if (Number.isFinite(p.size)) out.size = p.size;
+  return out;
+}
+
 function userPublic(u) {
   if (!u) return null;
   const storedSkills = readStoredSkills(u);
@@ -205,6 +220,7 @@ function userPublic(u) {
           title: String(it?.title ?? "").trim(),
           company: String(it?.company ?? "").trim(),
           description: String(it?.description ?? "").trim(),
+          proof: employmentProof(it?.proof),
         }))
         .filter((it) => it.year || it.title || it.company || it.description)
     : [];
@@ -225,6 +241,9 @@ function userPublic(u) {
     skillLevels: storedSkills.levels,
     education,
     experience,
+    yearsOfExperience:
+      typeof u.yearsOfExperience === "number" ? u.yearsOfExperience : null,
+    highestEducation: u.highestEducation || "",
     profile: u.profile && typeof u.profile === "object" ? u.profile : {},
   };
 }
@@ -1172,6 +1191,17 @@ app.post("/api/users/password/reset/complete", requireDb, async (req, res) => {
   }
 });
 
+// Highest educational attainment choices, lowest to highest. Keep in sync
+// with kEducationLevels in lib/services/applicant_background.dart.
+const EDUCATION_LEVELS = [
+  "Vocational / TESDA",
+  "College Undergraduate",
+  "Bachelor's Degree",
+  "Master's Degree",
+  "Doctorate",
+];
+const MAX_EXPERIENCE_YEARS = 40;
+
 // Current user profile
 app.get("/api/me", requireDb, requireAuth, async (req, res) => {
   return res.json({ user: userPublic(req.user) });
@@ -1244,6 +1274,7 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
         title: String(it?.title ?? "").trim(),
         company: String(it?.company ?? "").trim(),
         description: String(it?.description ?? "").trim(),
+        proof: employmentProof(it?.proof),
       });
       if (Array.isArray(body.experience)) {
         patch.experience = body.experience
@@ -1266,6 +1297,26 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
           })
           .filter((it) => it.year || it.title || it.company || it.description);
       }
+    }
+    if (body.yearsOfExperience !== undefined) {
+      if (body.yearsOfExperience === null) {
+        patch.yearsOfExperience = null;
+      } else {
+        const years = Number(body.yearsOfExperience);
+        if (!Number.isInteger(years) || years < 0 || years > MAX_EXPERIENCE_YEARS) {
+          return res.status(400).json({
+            message: `Years of experience must be a whole number from 0 to ${MAX_EXPERIENCE_YEARS}.`,
+          });
+        }
+        patch.yearsOfExperience = years;
+      }
+    }
+    if (body.highestEducation !== undefined) {
+      const level = String(body.highestEducation ?? "").trim();
+      if (level && !EDUCATION_LEVELS.includes(level)) {
+        return res.status(400).json({ message: "Unknown education level." });
+      }
+      patch.highestEducation = level;
     }
     if (body.profile !== undefined && body.profile && typeof body.profile === "object") {
       const existingProfile = (req.user.profile && typeof req.user.profile === "object")

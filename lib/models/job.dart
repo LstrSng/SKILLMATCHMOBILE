@@ -15,6 +15,9 @@ class Job {
   final String description;
   final String postedDate;
 
+  /// When the job was posted, if the API sent a timestamp.
+  final DateTime? postedAt;
+
   Job({
     this.id = '',
     required this.title,
@@ -29,6 +32,7 @@ class Job {
     required this.unmatchedSkills,
     required this.description,
     required this.postedDate,
+    this.postedAt,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -52,6 +56,7 @@ class Job {
       unmatchedSkills: _stringList(json['unmatchedSkills']),
       description: (json['description'] as String?)?.trim() ?? '',
       postedDate: posted.isNotEmpty ? posted : 'Recently posted',
+      postedAt: DateTime.tryParse(json['postedAt']?.toString() ?? ''),
     );
   }
 
@@ -110,6 +115,7 @@ class Job {
       unmatchedSkills: unmatchedSkills ?? this.unmatchedSkills,
       description: description,
       postedDate: postedDate,
+      postedAt: postedAt,
     );
   }
 }

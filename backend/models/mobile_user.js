@@ -15,6 +15,10 @@ const experienceItemSchema = new mongoose.Schema(
         title: { type: String, default: "" },
         company: { type: String, default: "" },
         description: { type: String, default: "" },
+        // Uploaded certificate/proof of employment: { name, url, publicId,
+        // resourceType, format, mimeType, size, updatedAt } (or `data`
+        // base64 when Cloudinary isn't configured). Null when none.
+        proof: { type: mongoose.Schema.Types.Mixed, default: null },
     },
     { _id: false }
 );
@@ -59,6 +63,11 @@ const mobileUserSchema = new mongoose.Schema({
     },
     education: { type: [educationItemSchema], default: [] },
     experience: { type: [experienceItemSchema], default: [] },
+
+    // Structured background for analytics. Null/"" until the user sets them
+    // (accounts created before these fields existed).
+    yearsOfExperience: { type: Number, default: null, min: 0, max: 40 },
+    highestEducation: { type: String, default: "" },
 
     // Flexible bucket for extra user-defined fields.
     profile: { type: mongoose.Schema.Types.Mixed, default: {} },

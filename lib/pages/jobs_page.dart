@@ -182,11 +182,6 @@ class _JobsPageState extends State<JobsPage> {
           !j.jobType.toLowerCase().contains('remote')) {
         return false;
       }
-      if (_selectedQuickFilter == 'Internship' &&
-          !j.jobType.toLowerCase().contains('intern') &&
-          !j.title.toLowerCase().contains('intern')) {
-        return false;
-      }
 
       // Modal filters
       if (_jobTypeFilter != null && j.jobType != _jobTypeFilter) return false;
@@ -206,7 +201,15 @@ class _JobsPageState extends State<JobsPage> {
       return hay.contains(q);
     }
 
-    return _jobs.where(matches).toList();
+    final visible = _jobs.where(matches).toList();
+    if (_selectedQuickFilter == 'Latest') {
+      // Newest first; jobs without a timestamp go last.
+      final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+      visible.sort(
+        (a, b) => (b.postedAt ?? epoch).compareTo(a.postedAt ?? epoch),
+      );
+    }
+    return visible;
   }
 
   bool get _hasActiveFilters =>
@@ -602,6 +605,15 @@ class _JobsPageState extends State<JobsPage> {
                                   ),
                                   const SizedBox(width: 8),
                                   _QuickFilterChip(
+                                    label: 'Latest',
+                                    icon: Icons.schedule_rounded,
+                                    selected: _selectedQuickFilter == 'Latest',
+                                    onTap: () => setState(
+                                      () => _selectedQuickFilter = 'Latest',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _QuickFilterChip(
                                     label: 'Saved',
                                     icon: Icons.bookmark_rounded,
                                     selected: _selectedQuickFilter == 'Saved',
@@ -642,15 +654,6 @@ class _JobsPageState extends State<JobsPage> {
                                     selected: _selectedQuickFilter == 'Remote',
                                     onTap: () => setState(
                                       () => _selectedQuickFilter = 'Remote',
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _QuickFilterChip(
-                                    label: 'Internship',
-                                    selected:
-                                        _selectedQuickFilter == 'Internship',
-                                    onTap: () => setState(
-                                      () => _selectedQuickFilter = 'Internship',
                                     ),
                                   ),
                                   const SizedBox(width: 8),
