@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../services/applicant_background.dart';
 import '../services/competency.dart';
 import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
-import '../widgets/background_fields.dart';
 import '../widgets/centered_form_width.dart';
 import '../widgets/edit_profile_sheet.dart' show kDefaultSkillLevel;
 import 'main_navigation_page.dart';
@@ -115,8 +113,6 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
   final List<String> _skills = [];
   final Map<String, int> _levels = {};
   String _query = '';
-  String? _education = readHighestEducation(SessionStore.user);
-  int _years = readYearsOfExperience(SessionStore.user) ?? 0;
   bool _saving = false;
 
   @override
@@ -179,7 +175,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
   }
 
   Future<void> _save() async {
-    if (_skills.isEmpty || _education == null || _saving) return;
+    if (_skills.isEmpty || _saving) return;
     setState(() => _saving = true);
     try {
       await updateMyProfile({
@@ -188,8 +184,6 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
           for (final skill in _skills)
             skill: _levels[skill] ?? kDefaultSkillLevel,
         },
-        'yearsOfExperience': _years,
-        'highestEducation': _education,
       });
       if (!mounted) return;
       widget.onDone();
@@ -247,8 +241,6 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
                     ],
                     const SizedBox(height: 20),
                     CenteredFormWidth(child: _buildSelected(tokens)),
-                    const SizedBox(height: 8),
-                    CenteredFormWidth(child: _buildBackground(tokens)),
                   ],
                 ),
               ),
@@ -449,45 +441,9 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
     );
   }
 
-  Widget _buildBackground(AppThemeExtension tokens) {
-    TextStyle label() => TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w700,
-      color: tokens.textPrimary,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Your background',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: tokens.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Text('Years of work experience', style: label()),
-        const SizedBox(height: 8),
-        ExperienceYearsStepper(
-          value: _years,
-          onChanged: (v) => setState(() => _years = v),
-        ),
-        const SizedBox(height: 18),
-        Text('Highest education', style: label()),
-        const SizedBox(height: 8),
-        EducationLevelPicker(
-          value: _education,
-          onChanged: (v) => setState(() => _education = v),
-        ),
-      ],
-    );
-  }
-
   Widget _buildBottomBar(AppThemeExtension tokens) {
     final count = _skills.length;
-    final ready = count > 0 && _education != null;
+    final ready = count > 0;
     return Container(
       decoration: BoxDecoration(
         color: tokens.cardBackground,
@@ -526,8 +482,6 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
                             child: Text(
                               count == 0
                                   ? 'Add at least 1 skill'
-                                  : _education == null
-                                  ? 'Pick your highest education'
                                   : 'Continue with $count skill${count == 1 ? '' : 's'}',
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
