@@ -155,11 +155,23 @@ class _JobDetailPageState extends State<JobDetailPage> {
         requiredSkills: [...widget.matchedSkills, ...widget.unmatchedSkills],
         user: SessionStore.user,
       );
+      // Re-split from the user's current skills (same as the Jobs list) so
+      // the matrix updates right after a pathway step adds a skill.
       final result = JobMatchResult(
         jobTitle: widget.title,
         matchScore: score,
-        matchedSkills: widget.matchedSkills,
-        missingSkills: widget.unmatchedSkills,
+        matchedSkills: competencies.isEmpty
+            ? widget.matchedSkills
+            : [
+                for (final c in competencies)
+                  if (c.status != CompetencyStatus.missing) c.raw,
+              ],
+        missingSkills: competencies.isEmpty
+            ? widget.unmatchedSkills
+            : [
+                for (final c in competencies)
+                  if (c.status == CompetencyStatus.missing) c.raw,
+              ],
         recommendation: prescriptionText(score: score, actions: actions),
       );
 
