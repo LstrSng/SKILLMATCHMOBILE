@@ -74,7 +74,7 @@ class _JobPathwayPageState extends State<JobPathwayPage> {
   /// Completing a step first offers an optional certificate upload, then
   /// asks for the user's level in the skill (starting at their current
   /// rating, or 1 if they don't have it yet); both are saved to the
-  /// profile. Undoing only clears the mark.
+  /// profile. Undoing asks for confirmation and only clears the mark.
   Future<void> _toggleStep(SkillCompetency competency, bool completed) async {
     final skill = competency.skill;
     CertificationDraft? cert;
@@ -100,6 +100,28 @@ class _JobPathwayPageState extends State<JobPathwayPage> {
         required: competency.required,
       );
       if (level == null || !mounted) return;
+    } else {
+      final remove = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Remove completed mark?'),
+          content: Text(
+            '"$skill" will no longer be marked as completed. Your skill level '
+            'and any certificate you uploaded stay on your profile.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Remove'),
+            ),
+          ],
+        ),
+      );
+      if (remove != true || !mounted) return;
     }
     final previous = _completedSteps;
     final key = skill.toLowerCase();

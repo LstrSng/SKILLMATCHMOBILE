@@ -191,9 +191,54 @@
           "costNote": "Free online course; the Level III assessment for the national certificate has a fee.",
           "provider": "TESDA Online Program (TOP)",
           "type": "Digital Marketing Level III"
+        },
+        {
+          "label": "Animation NC II",
+          "url": "https://www.degrees.ph/tesda/it-bpm/animation-nc-ii",
+          "isFree": false,
+          "cost": "paid",
+          "costNote": "Paid training at TESDA-accredited schools, about ₱10,000 – ₱30,000; 3–5 months (497 hours). TESDA scholarships may cover it.",
+          "provider": "TESDA-Accredited Schools (IT-BPM)",
+          "type": "Animation NC II"
+        },
+        {
+          "label": "Computer Systems Servicing NC II",
+          "url": "https://www.degrees.ph/tesda/it-bpm/computer-systems-servicing-nc-ii",
+          "isFree": false,
+          "cost": "paid",
+          "costNote": "Paid training at TESDA-accredited schools, about ₱5,000 – ₱20,000; 2–3 months full-time (280 hours). TESDA scholarships may cover it.",
+          "provider": "TESDA-Accredited Schools (IT-BPM)",
+          "type": "Computer Systems Servicing NC II"
+        },
+        {
+          "label": "Contact Center Services NC II",
+          "url": "https://www.degrees.ph/tesda/it-bpm/contact-center-services-nc-ii",
+          "isFree": false,
+          "cost": "paid",
+          "costNote": "Paid training at TESDA-accredited schools, about ₱5,000 – ₱15,000; 1–2 months (240 hours). TESDA scholarships may cover it.",
+          "provider": "TESDA-Accredited Schools (IT-BPM)",
+          "type": "Contact Center Services NC II"
+        },
+        {
+          "label": "Programming NC IV",
+          "url": "https://www.degrees.ph/tesda/it-bpm/programming-nc-iv",
+          "isFree": false,
+          "cost": "paid",
+          "costNote": "Paid training at TESDA-accredited schools, about ₱10,000 – ₱30,000; 4–6 months (586 hours). TESDA scholarships may cover it.",
+          "provider": "TESDA-Accredited Schools (IT-BPM)",
+          "type": "Programming NC IV"
+        },
+        {
+          "label": "Web Development NC III",
+          "url": "https://www.degrees.ph/tesda/it-bpm/web-development-nc-iii",
+          "isFree": false,
+          "cost": "paid",
+          "costNote": "Paid training at TESDA-accredited schools, about ₱8,000 – ₱25,000; 3–5 months (468 hours). TESDA scholarships may cover it.",
+          "provider": "TESDA-Accredited Schools (IT-BPM)",
+          "type": "Web Development NC III"
         }
       ],
-      "note": "Free ICT courses from the TESDA Online Program (e-TESDA, Information and Communication Technology category).",
+      "note": "Free ICT courses from the TESDA Online Program (e-TESDA), plus paid TESDA IT-BPM National Certificate (NC) programs offered by accredited schools.",
       "field": "TESDA"
     },
     {
