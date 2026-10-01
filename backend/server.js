@@ -252,10 +252,6 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, db: mongoose.connection.readyState === 1 });
 });
 
-app.get("/test", (_req, res) => {
-  res.send("test");
-});
-
 const JOBS_QUERY_LIMIT = Math.min(
   Math.max(Number(process.env.JOBS_QUERY_LIMIT) || 100, 1),
   500
@@ -268,6 +264,14 @@ function stripLevelSuffix(str) {
     .trim();
 }
 
+/** Whether a job posting is still accepting applicants. */
+function isJobOpen(d) {
+  if (d.isArchived === true) return false;
+  if (!d.closesAt) return true;
+  const closes = new Date(d.closesAt).getTime();
+  return Number.isNaN(closes) || closes > Date.now();
+}
+
 // Jobs stored in MongoDB (collection: JOBS_COLLECTION, default `jobs`)
 app.get("/api/jobs", requireDb, async (req, res) => {
   try {
@@ -277,12 +281,7 @@ app.get("/api/jobs", requireDb, async (req, res) => {
       .limit(JOBS_QUERY_LIMIT)
       .lean();
     // Neither are postings past their closing date.
-    const now = Date.now();
-    let raw = fetched.filter((d) => {
-      if (!d.closesAt) return true;
-      const closes = new Date(d.closesAt).getTime();
-      return Number.isNaN(closes) || closes > now;
-    });
+    let raw = fetched.filter(isJobOpen);
 
     // Job postings usually don't repeat the company name on the job itself —
     // it lives on the employer account that posted it (`postedBy`). Batch
@@ -673,6 +672,24 @@ app.get("/api/assessments/:id", requireDb, async (req, res) => {
   }
 });
 
+// Adaptive ability estimate, replayed from each answer in order. Must match
+// AssessmentEngine in lib/services/skill_assessment_engine.dart so the level
+// saved here is the one the app showed on the result screen.
+function adaptiveAbility(outcomes) {
+  let ability = 2.0;
+  for (const correct of outcomes) {
+    ability = correct ? Math.min(4.0, ability + 0.4) : Math.max(1.0, ability - 0.4);
+  }
+  return ability;
+}
+
+function levelForAbility(ability) {
+  if (ability < 1.8) return "Beginner";
+  if (ability < 2.6) return "Intermediate";
+  if (ability < 3.4) return "Advanced";
+  return "Job-ready";
+}
+
 // Submit assessment results and persist to MongoDB user profile
 app.post("/api/assessments/:id/submit", requireDb, async (req, res) => {
   try {
@@ -686,49 +703,51 @@ app.post("/api/assessments/:id/submit", requireDb, async (req, res) => {
     }
 
     const body = req.body ?? {};
-    let correctCount = 0;
-    let totalCount = Array.isArray(doc?.questions) && doc.questions.length > 0
-      ? doc.questions.length
-      : Math.max(1, Number(body.totalCount) || 1);
+    const answers = Array.isArray(body.answers) ? body.answers.filter(Boolean) : [];
+    // Correctness of each answered question, in the order asked.
+    const outcomes = [];
 
-    if (Array.isArray(body.answers) && doc?.questions?.length) {
+    if (doc?.questions?.length) {
       // Grade on the server: each question counts once, only answers that
       // match the stored answer key are correct, and the score is out of
       // the questions actually asked (the test is adaptive, so that can be
-      // fewer than all of the assessment's questions).
+      // fewer than all of the assessment's questions). Client-sent counts
+      // are ignored so a result can't be faked.
       const graded = new Set();
-      let computedCorrect = 0;
-      for (const ans of body.answers) {
-        if (!ans) continue;
-        const qId = String(ans.questionId || "").trim();
+      for (const ans of answers) {
+        const qId = String(ans.questionId ?? "").trim();
+        const prompt = String(ans.prompt ?? "").trim();
         const selAns = String(ans.selectedAnswer ?? "").trim().toLowerCase();
         const q = doc.questions.find(
           (item) =>
             (qId && (item.questionId === qId || String(item._id) === qId)) ||
-            (ans.prompt && item.prompt && item.prompt.trim() === ans.prompt.trim())
+            (prompt && String(item.prompt ?? "").trim() === prompt)
         );
         if (!q) continue;
         const key = String(q._id ?? q.questionId ?? q.prompt);
         if (graded.has(key)) continue;
         graded.add(key);
         const target = String(q.correctAnswer ?? "").trim().toLowerCase();
-        if (selAns && target && selAns === target) computedCorrect += 1;
+        outcomes.push(Boolean(selAns && target && selAns === target));
       }
-      totalCount = Math.max(1, graded.size);
-      correctCount = computedCorrect;
     } else {
+      // Not a stored assessment (e.g. the app's bundled question bank), so
+      // there is no answer key to grade against.
+      for (const ans of answers) outcomes.push(ans.isCorrect === true);
+    }
+
+    let correctCount = outcomes.filter(Boolean).length;
+    let totalCount = Math.max(1, outcomes.length);
+    if (!doc && !outcomes.length) {
+      totalCount = Math.max(1, Number(body.totalCount) || 1);
       correctCount = Math.max(0, Math.min(Number(body.correctCount) || 0, totalCount));
-      totalCount = Math.max(1, Number(body.totalCount) || totalCount);
     }
 
     const percentage = Math.max(0, Math.min(100, Math.round((correctCount / totalCount) * 100)));
     const passingThreshold = Number(doc?.passingScorePercentage) || 70;
     const passed = percentage >= passingThreshold;
-
-    let level = "Beginner";
-    if (percentage >= 85) level = "Job-ready";
-    else if (percentage >= 70) level = "Advanced";
-    else if (percentage >= 50) level = "Intermediate";
+    const ability = adaptiveAbility(outcomes);
+    const level = levelForAbility(ability);
 
     const result = {
       assessmentId: doc ? String(doc._id) : id,
@@ -761,7 +780,7 @@ app.post("/api/assessments/:id/submit", requireDb, async (req, res) => {
             const categoryKey = doc?.roleId || id;
             currentAssessments[categoryKey] = {
               level,
-              ability: Number((percentage / 25).toFixed(2)),
+              ability: Number(ability.toFixed(2)),
               correctCount,
               totalCount,
               scorePercentage: percentage,
@@ -1218,6 +1237,20 @@ const EDUCATION_LEVELS = [
 ];
 const MAX_EXPERIENCE_YEARS = 40;
 
+/** Whether two profile file items (resume / certification) are the same file. */
+function sameFileItem(a, b) {
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  if (a.id && b.id) return String(a.id) === String(b.id);
+  return a.name === b.name && a.updatedAt === b.updatedAt;
+}
+
+/** [incoming] with the [stored] file's base64 `data` restored if it was left out. */
+function keepFileData(stored, incoming) {
+  if (!stored || !incoming || typeof incoming !== "object") return incoming;
+  if (incoming.data || incoming.url) return incoming;
+  return { ...incoming, data: stored.data };
+}
+
 // Current user profile
 app.get("/api/me", requireDb, requireAuth, async (req, res) => {
   return res.json({ user: userPublic(req.user) });
@@ -1359,6 +1392,24 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
         ...incoming
       } = body.profile;
       patch.profile = { ...existingProfile, ...incoming };
+      // The app drops base64 file `data` from its on-device copy of the
+      // profile, so items it sends back may lack it. Keep the stored data
+      // rather than wiping the uploaded file.
+      const storedFiles = [
+        existingProfile.resume,
+        existingProfile.certification,
+        ...(Array.isArray(existingProfile.certifications)
+          ? existingProfile.certifications
+          : []),
+      ].filter((f) => f?.data);
+      const restore = (item) =>
+        keepFileData(storedFiles.find((s) => sameFileItem(s, item)), item);
+      for (const k of ["resume", "certification"]) {
+        if (patch.profile[k]) patch.profile[k] = restore(patch.profile[k]);
+      }
+      if (Array.isArray(patch.profile.certifications)) {
+        patch.profile.certifications = patch.profile.certifications.map(restore);
+      }
       if (removeResume === true || body.removeResume === true) {
         patch.profile.resume = null;
       }
@@ -1388,10 +1439,12 @@ app.post("/api/applications", requireDb, requireAuth, async (req, res) => {
     if (!jobId || String(jobId).trim() === "") {
       return res.status(400).json({ message: "jobId is required." });
     }
-    const jobExists =
+    const job =
       mongoose.Types.ObjectId.isValid(jobId) &&
-      (await Job.exists({ _id: jobId }));
-    if (!jobExists) {
+      (await Job.findById(jobId, { isArchived: 1, closesAt: 1 }).lean());
+    // Same rule as GET /api/jobs: archived or past-closing postings are
+    // not open for applications.
+    if (!job || !isJobOpen(job)) {
       return res.status(404).json({ message: "This job is no longer available." });
     }
 

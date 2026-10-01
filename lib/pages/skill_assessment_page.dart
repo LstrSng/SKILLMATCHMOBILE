@@ -52,6 +52,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
   int? _selectedIndex;
   AssessmentResult? _sessionResult;
   bool _saving = false;
+  Future<void>? _pendingSave;
   bool _showReview = false;
 
   Timer? _questionTimer;
@@ -219,14 +220,13 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
 
       // If deep-linked to a specific roleId, launch directly if found
       if (widget.initialRoleId != null) {
-        final match = dbCategories.firstWhere(
-          (c) => c.key == widget.initialRoleId || c.id == widget.initialRoleId,
-          orElse: () => dbCategories.first,
-        );
-        if (match.key == widget.initialRoleId ||
-            match.id == widget.initialRoleId) {
-          _startCategory(match);
-        }
+        final match = dbCategories
+            .where(
+              (c) =>
+                  c.key == widget.initialRoleId || c.id == widget.initialRoleId,
+            )
+            .firstOrNull;
+        if (match != null) _startCategory(match);
       }
     } catch (e) {
       if (!mounted) return;
@@ -271,6 +271,7 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
           ? fullCategory.questions.length
           : kAssessmentSessionLength,
     );
+    _pendingSave = null;
     setState(() {
       _activeCategory = fullCategory;
       _engine = engine;
@@ -335,120 +336,103 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
     return answers;
   }
 
-  Future<void> _autoSaveResult(AssessmentResult result) async {
+  /// Submits [result] and syncs the profile. Runs as soon as the quiz ends;
+  /// "Save & Finish" reuses this save instead of submitting the attempt
+  /// again (which would log it twice in the assessment history).
+  void _autoSaveResult(AssessmentResult result) {
+    _pendingSave = _persistResult(result);
+    _pendingSave!
+        .then((_) => _syncPassedSkill(result))
+        .catchError((Object e) => debugPrint('Auto-save assessment error: $e'));
+  }
+
+  /// Waits for the auto-save, retrying once if it failed.
+  Future<void> _ensureSaved(AssessmentResult result) async {
+    final pending = _pendingSave;
+    if (pending != null) {
+      try {
+        return await pending;
+      } catch (_) {
+        // Fall through and retry.
+      }
+    }
+    await (_pendingSave = _persistResult(result));
+  }
+
+  Future<void> _persistResult(AssessmentResult result) async {
+    final category = _activeCategory;
+    final categoryId = category?.id.isNotEmpty == true
+        ? category!.id
+        : (category?.key ?? result.categoryKey);
+
+    final res = await submitAssessment(
+      assessmentId: categoryId,
+      correctCount: result.correctCount,
+      totalCount: result.totalCount,
+      answers: _collectEngineAnswers(),
+    );
+
+    // Synchronize SessionStore and local profile without wiping out other fields
+    Map<String, dynamic> updatedProfile = mergeAssessmentResult(
+      _profileData,
+      result,
+    );
+    if (res['user'] is Map) {
+      final userDoc = Map<String, dynamic>.from(res['user'] as Map);
+      if (userDoc['profile'] is Map) {
+        updatedProfile = Map<String, dynamic>.from(userDoc['profile'] as Map);
+      }
+      await SessionStore.updateUser(userDoc);
+    } else if (SessionStore.user != null) {
+      final currentUser = Map<String, dynamic>.from(SessionStore.user!);
+      currentUser['profile'] = updatedProfile;
+      await SessionStore.updateUser(currentUser);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _profileData = updatedProfile;
+      _results = readAssessmentResults(updatedProfile);
+    });
+  }
+
+  /// Adds a passed assessment's skill to the profile if it isn't there yet.
+  Future<void> _syncPassedSkill(AssessmentResult result) async {
+    if (!result.passed) return;
+    final skillName =
+        (result.roleTitle ?? _activeCategory?.label ?? result.categoryKey)
+            .trim();
+    if (skillName.isEmpty) return;
+    final currentSkills =
+        (SessionStore.user?['skills'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
+    final alreadyHas = currentSkills.any(
+      (s) => s.toLowerCase().trim() == skillName.toLowerCase(),
+    );
+    if (alreadyHas) return;
     try {
-      final category = _activeCategory;
-      final categoryId = category?.id.isNotEmpty == true
-          ? category!.id
-          : (category?.key ?? result.categoryKey);
-
-      final answers = _collectEngineAnswers();
-
-      // Save via dedicated assessment submit API in MongoDB
-      final res = await submitAssessment(
-        assessmentId: categoryId,
-        correctCount: result.correctCount,
-        totalCount: result.totalCount,
-        answers: answers,
-      );
-
-      // Synchronize SessionStore and local profile without wiping out other fields
-      Map<String, dynamic> updatedProfile = mergeAssessmentResult(
-        _profileData,
-        result,
-      );
-      if (res['user'] is Map) {
-        final userDoc = Map<String, dynamic>.from(res['user'] as Map);
-        if (userDoc['profile'] is Map) {
-          updatedProfile = Map<String, dynamic>.from(userDoc['profile'] as Map);
-        }
-        await SessionStore.updateUser(userDoc);
-      } else if (SessionStore.user != null) {
-        final currentUser = Map<String, dynamic>.from(SessionStore.user!);
-        currentUser['profile'] = updatedProfile;
-        await SessionStore.updateUser(currentUser);
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _profileData = updatedProfile;
-        _results = readAssessmentResults(updatedProfile);
+      await updateMyProfile({
+        'skills': [...currentSkills, skillName],
       });
-
-      if (result.passed) {
-        final skillName = (result.roleTitle ?? _activeCategory?.label ?? result.categoryKey).trim();
-        if (skillName.isNotEmpty) {
-          final currentSkills =
-              (SessionStore.user?['skills'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [];
-          final alreadyHas = currentSkills.any(
-            (s) => s.toLowerCase().trim() == skillName.toLowerCase(),
-          );
-          if (!alreadyHas) {
-            try {
-              await updateMyProfile({
-                'skills': [...currentSkills, skillName],
-              });
-            } catch (e) {
-              // Non-critical: skill sync failed but assessment is saved
-              debugPrint('Could not sync skill to profile: $e');
-            }
-          }
-        }
-      }
     } catch (e) {
-      debugPrint('Auto-save assessment error: $e');
+      // Non-critical: skill sync failed but assessment is saved
+      debugPrint('Could not sync skill to profile: $e');
     }
   }
 
   Future<void> _saveResult() async {
     final result = _sessionResult;
-    final category = _activeCategory;
     if (result == null) return;
 
     setState(() => _saving = true);
     HapticFeedback.mediumImpact();
 
     try {
-      final categoryId = category?.id.isNotEmpty == true
-          ? category!.id
-          : (category?.key ?? result.categoryKey);
-
-      final answers = _collectEngineAnswers();
-
-      // 1. Submit to MongoDB assessments collection backend
-      final res = await submitAssessment(
-        assessmentId: categoryId,
-        correctCount: result.correctCount,
-        totalCount: result.totalCount,
-        answers: answers,
-      );
-
-      // 2. Synchronize SessionStore and local profile
-      Map<String, dynamic> updatedProfile = mergeAssessmentResult(
-        _profileData,
-        result,
-      );
-      if (res['user'] is Map) {
-        final userDoc = Map<String, dynamic>.from(res['user'] as Map);
-        if (userDoc['profile'] is Map) {
-          updatedProfile = Map<String, dynamic>.from(userDoc['profile'] as Map);
-        }
-        await SessionStore.updateUser(userDoc);
-      } else if (SessionStore.user != null) {
-        final currentUser = Map<String, dynamic>.from(SessionStore.user!);
-        currentUser['profile'] = updatedProfile;
-        await SessionStore.updateUser(currentUser);
-      }
-
+      await _ensureSaved(result);
       if (!mounted) return;
-      setState(() {
-        _profileData = updatedProfile;
-        _results = readAssessmentResults(updatedProfile);
-        _saving = false;
-      });
+      setState(() => _saving = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

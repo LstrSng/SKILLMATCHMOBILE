@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/api_config.dart';
@@ -11,14 +10,7 @@ import 'session_store.dart';
 Uri _appsUri() => Uri.parse('$kApiBaseUrl/api/applications');
 Uri _appUri(String id) => Uri.parse('$kApiBaseUrl/api/applications/$id');
 
-const _kTimeout = Duration(seconds: 20);
-
-String _appsCacheKey() {
-  final userId =
-      (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString() ??
-      'guest';
-  return 'cache.applications.$userId';
-}
+String _appsCacheKey() => 'cache.applications.${SessionStore.userKey}';
 
 List<Map<String, dynamic>>? _memoryCachedApplications;
 Future<List<Map<String, dynamic>>>? _inFlightFetchMyApplications;
@@ -67,21 +59,11 @@ Future<void> _saveApplicationsToCache(List<Map<String, dynamic>> apps) async {
   } catch (_) {}
 }
 
-Future<T> _withNetworkErrors<T>(Future<T> Function() run) async {
-  try {
-    return await run().timeout(_kTimeout);
-  } on TimeoutException {
-    throw AuthedException('Request timed out. Please check your connection and try again.');
-  } on http.ClientException {
-    throw AuthedException('Unable to connect to server. Please check your internet connection.');
-  }
-}
-
 Future<List<Map<String, dynamic>>> fetchMyApplications() async {
   final inFlight = _inFlightFetchMyApplications;
   if (inFlight != null) return inFlight;
 
-  final future = _withNetworkErrors(() async {
+  final future = withNetworkErrors(() async {
     final res = await authedGet(_appsUri());
     if (res.statusCode == 401) {
       await SessionStore.clear();
@@ -119,7 +101,7 @@ Future<Map<String, dynamic>> applyToJob({
   required Map<String, dynamic> jobSnapshot,
   Map<String, dynamic>? codingChallenge,
 }) async {
-  return _withNetworkErrors(() async {
+  return withNetworkErrors(() async {
     final res = await authedPost(
       _appsUri(),
       body: jsonEncode({
@@ -153,7 +135,7 @@ Future<Map<String, dynamic>> updateApplicationStatus({
   required String applicationId,
   required String status,
 }) async {
-  return _withNetworkErrors(() async {
+  return withNetworkErrors(() async {
     final res = await authedPatch(
       _appUri(applicationId),
       body: jsonEncode({'status': status}),

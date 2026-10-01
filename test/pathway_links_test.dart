@@ -56,10 +56,17 @@ void main() {
         );
         expect(typeScriptPathway.links.length, greaterThanOrEqualTo(1));
         // Only free links are kept (no paid exams or subscriptions), and every
-        // pathway still has at least one.
+        // pathway still has at least one. The exception is TESDA-registered
+        // programs: paid courses at accredited schools, which TESDA
+        // scholarships may cover.
         for (final p in pathways) {
           expect(p.links, isNotEmpty, reason: p.name);
-          expect(p.links.where((l) => l.cost == TrainingCost.paid), isEmpty);
+          if (p.name == 'TESDA-Registered IT Programs & Providers') continue;
+          expect(
+            p.links.where((l) => l.cost == TrainingCost.paid),
+            isEmpty,
+            reason: p.name,
+          );
         }
       },
     );

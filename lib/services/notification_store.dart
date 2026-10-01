@@ -79,47 +79,22 @@ class AppNotification {
 class NotificationStore {
   static final ValueNotifier<int> unreadCountNotifier = ValueNotifier<int>(0);
 
-  static String _storageKey() {
-    final userId =
-        (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString() ??
-        'guest';
-    return 'notifications.$userId';
-  }
+  static String _storageKey() => 'notifications.${SessionStore.userKey}';
 
-  static String _statusSnapshotKey() {
-    final userId =
-        (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString() ??
-        'guest';
-    return 'application-statuses.$userId';
-  }
+  static String _statusSnapshotKey() =>
+      'application-statuses.${SessionStore.userKey}';
 
-  static String _lastReadKey() {
-    final userId =
-        (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString() ??
-        'guest';
-    return 'notifications-last-read.$userId';
-  }
+  static String _lastReadKey() =>
+      'notifications-last-read.${SessionStore.userKey}';
 
-  static String _seenJobIdsKey() {
-    final userId =
-        (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString() ??
-        'guest';
-    return 'notifications-seen-jobs.$userId';
-  }
+  static String _seenJobIdsKey() =>
+      'notifications-seen-jobs.${SessionStore.userKey}';
 
-  static String _lastDigestAtKey() {
-    final userId =
-        (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString() ??
-        'guest';
-    return 'notifications-last-digest.$userId';
-  }
+  static String _lastDigestAtKey() =>
+      'notifications-last-digest.${SessionStore.userKey}';
 
-  static String _preferenceKey(String name) {
-    final userId =
-        (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString() ??
-        'guest';
-    return 'notification-pref.$name.$userId';
-  }
+  static String _preferenceKey(String name) =>
+      'notification-pref.$name.${SessionStore.userKey}';
 
   /// Preference keys used by the Settings page toggles.
   static const kPrefJobMatches = 'jobMatches';
@@ -307,6 +282,14 @@ class NotificationStore {
   }
 
   static DateTime? _lastAppSyncTime;
+
+  /// Resets in-memory state on sign-out so the next account starts fresh
+  /// (no stale unread badge, no sync cooldown carried over).
+  static void resetSession() {
+    _lastAppSyncTime = null;
+    unreadCountNotifier.value = 0;
+  }
+
   static const Duration _kAppSyncCooldown = Duration(seconds: 45);
 
   static Future<void> syncApplicationUpdates({bool force = false}) async {

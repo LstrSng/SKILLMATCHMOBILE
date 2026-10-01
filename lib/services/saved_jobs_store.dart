@@ -7,12 +7,7 @@ import 'session_store.dart';
 /// Persists which job IDs the current user has bookmarked, so the bookmark
 /// icon on a job's details survives navigating away and reopening the app.
 class SavedJobsStore {
-  static String _storageKey() {
-    final userId =
-        (SessionStore.user?['_id'] ?? SessionStore.user?['id'])?.toString() ??
-        'guest';
-    return 'saved-jobs.$userId';
-  }
+  static String _storageKey() => 'saved-jobs.${SessionStore.userKey}';
 
   static Future<Set<String>> loadIds() async {
     final prefs = await SharedPreferences.getInstance();

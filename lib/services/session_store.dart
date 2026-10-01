@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'applications_api.dart';
 import 'jobs_api.dart';
+import 'navigation_service.dart';
+import 'notification_store.dart';
 import 'profile_api.dart';
 
 class SessionStore {
@@ -20,6 +22,11 @@ class SessionStore {
 
   static String? get token => _token;
   static Map<String, dynamic>? get user => _user;
+
+  /// The signed-in user's id ('guest' when signed out), for scoping data
+  /// stored on this device to one account.
+  static String get userKey =>
+      (_user?['_id'] ?? _user?['id'])?.toString() ?? 'guest';
 
   /// Bumped whenever the signed-in user's skills or skill levels change
   /// (e.g. after editing
@@ -149,10 +156,13 @@ class SessionStore {
 
   static Future<void> clear({bool clearDeviceToken = false}) async {
     _token = null;
-    _user = null;
+    _setUser(null);
     clearApplicationsCache();
     clearJobsCache();
     clearProfileCache();
+    // Don't carry this account's UI state over to the next sign-in.
+    NotificationStore.resetSession();
+    AppNavigation.switchTab(AppTab.dashboard);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kTokenKey);
     await prefs.remove(_kUserKey);

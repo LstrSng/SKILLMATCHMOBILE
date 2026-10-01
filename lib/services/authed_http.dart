@@ -26,6 +26,25 @@ class AuthedException implements Exception {
 
 const Duration _kHttpTimeout = Duration(seconds: 45);
 
+/// Runs [run] with a [timeout], turning timeouts and connection failures
+/// into an [AuthedException] with a user-facing message.
+Future<T> withNetworkErrors<T>(
+  Future<T> Function() run, {
+  Duration timeout = const Duration(seconds: 20),
+  String timeoutMessage =
+      'Request timed out. Please check your connection and try again.',
+  String offlineMessage =
+      'Unable to connect to server. Please check your internet connection.',
+}) async {
+  try {
+    return await run().timeout(timeout);
+  } on TimeoutException {
+    throw AuthedException(timeoutMessage);
+  } on http.ClientException {
+    throw AuthedException(offlineMessage);
+  }
+}
+
 Future<http.Response> authedGet(Uri uri) async {
   try {
     final res = await http

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import '../models/skill_assessment.dart';
@@ -25,17 +24,13 @@ Uri _assessmentsUri({String? track, String? search, String? roleId}) {
 Uri _assessmentByIdUri(String id) => Uri.parse('$kApiBaseUrl/api/assessments/$id');
 Uri _submitAssessmentUri(String id) => Uri.parse('$kApiBaseUrl/api/assessments/$id/submit');
 
-const _kTimeout = Duration(seconds: 20);
-
-Future<T> _withNetworkErrors<T>(Future<T> Function() run) async {
-  try {
-    return await run().timeout(_kTimeout);
-  } on TimeoutException {
-    throw AuthedException('Request timed out while loading assessments. Please check your connection.');
-  } on http.ClientException {
-    throw AuthedException('Could not reach the backend API. Please make sure the server is running.');
-  }
-}
+Future<T> _withNetworkErrors<T>(Future<T> Function() run) => withNetworkErrors(
+  run,
+  timeoutMessage:
+      'Request timed out while loading assessments. Please check your connection.',
+  offlineMessage:
+      'Could not reach the backend API. Please make sure the server is running.',
+);
 
 /// Fetches all role assessments from MongoDB.
 Future<List<AssessmentCategory>> fetchAssessments({

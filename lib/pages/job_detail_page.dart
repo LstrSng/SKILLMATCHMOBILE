@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -94,19 +96,25 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
   bool _isApplied = false;
 
+  /// Shows the cached answer right away, then confirms with the server (the
+  /// cache can be missing or older than the last application).
   Future<void> _checkIfApplied() async {
     if (widget.jobId.trim().isEmpty) return;
+    // Only a withdrawn application can be re-submitted; the server rejects
+    // any other repeat application, including after a rejection.
+    bool hasApplied(List<Map<String, dynamic>> apps) => apps.any((a) {
+      final jId = (a['jobId'] as Object?)?.toString().trim() ?? '';
+      if (jId != widget.jobId.trim()) return false;
+      final status =
+          (a['status'] as Object?)?.toString().trim().toLowerCase() ?? '';
+      return status != 'withdrawn';
+    });
     try {
       final cached =
           memoryCachedApplications ?? await getCachedMyApplications();
-      final match = cached.any((a) {
-        final jId = (a['jobId'] as Object?)?.toString().trim() ?? '';
-        if (jId != widget.jobId.trim()) return false;
-        final status =
-            (a['status'] as Object?)?.toString().trim().toLowerCase() ?? '';
-        return status != 'withdrawn' && status != 'rejected';
-      });
-      if (mounted) setState(() => _isApplied = match);
+      if (mounted) setState(() => _isApplied = hasApplied(cached));
+      final fresh = await fetchMyApplications();
+      if (mounted) setState(() => _isApplied = hasApplied(fresh));
     } catch (_) {}
   }
 
@@ -236,6 +244,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
           'description': _displayDescription,
         },
       );
+      // Refresh the applications cache so this job shows as applied when
+      // reopened, before the Applied tab has been visited.
+      unawaited(fetchMyApplications().then((_) {}, onError: (_) {}));
       if (!mounted) return;
       setState(() => _isApplied = true);
       showAppToast(

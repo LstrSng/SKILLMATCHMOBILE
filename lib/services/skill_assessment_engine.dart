@@ -8,6 +8,8 @@ const double _kMinAbility = 1.0;
 const double _kMaxAbility = 4.0;
 const double _kAbilityStep = 0.4;
 
+// The server replays answers with the same constants and thresholds
+// (adaptiveAbility / levelForAbility in backend/server.js); keep in sync.
 String levelForAbility(double ability) {
   if (ability < 1.8) return kProficiencyLevels[0]; // Beginner
   if (ability < 2.6) return kProficiencyLevels[1]; // Intermediate
@@ -165,22 +167,11 @@ class AssessmentEngine {
         : 0;
     final passed = percentage >= category.passingScorePercentage;
 
-    String level;
-    if (_ability >= 3.4) {
-      level = 'Job-ready';
-    } else if (_ability >= 2.6) {
-      level = 'Advanced';
-    } else if (_ability >= 1.8) {
-      level = 'Intermediate';
-    } else {
-      level = 'Beginner';
-    }
-
     return AssessmentResult(
       categoryKey: category.key,
       roleTitle: category.label,
       track: category.track,
-      level: level,
+      level: levelForAbility(_ability),
       ability: _ability,
       correctCount: _correctCount,
       totalCount: _askedCount,

@@ -70,20 +70,11 @@ class PasswordResetConfirmResult {
   final String message;
 }
 
-/// Paths after `kApiBaseUrl`. Defaults match `app.use('/api/users', authRoutes)` + `/register`.
-/// If your Skillmatch server uses different URLs, set e.g.
-/// `--dart-define=AUTH_REGISTER_PATH=/register`
+/// Paths after `kApiBaseUrl`. If your Skillmatch server uses different URLs,
+/// override them, e.g. `--dart-define=AUTH_LOGIN_PATH=/login`
 Uri _authEndpointUri(String pathFromEnv) {
   final p = pathFromEnv.startsWith('/') ? pathFromEnv : '/$pathFromEnv';
   return Uri.parse('$kApiBaseUrl$p');
-}
-
-Uri _registerUri() {
-  const p = String.fromEnvironment(
-    'AUTH_REGISTER_PATH',
-    defaultValue: '/api/users/register',
-  );
-  return _authEndpointUri(p);
 }
 
 Uri _registerOtpRequestUri() {
@@ -408,35 +399,6 @@ AuthResult _parseAuthResponse(
   throw AuthApiException(err, statusCode: res.statusCode);
 }
 
-Future<AuthResult> registerUser({
-  required String email,
-  required String password,
-  required String firstName,
-  required String lastName,
-}) async {
-  final uri = _registerUri();
-  http.Response res;
-  try {
-    res = await http
-        .post(
-          uri,
-          headers: _jsonHeaders(),
-          body: jsonEncode({
-            'firstName': firstName,
-            'lastName': lastName,
-            'email': email,
-            'password': password,
-          }),
-        )
-        .timeout(_kAuthTimeout);
-  } on TimeoutException {
-    throw AuthApiException(
-      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
-    );
-  }
-  return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
-}
-
 /// Creates the (unverified) account and emails a sign-up code. Pass only
 /// [email] to resend the code for an account that was already created.
 Future<OtpChallengeResult> requestRegisterOtp({
@@ -495,28 +457,6 @@ Future<AuthResult> verifyRegisterOtp({
             'otp': otp,
             'challengeId': challengeId,
           }),
-        )
-        .timeout(_kAuthTimeout);
-  } on TimeoutException {
-    throw AuthApiException(
-      'The server is taking longer than usual to respond (it may be waking up). Please try again.',
-    );
-  }
-  return _parseAuthResponse(res, knownEmail: email, requestedUri: uri);
-}
-
-Future<AuthResult> loginUser({
-  required String email,
-  required String password,
-}) async {
-  final uri = _loginUri();
-  http.Response res;
-  try {
-    res = await http
-        .post(
-          uri,
-          headers: _jsonHeaders(),
-          body: jsonEncode({'email': email, 'password': password}),
         )
         .timeout(_kAuthTimeout);
   } on TimeoutException {
