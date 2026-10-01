@@ -48,7 +48,9 @@ class JobApplication {
             : (json['company'] as Object?)?.toString().trim() ?? '';
 
     final createdRaw = (json['createdAt'] as Object?)?.toString().trim() ?? '';
-    final parsedCreated = DateTime.tryParse(createdRaw) ?? DateTime.now();
+    // The API sends UTC timestamps; show them in the device's time zone.
+    final parsedCreated =
+        DateTime.tryParse(createdRaw)?.toLocal() ?? DateTime.now();
 
     final historyRaw = json['statusHistory'];
     final history = <ApplicationStatusStep>[];
@@ -109,7 +111,7 @@ class ApplicationStatusStep {
         '';
     return ApplicationStatusStep(
       status: (json['status'] as Object?)?.toString().trim() ?? 'Applied',
-      date: DateTime.tryParse(rawDate) ?? DateTime.now(),
+      date: DateTime.tryParse(rawDate)?.toLocal() ?? DateTime.now(),
       note: (json['note'] as Object?)?.toString().trim() ?? '',
     );
   }

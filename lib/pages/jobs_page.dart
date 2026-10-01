@@ -639,15 +639,24 @@ class _JobsPageState extends State<JobsPage> {
                                           'High Match (80%+)',
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  _QuickFilterChip(
-                                    label: 'Full-time',
-                                    selected:
-                                        _selectedQuickFilter == 'Full-time',
-                                    onTap: () => setState(
-                                      () => _selectedQuickFilter = 'Full-time',
+                                  // Postings don't always carry a job type;
+                                  // only offer the chip when some do.
+                                  if (_jobs.any(
+                                    (j) => j.jobType.toLowerCase().contains(
+                                      'full',
                                     ),
-                                  ),
+                                  )) ...[
+                                    const SizedBox(width: 8),
+                                    _QuickFilterChip(
+                                      label: 'Full-time',
+                                      selected:
+                                          _selectedQuickFilter == 'Full-time',
+                                      onTap: () => setState(
+                                        () =>
+                                            _selectedQuickFilter = 'Full-time',
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(width: 8),
                                   _QuickFilterChip(
                                     label: 'Remote',

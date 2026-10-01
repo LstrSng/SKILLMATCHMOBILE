@@ -50,6 +50,9 @@ Future<void> _load() async {
       links: links,
       note: (map['note'] as String?) ?? '',
       field: map['field'] as String?,
+      description: map['description'] as String?,
+      level: map['level'] as String?,
+      duration: map['duration'] as String?,
     );
   }
 

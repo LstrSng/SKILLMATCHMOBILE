@@ -89,9 +89,13 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
     super.dispose();
   }
 
-  void _startQuestionTimer() {
+  /// Starts the countdown for the current question. With [resume], it
+  /// continues from the seconds left instead of starting over.
+  void _startQuestionTimer({bool resume = false}) {
     _stopQuestionTimer();
-    _secondsRemaining = kQuestionTimeLimitSeconds;
+    if (!resume || _secondsRemaining <= 0) {
+      _secondsRemaining = kQuestionTimeLimitSeconds;
+    }
     _questionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -473,6 +477,8 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
       return true;
     }
     if (_step == _Step.question) {
+      // Pause the countdown while the user decides.
+      _stopQuestionTimer();
       final confirm = await showDialog<bool>(
         context: context,
         builder: (dialogCtx) => AlertDialog(
@@ -498,6 +504,8 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
       );
       if (confirm == true) {
         _exitToCategories();
+      } else if (mounted && _step == _Step.question) {
+        _startQuestionTimer(resume: true);
       }
       return false;
     }
@@ -1367,7 +1375,9 @@ class _SkillAssessmentPageState extends State<SkillAssessmentPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'This verified assessment is automatically stored on your database profile and visible to employers during job applications.',
+                    result.passed
+                        ? 'This verified assessment is automatically stored on your database profile and visible to employers during job applications.'
+                        : 'This attempt is saved to your profile. Score 70% or higher to earn a verified badge.',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,

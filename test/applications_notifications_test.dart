@@ -150,7 +150,10 @@ void main() {
 
       final app = JobApplication.fromJson(json);
       expect(app.statusHistory.length, equals(1));
-      expect(app.statusHistory[0].date, equals(DateTime.parse('2026-08-20T10:00:00Z')));
+      final date = app.statusHistory[0].date;
+      // Same instant, converted to the device's time zone for display.
+      expect(date.isUtc, isFalse);
+      expect(date.isAtSameMomentAs(DateTime.parse('2026-08-20T10:00:00Z')), isTrue);
     });
 
     test('NotificationStore unreadCount calculates based on isRead', () async {

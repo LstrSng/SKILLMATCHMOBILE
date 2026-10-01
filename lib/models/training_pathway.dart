@@ -63,10 +63,22 @@ class TrainingPathway {
   final String note;
   final String? field;
 
+  /// One-line summary of what the pathway covers.
+  final String? description;
+
+  /// Difficulty: Beginner, Intermediate or Advanced.
+  final String? level;
+
+  /// Estimated time to complete, e.g. "2–3 months".
+  final String? duration;
+
   const TrainingPathway({
     required this.name,
     required this.links,
     required this.note,
     this.field,
+    this.description,
+    this.level,
+    this.duration,
   });
 }

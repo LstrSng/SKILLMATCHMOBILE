@@ -290,7 +290,9 @@ class AssessmentResult {
       passed: isPassed,
       passingScorePercentage: passingScore,
       takenAt:
-          DateTime.tryParse((raw['takenAt'] as Object?)?.toString() ?? '') ??
+          DateTime.tryParse(
+            (raw['takenAt'] as Object?)?.toString() ?? '',
+          )?.toLocal() ??
           DateTime.now(),
     );
   }

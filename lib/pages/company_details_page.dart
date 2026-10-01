@@ -63,7 +63,7 @@ class _CompanyDetailsPageState extends State<CompanyDetailsPage> {
 
   String _memberSinceLabel(String raw) {
     if (raw.isEmpty) return '';
-    final parsed = DateTime.tryParse(raw);
+    final parsed = DateTime.tryParse(raw)?.toLocal();
     if (parsed == null) return raw;
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',

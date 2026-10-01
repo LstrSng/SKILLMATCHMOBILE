@@ -17,11 +17,13 @@ import '../services/employment_proof.dart';
 import '../services/completed_certs.dart' show completionsChanged;
 import '../services/job_roles_data.dart';
 import '../services/profile_api.dart';
+import '../services/profile_completion.dart';
 import '../services/session_store.dart';
 import '../services/skill_assessment_bank.dart';
 import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/edit_profile_sheet.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/profile_section_sheets.dart';
 import '../widgets/widgets.dart';
 import 'sign_in_page.dart';
@@ -38,125 +40,6 @@ String _phoneDigitsOnly(String raw) {
     digits = digits.substring(1);
   }
   return digits;
-}
-
-Widget _profileAvatar(
-  BuildContext context, {
-  required String avatarUrl,
-  double size = 80,
-  double radius = 12,
-  Color? fallbackBg,
-  Color? fallbackIconColor,
-}) {
-  final trimmed = avatarUrl.trim();
-  final tokens = context.appColors;
-  final fallback = Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      color: fallbackBg ?? tokens.surfaceMuted,
-      borderRadius: BorderRadius.circular(radius),
-    ),
-    child: Center(
-      child: Icon(
-        Icons.person,
-        size: size * 0.5,
-        color: fallbackIconColor ?? tokens.textFaint,
-      ),
-    ),
-  );
-
-  if (trimmed.isEmpty) return fallback;
-
-  if (trimmed.startsWith('data:image')) {
-    final comma = trimmed.indexOf(',');
-    if (comma > -1 && comma + 1 < trimmed.length) {
-      try {
-        final bytes = base64Decode(trimmed.substring(comma + 1));
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(radius),
-          child: Image.memory(
-            bytes,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-          ),
-        );
-      } catch (_) {
-        return fallback;
-      }
-    }
-  }
-
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(radius),
-    child: Image.network(
-      trimmed,
-      width: size,
-      height: size,
-      fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => fallback,
-    ),
-  );
-}
-
-Map<String, dynamic>? parseProfileFileItem(
-  dynamic raw, {
-  required String fallbackName,
-}) {
-  if (raw is! Map) return null;
-  final id = (raw['id'] as Object?)?.toString().trim() ?? '';
-  final name = (raw['name'] as Object?)?.toString().trim() ?? '';
-  final url = (raw['url'] as Object?)?.toString().trim() ?? '';
-  final data = (raw['data'] as Object?)?.toString().trim() ?? '';
-  final mimeType = (raw['mimeType'] as Object?)?.toString().trim() ?? '';
-  final publicId = (raw['publicId'] as Object?)?.toString().trim() ?? '';
-  final sizeRaw = raw['size'];
-  final size = sizeRaw is num
-      ? sizeRaw.toInt()
-      : (int.tryParse(sizeRaw?.toString() ?? '') ?? 0);
-  final updatedAt = (raw['updatedAt'] as Object?)?.toString().trim() ?? '';
-  if (name.isEmpty && url.isEmpty && data.isEmpty) return null;
-  // Extra details of certificates added from an upskilling pathway.
-  String? extra(String key) {
-    final v = (raw[key] as Object?)?.toString().trim() ?? '';
-    return v.isEmpty ? null : v;
-  }
-
-  return {
-    'id': id.isNotEmpty ? id : (publicId.isNotEmpty ? publicId : name),
-    'name': name.isNotEmpty ? name : fallbackName,
-    'url': url,
-    'data': data,
-    'mimeType': mimeType,
-    'publicId': publicId,
-    'size': size,
-    'updatedAt': updatedAt,
-    for (final key in const ['title', 'issuer', 'skill', 'source'])
-      key: ?extra(key),
-  };
-}
-
-Map<String, dynamic>? readProfileResume(Map<String, dynamic> profileData) {
-  return parseProfileFileItem(profileData['resume'], fallbackName: 'Resume');
-}
-
-List<Map<String, dynamic>> readProfileCertifications(
-  Map<String, dynamic> profileData,
-) {
-  final rawList = profileData['certifications'];
-  final list = <Map<String, dynamic>>[];
-  if (rawList is List) {
-    for (final raw in rawList) {
-      final item = parseProfileFileItem(raw, fallbackName: 'Certification');
-      if (item != null) list.add(item);
-    }
-  } else {
-    final singleRaw = profileData['certification'];
-    final item = parseProfileFileItem(singleRaw, fallbackName: 'Certification');
-    if (item != null) list.add(item);
-  }
-  return list;
 }
 
 class ProfilePage extends StatefulWidget {
@@ -311,7 +194,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _resumeDateLabel(String raw) {
     if (raw.trim().isEmpty) return 'Uploaded recently';
-    final parsed = DateTime.tryParse(raw);
+    final parsed = DateTime.tryParse(raw)?.toLocal();
     if (parsed == null) return 'Uploaded recently';
     const months = [
       'Jan',
@@ -1000,56 +883,6 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (_) {}
   }
 
-  int _calculateProfileCompletion({
-    required String firstName,
-    required String lastName,
-    required String headline,
-    required String location,
-    required String phone,
-    required String email,
-    required String portfolio,
-    required List<String> skills,
-    required Map<String, dynamic>? resume,
-    required List<Map<String, dynamic>> certifications,
-    required List<Map<String, String>> experience,
-    required List<Map<String, String>> education,
-    required Map<String, AssessmentResult> assessments,
-    required String avatarUrl,
-  }) {
-    var score = 0;
-    // 1. Basic Info (25%)
-    if (firstName.isNotEmpty && lastName.isNotEmpty) score += 10;
-    if (headline.isNotEmpty) score += 5;
-    if (location.isNotEmpty) score += 5;
-    if (phone.isNotEmpty || email.isNotEmpty) score += 5;
-
-    // 2. Avatar (5%)
-    if (avatarUrl.isNotEmpty) score += 5;
-
-    // 3. Skills (20%)
-    if (skills.length >= 3) {
-      score += 20;
-    } else if (skills.isNotEmpty) {
-      score += 10;
-    }
-
-    // 4. Resume (20%)
-    if (resume != null) score += 20;
-
-    // 5. Experience (10%)
-    if (experience.isNotEmpty) score += 10;
-
-    // 6. Education (10%)
-    if (education.isNotEmpty) score += 10;
-
-    // 7. Certifications or Assessments (10%)
-    if (certifications.isNotEmpty || assessments.isNotEmpty) {
-      score += 10;
-    }
-
-    return score.clamp(0, 100);
-  }
-
   Map<String, String> _getCompletionTip({
     required Map<String, dynamic>? resume,
     required List<String> skills,
@@ -1251,23 +1084,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final education = _education();
     final experience = _experience();
     final assessmentResults = _assessmentResults();
+    final passedAssessments = assessmentResults.values
+        .where((r) => r.passed)
+        .length;
 
-    final completionScore = _calculateProfileCompletion(
-      firstName: firstName,
-      lastName: lastName,
-      headline: headline,
-      location: location,
-      phone: phone,
-      email: email,
-      portfolio: portfolio,
-      skills: skills,
-      resume: resume,
-      certifications: certifications,
-      experience: experience,
-      education: education,
-      assessments: assessmentResults,
-      avatarUrl: avatarUrl,
-    );
+    final completionScore = profileCompletionPercent(_user);
 
     final completionTip = _getCompletionTip(
       resume: resume,
@@ -1348,7 +1169,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 shape: BoxShape.circle,
                                 boxShadow: tokens.cardShadows,
                               ),
-                              child: _profileAvatar(
+                              child: profileAvatar(
                                 context,
                                 avatarUrl: avatarUrl,
                                 size: 88,
@@ -1564,8 +1385,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         ? AppColors.verifiedDarkSoft
                         : AppColors.verifiedSoft,
                     title: 'Assessments',
-                    badgeText: assessmentResults.isNotEmpty
-                        ? '${assessmentResults.length} Verified'
+                    // Only passed attempts earn a verified badge.
+                    badgeText: passedAssessments > 0
+                        ? '$passedAssessments Verified'
                         : null,
                     badgeColor: tokens.verified,
                     actionLabel: 'Retake',

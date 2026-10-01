@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:skillmatch/pages/profile_page.dart';
+import 'package:skillmatch/services/profile_completion.dart';
 
 void main() {
   group('Profile Files & Certifications Tests', () {

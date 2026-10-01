@@ -271,10 +271,18 @@ function stripLevelSuffix(str) {
 // Jobs stored in MongoDB (collection: JOBS_COLLECTION, default `jobs`)
 app.get("/api/jobs", requireDb, async (req, res) => {
   try {
-    const raw = await Job.find({})
+    // Archived postings are no longer open, so they are not shown to applicants.
+    const fetched = await Job.find({ isArchived: { $ne: true } })
       .sort({ _id: -1 })
       .limit(JOBS_QUERY_LIMIT)
       .lean();
+    // Neither are postings past their closing date.
+    const now = Date.now();
+    let raw = fetched.filter((d) => {
+      if (!d.closesAt) return true;
+      const closes = new Date(d.closesAt).getTime();
+      return Number.isNaN(closes) || closes > now;
+    });
 
     // Job postings usually don't repeat the company name on the job itself —
     // it lives on the employer account that posted it (`postedBy`). Batch
@@ -295,6 +303,14 @@ app.get("/api/jobs", requireDb, async (req, res) => {
           { companyName: 1, logoUrl: 1 }
         ).lean();
         postersById = new Map(posters.map((p) => [String(p._id), p]));
+        // Drop postings whose employer account was deleted: they have no
+        // company to show and nobody to review applications.
+        raw = raw.filter(
+          (d) =>
+            !d.postedBy ||
+            !mongoose.Types.ObjectId.isValid(d.postedBy) ||
+            postersById.has(String(d.postedBy))
+        );
       } catch (e) {
         console.error("Poster lookup error:", e);
       }
@@ -1222,6 +1238,17 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
       "avatarUrl",
     ]) {
       if (body[k] !== undefined) patch[k] = String(body[k] ?? "").trim();
+    }
+    // Same name rule as sign-up; names can be changed but not cleared.
+    const namePattern = /^[\p{L}][\p{L} .'-]{0,49}$/u;
+    for (const k of ["firstName", "lastName"]) {
+      if (patch[k] !== undefined && !namePattern.test(patch[k])) {
+        return res.status(400).json({
+          message: patch[k]
+            ? "Names may only contain letters, spaces, periods, hyphens, and apostrophes."
+            : "First and last name are required.",
+        });
+      }
     }
     if (body.skills !== undefined || body.skillLevels !== undefined) {
       const current = readStoredSkills(req.user);

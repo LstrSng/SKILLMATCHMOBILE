@@ -239,7 +239,10 @@
         }
       ],
       "note": "Free ICT courses from the TESDA Online Program (e-TESDA), plus paid TESDA IT-BPM National Certificate (NC) programs offered by accredited schools.",
-      "field": "TESDA"
+      "field": "TESDA",
+      "description": "Government-recognized ICT courses and National Certificates (NC II–IV) for IT-BPM careers in the Philippines.",
+      "level": "Beginner",
+      "duration": "2–6 months"
     },
     {
       "name": "Full-Stack & General Development",
@@ -278,7 +281,10 @@
         }
       ],
       "note": "",
-      "field": "Web"
+      "field": "Web",
+      "description": "Build complete web apps end to end: HTML/CSS, JavaScript, a back-end language, databases and deployment.",
+      "level": "Intermediate",
+      "duration": "6–12 months"
     },
     {
       "name": "Java Development",
@@ -293,7 +299,10 @@
         }
       ],
       "note": "",
-      "field": "Developer"
+      "field": "Developer",
+      "description": "Core Java syntax, object-oriented programming and the JVM — the base for enterprise and Android work.",
+      "level": "Beginner",
+      "duration": "4–8 weeks"
     },
     {
       "name": "Python Development",
@@ -348,7 +357,10 @@
         }
       ],
       "note": "",
-      "field": "Developer"
+      "field": "Developer",
+      "description": "Python fundamentals through to web frameworks like Django and FastAPI.",
+      "level": "Beginner",
+      "duration": "2–4 months"
     },
     {
       "name": ".NET / C# Development",
@@ -371,7 +383,10 @@
         }
       ],
       "note": "",
-      "field": "Developer"
+      "field": "Developer",
+      "description": "C# language foundations and building applications on Microsoft .NET.",
+      "level": "Beginner",
+      "duration": "2–3 months"
     },
     {
       "name": "PHP Development",
@@ -402,7 +417,10 @@
         }
       ],
       "note": "",
-      "field": "Web"
+      "field": "Web",
+      "description": "Modern PHP practices and the Laravel framework for server-side web apps.",
+      "level": "Beginner",
+      "duration": "2–3 months"
     },
     {
       "name": "JavaScript & Front-End",
@@ -465,7 +483,10 @@
         }
       ],
       "note": "",
-      "field": "Web"
+      "field": "Web",
+      "description": "Responsive layouts, JavaScript, front-end libraries and TypeScript for interactive web UIs.",
+      "level": "Beginner",
+      "duration": "3–6 months"
     },
     {
       "name": "TypeScript Development",
@@ -504,7 +525,10 @@
         }
       ],
       "note": "TypeScript extends JavaScript with static type checking, essential for robust modern frontend, full-stack, and backend application development.",
-      "field": "Web"
+      "field": "Web",
+      "description": "Add static typing to JavaScript for safer, more maintainable front-end and Node.js code.",
+      "level": "Intermediate",
+      "duration": "4–8 weeks"
     },
     {
       "name": "Back-End Development",
@@ -527,7 +551,10 @@
         }
       ],
       "note": "",
-      "field": "Web"
+      "field": "Web",
+      "description": "Server-side programming, REST APIs, Node.js/Express and API testing.",
+      "level": "Intermediate",
+      "duration": "2–4 months"
     },
     {
       "name": "General Web / CMS",
@@ -566,7 +593,10 @@
         }
       ],
       "note": "",
-      "field": "Web"
+      "field": "Web",
+      "description": "Web fundamentals, site performance (Core Web Vitals) and building on a CMS.",
+      "level": "Beginner",
+      "duration": "2–3 months"
     },
     {
       "name": "WordPress Development",
@@ -598,7 +628,10 @@
         }
       ],
       "note": "WordPress is open-source; official developer handbooks along with recognized credentials provide the most complete pathway.",
-      "field": "Web"
+      "field": "Web",
+      "description": "Build and customize WordPress sites, themes and plugins.",
+      "level": "Beginner",
+      "duration": "4–8 weeks"
     },
     {
       "name": "Ruby on Rails",
@@ -629,7 +662,10 @@
         }
       ],
       "note": "No formal vendor-neutral certification exists for Rails — these are the canonical training and guide paths.",
-      "field": "Web"
+      "field": "Web",
+      "description": "Ruby and the Rails framework for rapid full-stack web development.",
+      "level": "Intermediate",
+      "duration": "3–4 months"
     },
     {
       "name": "Mainframe Development",
@@ -644,7 +680,10 @@
         }
       ],
       "note": "",
-      "field": "Developer"
+      "field": "Developer",
+      "description": "Hands-on z/OS, COBOL and JCL basics on IBM Z systems used by banks and enterprises.",
+      "level": "Intermediate",
+      "duration": "4–8 weeks"
     },
     {
       "name": "Cloud Architecture (AWS)",
@@ -667,7 +706,10 @@
         }
       ],
       "note": "",
-      "field": "Cloud"
+      "field": "Cloud",
+      "description": "Core AWS services, pricing and architecture to prepare for AWS Cloud Practitioner.",
+      "level": "Beginner",
+      "duration": "4–6 weeks"
     },
     {
       "name": "Cloud Administration (Azure)",
@@ -683,7 +725,10 @@
         }
       ],
       "note": "",
-      "field": "Cloud"
+      "field": "Cloud",
+      "description": "Azure fundamentals (AZ-900): cloud concepts, core services, security and governance.",
+      "level": "Beginner",
+      "duration": "3–4 weeks"
     },
     {
       "name": "Cloud Engineering (GCP)",
@@ -698,7 +743,10 @@
         }
       ],
       "note": "",
-      "field": "Cloud"
+      "field": "Cloud",
+      "description": "Google Cloud basics: compute, storage, networking and identity.",
+      "level": "Beginner",
+      "duration": "3–4 weeks"
     },
     {
       "name": "DevOps & Release Engineering",
@@ -731,7 +779,10 @@
         }
       ],
       "note": "",
-      "field": "DevOps"
+      "field": "DevOps",
+      "description": "DevOps culture, CI/CD with GitHub Actions and GitLab, and release practices.",
+      "level": "Intermediate",
+      "duration": "2–3 months"
     },
     {
       "name": "Site Reliability & Kubernetes",
@@ -755,7 +806,10 @@
         }
       ],
       "note": "",
-      "field": "DevOps"
+      "field": "DevOps",
+      "description": "Containers with Docker and orchestration with Kubernetes for reliable services.",
+      "level": "Intermediate",
+      "duration": "2–3 months"
     },
     {
       "name": "Infrastructure as Code (HashiCorp)",
@@ -770,7 +824,10 @@
         }
       ],
       "note": "",
-      "field": "DevOps"
+      "field": "DevOps",
+      "description": "Provision cloud infrastructure with Terraform toward the Terraform Associate exam.",
+      "level": "Intermediate",
+      "duration": "4–6 weeks"
     },
     {
       "name": "Configuration Management",
@@ -785,7 +842,10 @@
         }
       ],
       "note": "",
-      "field": "DevOps"
+      "field": "DevOps",
+      "description": "Automate server setup and configuration with Ansible playbooks.",
+      "level": "Intermediate",
+      "duration": "3–4 weeks"
     },
     {
       "name": "CI/CD Pipeline Tooling",
@@ -808,7 +868,10 @@
         }
       ],
       "note": "No single vendor-neutral certification covers this whole toolchain — start with Jenkins, the most widely used.",
-      "field": "DevOps"
+      "field": "DevOps",
+      "description": "Build automated build, test and deploy pipelines with Jenkins and GitLab CI.",
+      "level": "Intermediate",
+      "duration": "4–6 weeks"
     },
     {
       "name": "Version Control & Git Platforms",
@@ -823,7 +886,10 @@
         }
       ],
       "note": "",
-      "field": "DevOps"
+      "field": "DevOps",
+      "description": "Git branching, pull requests and collaboration on GitHub.",
+      "level": "Beginner",
+      "duration": "2–3 weeks"
     },
     {
       "name": "Agile Tooling (Atlassian)",
@@ -846,7 +912,10 @@
         }
       ],
       "note": "",
-      "field": "Management"
+      "field": "Management",
+      "description": "Run agile projects with Jira boards and document work in Confluence.",
+      "level": "Beginner",
+      "duration": "2–3 weeks"
     },
     {
       "name": "Observability & Monitoring",
@@ -870,7 +939,10 @@
         }
       ],
       "note": "",
-      "field": "DevOps"
+      "field": "DevOps",
+      "description": "Metrics, logs, dashboards and alerting with Dynatrace and Grafana.",
+      "level": "Intermediate",
+      "duration": "4–6 weeks"
     },
     {
       "name": "Cloud-Native Service Mesh",
@@ -885,7 +957,10 @@
         }
       ],
       "note": "",
-      "field": "DevOps"
+      "field": "DevOps",
+      "description": "Manage traffic, security and observability between microservices with Istio.",
+      "level": "Advanced",
+      "duration": "4–6 weeks"
     },
     {
       "name": "Data Analytics & BI",
@@ -916,7 +991,10 @@
         }
       ],
       "note": "",
-      "field": "Data & AI"
+      "field": "Data & AI",
+      "description": "Clean, analyze and visualize data with Python, spreadsheets and analytics tools.",
+      "level": "Beginner",
+      "duration": "2–4 months"
     },
     {
       "name": "Data Engineering & Big Data",
@@ -955,7 +1033,10 @@
         }
       ],
       "note": "",
-      "field": "Data & AI"
+      "field": "Data & AI",
+      "description": "Data pipelines, Apache Spark, Hadoop and cloud analytics services.",
+      "level": "Advanced",
+      "duration": "3–6 months"
     },
     {
       "name": "Data Science & Machine Learning",
@@ -986,7 +1067,10 @@
         }
       ],
       "note": "",
-      "field": "Data & AI"
+      "field": "Data & AI",
+      "description": "Machine learning models with Python, from regression to deep learning.",
+      "level": "Intermediate",
+      "duration": "3–6 months"
     },
     {
       "name": "Database Administration",
@@ -1025,7 +1109,10 @@
         }
       ],
       "note": "",
-      "field": "Data & AI"
+      "field": "Data & AI",
+      "description": "SQL, relational design and NoSQL (MongoDB) database management.",
+      "level": "Beginner",
+      "duration": "2–3 months"
     },
     {
       "name": "GIS / Geospatial Analysis",
@@ -1040,7 +1127,10 @@
         }
       ],
       "note": "",
-      "field": "Other"
+      "field": "Other",
+      "description": "Map-making and spatial analysis with the open-source QGIS.",
+      "level": "Beginner",
+      "duration": "4–6 weeks"
     },
     {
       "name": "Cybersecurity Analysis",
@@ -1080,7 +1170,10 @@
         }
       ],
       "note": "",
-      "field": "Cybersecurity"
+      "field": "Cybersecurity",
+      "description": "Security fundamentals, threats and defenses toward ISC2 Certified in Cybersecurity.",
+      "level": "Beginner",
+      "duration": "2–3 months"
     },
     {
       "name": "Penetration Testing & Forensics",
@@ -1105,7 +1198,10 @@
         }
       ],
       "note": "",
-      "field": "Cybersecurity"
+      "field": "Cybersecurity",
+      "description": "Hands-on web security and ethical hacking labs.",
+      "level": "Advanced",
+      "duration": "3–6 months"
     },
     {
       "name": "Security Leadership & GRC",
@@ -1128,7 +1224,10 @@
         }
       ],
       "note": "",
-      "field": "Cybersecurity"
+      "field": "Cybersecurity",
+      "description": "Security governance, risk and compliance frameworks such as NIST CSF.",
+      "level": "Advanced",
+      "duration": "4–8 weeks"
     },
     {
       "name": "Cloud Security",
@@ -1152,7 +1251,10 @@
         }
       ],
       "note": "",
-      "field": "Cybersecurity"
+      "field": "Cybersecurity",
+      "description": "Identity, compliance and security controls in AWS and Microsoft cloud (SC-900).",
+      "level": "Intermediate",
+      "duration": "4–6 weeks"
     },
     {
       "name": "Networking",
@@ -1175,7 +1277,10 @@
         }
       ],
       "note": "",
-      "field": "IT & Support"
+      "field": "IT & Support",
+      "description": "Networking basics, IP addressing and how networks connect.",
+      "level": "Beginner",
+      "duration": "4–8 weeks"
     },
     {
       "name": "Linux & Systems Administration",
@@ -1199,7 +1304,10 @@
         }
       ],
       "note": "",
-      "field": "IT & Support"
+      "field": "IT & Support",
+      "description": "Linux command line, operating system concepts and server administration.",
+      "level": "Beginner",
+      "duration": "4–8 weeks"
     },
     {
       "name": "IT Support & Help Desk",
@@ -1231,7 +1339,10 @@
         }
       ],
       "note": "",
-      "field": "IT & Support"
+      "field": "IT & Support",
+      "description": "Troubleshooting hardware, Windows and users' technical issues.",
+      "level": "Beginner",
+      "duration": "4–8 weeks"
     },
     {
       "name": "IT Service Management",
@@ -1247,7 +1358,10 @@
         }
       ],
       "note": "",
-      "field": "IT & Support"
+      "field": "IT & Support",
+      "description": "ITIL processes for delivering and supporting IT services.",
+      "level": "Intermediate",
+      "duration": "3–4 weeks"
     },
     {
       "name": "Embedded, IoT & Robotics",
@@ -1271,7 +1385,10 @@
         }
       ],
       "note": "",
-      "field": "Other"
+      "field": "Other",
+      "description": "Microcontrollers, sensors and embedded programming with Arduino and Arm.",
+      "level": "Intermediate",
+      "duration": "2–3 months"
     },
     {
       "name": "UX/UI Design",
@@ -1303,7 +1420,10 @@
         }
       ],
       "note": "",
-      "field": "Design"
+      "field": "Design",
+      "description": "User research, wireframes, prototypes and UI design in Figma.",
+      "level": "Beginner",
+      "duration": "2–4 months"
     },
     {
       "name": "Animation, VFX & 3D",
@@ -1326,7 +1446,10 @@
         }
       ],
       "note": "",
-      "field": "Design"
+      "field": "Design",
+      "description": "3D modeling, animation and real-time visual effects with Blender and Unreal Engine.",
+      "level": "Intermediate",
+      "duration": "3–6 months"
     },
     {
       "name": "Game Development",
@@ -1365,7 +1488,10 @@
         }
       ],
       "note": "",
-      "field": "Game Dev"
+      "field": "Game Dev",
+      "description": "Game programming and design with Unity, Unreal Engine and Godot.",
+      "level": "Intermediate",
+      "duration": "3–6 months"
     },
     {
       "name": "Accessibility",
@@ -1389,7 +1515,10 @@
         }
       ],
       "note": "",
-      "field": "Design"
+      "field": "Design",
+      "description": "Design and build websites that people with disabilities can use (WCAG).",
+      "level": "Beginner",
+      "duration": "3–4 weeks"
     },
     {
       "name": "Android Development",
@@ -1420,7 +1549,10 @@
         }
       ],
       "note": "Google retired its standalone Associate Android Developer exam; Google's official Compose pathway and Meta's Professional Certificate are the current industry standard learning paths.",
-      "field": "Mobile"
+      "field": "Mobile",
+      "description": "Native Android apps with Kotlin and Jetpack Compose.",
+      "level": "Intermediate",
+      "duration": "3–4 months"
     },
     {
       "name": "iOS Development",
@@ -1459,7 +1591,10 @@
         }
       ],
       "note": "Apple does not issue direct individual certifications; its official Swift/SwiftUI curricula and Meta's professional certificate provide the most recognized pathways.",
-      "field": "Mobile"
+      "field": "Mobile",
+      "description": "Native iPhone apps with Swift and SwiftUI.",
+      "level": "Intermediate",
+      "duration": "3–4 months"
     },
     {
       "name": "Mobile App Development (Cross-Platform)",
@@ -1506,7 +1641,10 @@
         }
       ],
       "note": "Covers leading cross-platform mobile frameworks (Flutter/Dart & React Native) for building high-performance iOS and Android applications from a single codebase.",
-      "field": "Mobile"
+      "field": "Mobile",
+      "description": "One codebase for Android and iOS with Flutter/Dart or React Native.",
+      "level": "Intermediate",
+      "duration": "3–4 months"
     },
     {
       "name": "QA & Test Automation",
@@ -1529,7 +1667,10 @@
         }
       ],
       "note": "",
-      "field": "DevOps"
+      "field": "DevOps",
+      "description": "Software testing fundamentals and automated testing tools.",
+      "level": "Intermediate",
+      "duration": "2–3 months"
     },
     {
       "name": "Project, Program & Product Management",
@@ -1561,7 +1702,10 @@
         }
       ],
       "note": "",
-      "field": "Management"
+      "field": "Management",
+      "description": "Plan and deliver projects with Scrum, agile and project management tools.",
+      "level": "Intermediate",
+      "duration": "2–3 months"
     },
     {
       "name": "Business & Systems Analysis",
@@ -1576,7 +1720,10 @@
         }
       ],
       "note": "",
-      "field": "Management"
+      "field": "Management",
+      "description": "Gather requirements and translate business needs into system specifications.",
+      "level": "Intermediate",
+      "duration": "4–6 weeks"
     },
     {
       "name": "Enterprise & Technology Leadership",
@@ -1591,7 +1738,10 @@
         }
       ],
       "note": "",
-      "field": "Management"
+      "field": "Management",
+      "description": "Lead digital transformation and align technology with business strategy.",
+      "level": "Advanced",
+      "duration": "2–4 weeks"
     },
     {
       "name": "Salesforce Administration & Development",
@@ -1614,7 +1764,10 @@
         }
       ],
       "note": "",
-      "field": "Other"
+      "field": "Other",
+      "description": "Configure and build on the Salesforce CRM platform with Trailhead.",
+      "level": "Beginner",
+      "duration": "2–3 months"
     },
     {
       "name": "SAP & ERP Consulting",
@@ -1630,7 +1783,10 @@
         }
       ],
       "note": "",
-      "field": "Other"
+      "field": "Other",
+      "description": "Enterprise resource planning concepts and SAP modules.",
+      "level": "Intermediate",
+      "duration": "2–3 months"
     },
     {
       "name": "Microsoft Dynamics & SharePoint",
@@ -1645,7 +1801,10 @@
         }
       ],
       "note": "",
-      "field": "Other"
+      "field": "Other",
+      "description": "Business apps with Dynamics 365 and the Power Platform.",
+      "level": "Intermediate",
+      "duration": "4–8 weeks"
     },
     {
       "name": "Integration / MuleSoft",
@@ -1660,7 +1819,10 @@
         }
       ],
       "note": "",
-      "field": "Other"
+      "field": "Other",
+      "description": "Connect systems through APIs and integration flows with MuleSoft Anypoint.",
+      "level": "Intermediate",
+      "duration": "4–6 weeks"
     },
     {
       "name": "Blockchain Development",
@@ -1675,7 +1837,10 @@
         }
       ],
       "note": "No official standards body for blockchain exists — this is a widely used private-sector credential.",
-      "field": "Other"
+      "field": "Other",
+      "description": "Blockchain concepts, distributed ledgers and smart-contract use cases.",
+      "level": "Intermediate",
+      "duration": "2–4 weeks"
     },
     {
       "name": "Technology Sales & Accounts",
@@ -1698,7 +1863,10 @@
         }
       ],
       "note": "No widely-recognized individual certification exists for tech sales roles. The strongest credential is a technical certification (e.g. AWS or Azure) paired with the vendor's own sales-enablement training.",
-      "field": "Other"
+      "field": "Other",
+      "description": "Consultative and inbound selling of technology and cloud products.",
+      "level": "Beginner",
+      "duration": "2–4 weeks"
     },
     {
       "name": "SEO & Digital Marketing",
@@ -1721,7 +1889,10 @@
         }
       ],
       "note": "",
-      "field": "Web"
+      "field": "Web",
+      "description": "Search engine optimization, analytics and digital marketing campaigns.",
+      "level": "Beginner",
+      "duration": "4–6 weeks"
     }
   ]
 }

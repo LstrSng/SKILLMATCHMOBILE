@@ -386,6 +386,8 @@ class _PathwayPageState extends State<PathwayPage> {
 
     bool matchesPathway(TrainingPathway pathway, String term) {
       return matchesTerm(pathway.name, term) ||
+          (pathway.description != null &&
+              matchesTerm(pathway.description!, term)) ||
           pathway.links.any(
             (l) =>
                 matchesTerm(l.label, term) ||
@@ -940,6 +942,36 @@ class _PathwayTileState extends State<_PathwayTile> {
               ),
             ],
           ),
+          if (pathway.description != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              pathway.description!,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: tokens.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ],
+          if (pathway.level != null || pathway.duration != null) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                if (pathway.level != null)
+                  _PathwayMeta(
+                    icon: Icons.signal_cellular_alt_rounded,
+                    label: pathway.level!,
+                  ),
+                if (pathway.duration != null)
+                  _PathwayMeta(
+                    icon: Icons.schedule_rounded,
+                    label: 'Est. ${pathway.duration}',
+                  ),
+              ],
+            ),
+          ],
           if (widget.gapSkills.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
@@ -1113,6 +1145,41 @@ class _GapSection extends StatelessWidget {
         ),
         const SizedBox(height: 4),
       ],
+    );
+  }
+}
+
+/// Small icon + label pill for a pathway's difficulty or duration.
+class _PathwayMeta extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _PathwayMeta({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: tokens.primarySoftBg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: tokens.primary),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: tokens.primary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

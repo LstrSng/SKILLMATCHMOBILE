@@ -9,9 +9,11 @@ import '../services/job_skill_matcher.dart';
 import '../services/jobs_api.dart';
 import '../services/navigation_service.dart';
 import '../services/profile_api.dart';
+import '../services/profile_completion.dart';
 import '../services/session_store.dart';
 import '../services/skill_assessment_engine.dart';
 import 'package:skillmatch/theme/app_colors.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/widgets.dart';
 import 'sign_in_page.dart';
 
@@ -173,49 +175,8 @@ class _DashboardPageState extends State<DashboardPage> {
     return '';
   }
 
-  double _profileCompletion() {
-    bool has(String key) =>
-        (_profile[key] as Object?)?.toString().trim().isNotEmpty ?? false;
-    bool hasList(String key) {
-      final v = _profile[key];
-      return v is List && v.isNotEmpty;
-    }
-
-    final profileData = _profile['profile'];
-    final hasResume =
-        profileData is Map &&
-        profileData['resume'] is Map &&
-        ((profileData['resume']['url'] as Object?)
-                    ?.toString()
-                    .trim()
-                    .isNotEmpty ==
-                true ||
-            (profileData['resume']['data'] as Object?)
-                    ?.toString()
-                    .trim()
-                    .isNotEmpty ==
-                true ||
-            (profileData['resume']['name'] as Object?)
-                    ?.toString()
-                    .trim()
-                    .isNotEmpty ==
-                true);
-
-    final checks = [
-      has('firstName'),
-      has('lastName'),
-      has('headline'),
-      has('location'),
-      has('phone'),
-      has('portfolioUrl'),
-      hasList('skills'),
-      hasList('education'),
-      hasList('experience'),
-      hasResume,
-    ];
-    final filled = checks.where((c) => c).length;
-    return filled / checks.length;
-  }
+  // Same formula as the Profile tab's Profile Strength meter.
+  double _profileCompletion() => profileCompletionPercent(_profile) / 100;
 
   int _averageMatch() {
     if (_jobs.isEmpty) return 0;
@@ -339,6 +300,28 @@ class _DashboardPageState extends State<DashboardPage> {
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () => AppNavigation.switchTab(AppTab.profile),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: profileAvatar(
+                              context,
+                              avatarUrl:
+                                  (_profile['avatarUrl'] as Object?)
+                                      ?.toString() ??
+                                  '',
+                              size: 52,
+                              radius: 26,
+                              fallbackBg: const Color(0xFFDBEAFE),
+                              fallbackIconColor: AppColors.primary,
+                            ),
                           ),
                         ),
                       ],

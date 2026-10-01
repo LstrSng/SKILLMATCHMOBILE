@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../services/profile_api.dart';
 import '../services/competency.dart';
 import 'package:skillmatch/theme/app_colors.dart';
+import 'profile_avatar.dart';
 
 String _phoneDigitsOnly(String raw) {
   var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
@@ -17,66 +18,6 @@ String _phoneDigitsOnly(String raw) {
     digits = digits.substring(1);
   }
   return digits;
-}
-
-Widget _profileAvatar(
-  BuildContext context, {
-  required String avatarUrl,
-  double size = 80,
-  double radius = 12,
-  Color? fallbackBg,
-  Color? fallbackIconColor,
-}) {
-  final trimmed = avatarUrl.trim();
-  final tokens = context.appColors;
-  final fallback = Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      color: fallbackBg ?? tokens.surfaceMuted,
-      borderRadius: BorderRadius.circular(radius),
-    ),
-    child: Center(
-      child: Icon(
-        Icons.person,
-        size: size * 0.5,
-        color: fallbackIconColor ?? tokens.textFaint,
-      ),
-    ),
-  );
-
-  if (trimmed.isEmpty) return fallback;
-
-  if (trimmed.startsWith('data:image')) {
-    final comma = trimmed.indexOf(',');
-    if (comma > -1 && comma + 1 < trimmed.length) {
-      try {
-        final bytes = base64Decode(trimmed.substring(comma + 1));
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(radius),
-          child: Image.memory(
-            bytes,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-          ),
-        );
-      } catch (_) {
-        return fallback;
-      }
-    }
-  }
-
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(radius),
-    child: Image.network(
-      trimmed,
-      width: size,
-      height: size,
-      fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => fallback,
-    ),
-  );
 }
 
 /// Education items as editable lines: "Degree | School | Years".
@@ -121,6 +62,12 @@ class EditProfileSheet extends StatefulWidget {
 }
 
 class EditProfileSheetState extends State<EditProfileSheet> {
+  // Errors are shown inline: a SnackBar would render behind this sheet.
+  String? _firstNameError;
+  String? _lastNameError;
+  String? _phoneError;
+  String? _saveError;
+
   late final TextEditingController _firstName = TextEditingController(
     text: (widget.initial['firstName'] as String?) ?? '',
   );
@@ -283,20 +230,25 @@ class EditProfileSheetState extends State<EditProfileSheet> {
   Future<void> _save() async {
     if (_saving) return;
     final phoneDigits = _phone.text.trim();
-    String phone = '';
-    if (phoneDigits.isNotEmpty) {
-      if (phoneDigits.length != 10 || !phoneDigits.startsWith('9')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Enter a valid PH mobile number, e.g. +63 9171234567.',
-            ),
-          ),
-        );
-        return;
-      }
-      phone = '+63$phoneDigits';
+    final firstNameError = _nameError(_firstName.text, 'First name');
+    final lastNameError = _nameError(_lastName.text, 'Last name');
+    final phoneError =
+        phoneDigits.isNotEmpty &&
+            (phoneDigits.length != 10 || !phoneDigits.startsWith('9'))
+        ? 'Enter a valid PH mobile number, e.g. +63 9171234567.'
+        : null;
+    setState(() {
+      _firstNameError = firstNameError;
+      _lastNameError = lastNameError;
+      _phoneError = phoneError;
+      _saveError = null;
+    });
+    if (firstNameError != null ||
+        lastNameError != null ||
+        phoneError != null) {
+      return;
     }
+    final phone = phoneDigits.isEmpty ? '' : '+63$phoneDigits';
     setState(() => _saving = true);
     try {
       final user = await updateMyProfile({
@@ -313,12 +265,22 @@ class EditProfileSheetState extends State<EditProfileSheet> {
       Navigator.pop(context, user);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      setState(() => _saveError = e.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  // Same rule as registration (and the backend).
+  static final _nameRegex = RegExp(r"^[\p{L}][\p{L} .'-]*$", unicode: true);
+
+  static String? _nameError(String raw, String label) {
+    final value = raw.trim();
+    if (value.isEmpty) return '$label is required.';
+    if (!_nameRegex.hasMatch(value)) {
+      return "Only letters, spaces and . ' - allowed.";
+    }
+    return null;
   }
 
   InputDecoration _dec(String hint) {
@@ -412,7 +374,7 @@ class EditProfileSheetState extends State<EditProfileSheet> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _profileAvatar(
+                  profileAvatar(
                     context,
                     avatarUrl: _avatarUrl,
                     size: 72,
@@ -457,20 +419,35 @@ class EditProfileSheetState extends State<EditProfileSheet> {
                   ),
                 ],
               ),
+              if (_saveError != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _saveError!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _firstName,
-                      decoration: _dec('First name'),
+                      decoration: _dec(
+                        'First name',
+                      ).copyWith(errorText: _firstNameError, errorMaxLines: 2),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: _lastName,
-                      decoration: _dec('Last name'),
+                      decoration: _dec(
+                        'Last name',
+                      ).copyWith(errorText: _lastNameError, errorMaxLines: 2),
                     ),
                   ),
                 ],
@@ -487,7 +464,11 @@ class EditProfileSheetState extends State<EditProfileSheet> {
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(10),
                 ],
-                decoration: _dec('Phone').copyWith(prefixText: '+63 '),
+                decoration: _dec('Phone').copyWith(
+                  prefixText: '+63 ',
+                  errorText: _phoneError,
+                  errorMaxLines: 2,
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
