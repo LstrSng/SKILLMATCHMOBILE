@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import '../models/training_pathway.dart';
 import '../services/competency.dart';
 import '../services/completed_certs.dart';
+import '../services/job_roles_data.dart';
 import '../services/jobs_api.dart';
+import '../services/pathway_certification.dart';
 import '../services/pathway_links_data.dart';
 import '../services/profile_api.dart';
 import '../services/session_store.dart';
@@ -15,6 +17,9 @@ import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
 import '../widgets/page_hero_header.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/certification_upload_sheet.dart';
+import '../widgets/skill_level_sheet.dart';
+import '../widgets/skill_pick_sheet.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/training_pathway_card.dart';
 
@@ -146,36 +151,170 @@ class _PathwayPageState extends State<PathwayPage> {
       _completedPathways.contains(pathway.name.toLowerCase()) ||
       pathway.links.any((l) => isCertificationCompleted(l, _completedKeys));
 
-  Future<void> _togglePathwayCompleted(
-    TrainingPathway pathway,
+  /// Skill gaps (from posted jobs) that [pathway]'s certifications cover.
+  /// Spelling variants ("Optimisation" / "Optimization") are listed once.
+  List<SkillGap> _gapsFor(TrainingPathway pathway) {
+    final seen = <String>{};
+    return [
+      for (final m in _gapMatches)
+        if (m.pathways.any((p) => p.name == pathway.name) &&
+            seen.add(_skillKey(m.gap.skill).replaceAll('is', 'iz')))
+          m.gap,
+    ];
+  }
+
+  /// The user's current 1–10 rating in [skill], or null if they lack it.
+  static int? _currentLevel(String skill) {
+    final key = plainSkillName(skill).toLowerCase();
+    final levels = SessionStore.user?['skillLevels'];
+    if (levels is! Map) return null;
+    for (final e in levels.entries) {
+      if (plainSkillName(e.key.toString()).toLowerCase() == key) {
+        final v = e.value;
+        return v is num ? v.toInt() : int.tryParse(v.toString());
+      }
+    }
+    return null;
+  }
+
+  /// Like the upskilling page: completing offers an optional certificate
+  /// upload for [subject] (prefilled from [suggested]), then asks which
+  /// skills were gained and the user's level in each; undoing asks for
+  /// confirmation. Returns null if the user backed out.
+  Future<({CertificationDraft? cert, Map<String, int> levels})?> _confirmToggle(
+    String subject,
+    bool completed, {
+    required TrainingPathway pathway,
+    TrainingResource? suggested,
+  }) async {
+    if (!completed) {
+      final remove = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Remove completed mark?'),
+          content: Text(
+            '"$subject" will no longer be marked as completed. Your skill '
+            'level and any certificate you uploaded stay on your profile.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Remove'),
+            ),
+          ],
+        ),
+      );
+      return remove == true && mounted
+          ? (cert: null, levels: const <String, int>{})
+          : null;
+    }
+    final upload = await showCertificationUploadSheet(
+      context,
+      skill: subject,
+      suggestedTitle: suggested?.label,
+      suggestedIssuer: suggested?.provider,
+    );
+    if (upload == null || !mounted) return null;
+    final gaps = _gapsFor(pathway);
+    final skills = await showSkillPickSheet(
+      context,
+      subject: subject,
+      suggestions: [for (final g in gaps) g.skill],
+    );
+    if (skills == null || !mounted) return null;
+    final levels = <String, int>{};
+    for (final skill in skills) {
+      final gap = gaps
+          .where((g) => g.skill.toLowerCase() == skill.toLowerCase())
+          .firstOrNull;
+      final level = await showSkillLevelSheet(
+        context,
+        skill: skill,
+        initialLevel: _currentLevel(skill) ?? gap?.rating ?? 1,
+        required: gap?.required,
+      );
+      if (level == null || !mounted) return null;
+      levels[skill] = level;
+    }
+    return (cert: upload.draft, levels: levels);
+  }
+
+  static String _skillCount(int n) => n == 1 ? '1 skill' : '$n skills';
+
+  /// Saves a completion change optimistically, reverting on failure.
+  /// [persist] saves the mark itself; the certificate and skill levels from
+  /// [details] are saved first.
+  Future<void> _save(
+    String subject,
     bool completed,
+    ({CertificationDraft? cert, Map<String, int> levels}) details,
+    VoidCallback apply,
+    VoidCallback revert,
+    Future<void> Function() persist,
   ) async {
     HapticFeedback.selectionClick();
-    final previous = _completedPathways;
-    final key = pathway.name.toLowerCase();
-    setState(() {
-      _completedPathways = {..._completedPathways};
-      completed ? _completedPathways.add(key) : _completedPathways.remove(key);
-    });
+    setState(apply);
+    final (:cert, :levels) = details;
     try {
-      final keys = await setPathwayCompleted(
-        name: pathway.name,
-        completed: completed,
-      );
+      if (cert != null) {
+        await addPathwayCertification(
+          cert,
+          skill: levels.isEmpty ? subject : levels.keys.join(', '),
+        );
+      }
+      // One at a time: each save builds on the profile the last one returned.
+      for (final MapEntry(key: skill, value: level) in levels.entries) {
+        await setMySkillLevel(skill, level);
+      }
+      await persist();
       if (!mounted) return;
-      setState(() => _completedPathways = keys);
       showAppToast(
         context,
-        completed
-            ? 'Marked "${pathway.name}" as completed.'
-            : 'Removed completed mark.',
+        !completed
+            ? 'Removed completed mark.'
+            : cert == null
+            ? 'Marked "$subject" as completed and added ${_skillCount(levels.length)} to your profile.'
+            : 'Marked "$subject" as completed. ${_skillCount(levels.length)} and certificate added to your profile.',
         type: AppToastType.success,
       );
     } catch (e) {
       if (!mounted) return;
-      setState(() => _completedPathways = previous);
+      setState(revert);
       showAppToast(context, e.toString(), type: AppToastType.error);
     }
+  }
+
+  Future<void> _togglePathwayCompleted(
+    TrainingPathway pathway,
+    bool completed,
+  ) async {
+    final details = await _confirmToggle(
+      pathway.name,
+      completed,
+      pathway: pathway,
+      suggested: pathway.links.firstOrNull,
+    );
+    if (details == null) return;
+    final previous = _completedPathways;
+    final key = pathway.name.toLowerCase();
+    await _save(
+      pathway.name,
+      completed,
+      details,
+      () => _completedPathways = {...previous}..toggle(key, add: completed),
+      () => _completedPathways = previous,
+      () async {
+        final keys = await setPathwayCompleted(
+          name: pathway.name,
+          completed: completed,
+        );
+        if (mounted) setState(() => _completedPathways = keys);
+      },
+    );
   }
 
   Future<void> _toggleCompleted(
@@ -183,33 +322,30 @@ class _PathwayPageState extends State<PathwayPage> {
     TrainingResource link,
     bool completed,
   ) async {
-    HapticFeedback.selectionClick();
+    final details = await _confirmToggle(
+      link.label,
+      completed,
+      pathway: pathway,
+      suggested: link,
+    );
+    if (details == null) return;
     final previous = _completedKeys;
     final key = link.label.trim().toLowerCase();
-    setState(() {
-      _completedKeys = {..._completedKeys};
-      completed ? _completedKeys.add(key) : _completedKeys.remove(key);
-    });
-    try {
-      final keys = await setCertificationCompleted(
-        link: link,
-        pathwayName: pathway.name,
-        completed: completed,
-      );
-      if (!mounted) return;
-      setState(() => _completedKeys = keys);
-      showAppToast(
-        context,
-        completed
-            ? 'Marked "${link.label}" as completed.'
-            : 'Removed completed mark.',
-        type: AppToastType.success,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _completedKeys = previous);
-      showAppToast(context, e.toString(), type: AppToastType.error);
-    }
+    await _save(
+      link.label,
+      completed,
+      details,
+      () => _completedKeys = {...previous}..toggle(key, add: completed),
+      () => _completedKeys = previous,
+      () async {
+        final keys = await setCertificationCompleted(
+          link: link,
+          pathwayName: pathway.name,
+          completed: completed,
+        );
+        if (mounted) setState(() => _completedKeys = keys);
+      },
+    );
   }
 
   static const _categories = [
@@ -1182,4 +1318,10 @@ class _PathwayMeta extends StatelessWidget {
       ),
     );
   }
+}
+
+extension on Set<String> {
+  /// Adds [key] when [add] is true, removes it otherwise.
+  void toggle(String key, {required bool add}) =>
+      add ? this.add(key) : remove(key);
 }
