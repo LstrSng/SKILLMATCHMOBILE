@@ -67,7 +67,13 @@ class JobApplication {
     }
 
     final rawStatus = (json['status'] as Object?)?.toString().trim() ?? 'Applied';
-    final currentStatus = normalizeApplicationStatus(rawStatus);
+    var currentStatus = normalizeApplicationStatus(rawStatus);
+    // Employers can invite a candidate to interview without moving the status.
+    final invited = (json['invitedToInterviewAt'] as Object?)?.toString() ?? '';
+    if (invited.isNotEmpty &&
+        (currentStatus == 'Applied' || currentStatus == 'Screening')) {
+      currentStatus = 'Interview';
+    }
 
     return JobApplication(
       id: (json['id'] as Object?)?.toString().trim() ??
