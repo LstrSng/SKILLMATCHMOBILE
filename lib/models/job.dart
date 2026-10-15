@@ -1,5 +1,19 @@
 import 'package:flutter/material.dart';
 
+/// Shows salaries in Philippine pesos: swaps a stray `$` for `PHP`, and adds
+/// the prefix when the employer entered a bare figure.
+String formatSalaryPhp(String raw) {
+  var s = raw.trim();
+  if (s.isEmpty) return '';
+  s = s.replaceFirst(RegExp(r'^\$\s*'), '').replaceAll(r'$', 'PHP ');
+  if (RegExp(r'^(php|₱)', caseSensitive: false).hasMatch(s)) return s;
+  return 'PHP $s';
+}
+
+/// Job type to display; employers sometimes leave it blank.
+String displayJobType(String raw) =>
+    raw.trim().isEmpty ? 'Not specified' : raw.trim();
+
 class Job {
   final String id;
   final String title;

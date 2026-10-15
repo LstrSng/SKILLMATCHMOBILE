@@ -997,11 +997,13 @@ class _JobCard extends StatelessWidget {
                   ),
                 if (job.salary.isNotEmpty)
                   _MetaPill(
-                    icon: Icons.attach_money_rounded,
-                    label: job.salary,
+                    icon: Icons.payments_outlined,
+                    label: formatSalaryPhp(job.salary),
                   ),
-                if (job.jobType.isNotEmpty)
-                  _MetaPill(icon: Icons.schedule_rounded, label: job.jobType),
+                _MetaPill(
+                  icon: Icons.schedule_rounded,
+                  label: displayJobType(job.jobType),
+                ),
               ],
             ),
             const SizedBox(height: 12),

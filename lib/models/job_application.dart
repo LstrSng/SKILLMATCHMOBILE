@@ -67,7 +67,7 @@ class JobApplication {
     }
 
     final rawStatus = (json['status'] as Object?)?.toString().trim() ?? 'Applied';
-    final currentStatus = rawStatus.isEmpty ? 'Applied' : rawStatus;
+    final currentStatus = normalizeApplicationStatus(rawStatus);
 
     return JobApplication(
       id: (json['id'] as Object?)?.toString().trim() ??
@@ -110,9 +110,35 @@ class ApplicationStatusStep {
         (json['updatedAt'] as Object?)?.toString().trim() ??
         '';
     return ApplicationStatusStep(
-      status: (json['status'] as Object?)?.toString().trim() ?? 'Applied',
+      status: normalizeApplicationStatus(
+        (json['status'] as Object?)?.toString().trim() ?? 'Applied',
+      ),
       date: DateTime.tryParse(rawDate)?.toLocal() ?? DateTime.now(),
       note: (json['note'] as Object?)?.toString().trim() ?? '',
     );
   }
+}
+
+/// Maps the many labels the employer portal uses (Reviewing, Shortlisted,
+/// Interview Scheduled, ...) onto the stages the app knows how to display.
+String normalizeApplicationStatus(String raw) {
+  final s = raw.trim().toLowerCase();
+  if (s.isEmpty) return 'Applied';
+  if (s.contains('withdraw')) return 'Withdrawn';
+  if (s.contains('reject') || s.contains('declin') || s.contains('not selected')) {
+    return 'Rejected';
+  }
+  if (s.contains('hire')) return 'Hired';
+  if (s.contains('offer') || s.contains('accept')) return 'Offer';
+  if (s.contains('interview')) return 'Interview';
+  if (s.contains('review') ||
+      s.contains('screen') ||
+      s.contains('shortlist') ||
+      s.contains('short-list')) {
+    return 'Screening';
+  }
+  if (s.contains('appl') || s.contains('submit') || s.contains('pending')) {
+    return 'Applied';
+  }
+  return raw.trim();
 }

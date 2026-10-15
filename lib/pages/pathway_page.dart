@@ -15,6 +15,7 @@ import '../services/session_store.dart';
 import '../services/skill_gap_data.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/app_card.dart';
+import '../widgets/app_shimmer.dart';
 import '../widgets/page_hero_header.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/certification_upload_sheet.dart';
@@ -450,7 +451,7 @@ class _PathwayPageState extends State<PathwayPage> {
     return Scaffold(
       appBar: const AppTopBar(),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const _PathwayListSkeleton()
           : _error != null
           ? Center(
               child: Padding(
@@ -1324,4 +1325,34 @@ extension on Set<String> {
   /// Adds [key] when [add] is true, removes it otherwise.
   void toggle(String key, {required bool add}) =>
       add ? this.add(key) : remove(key);
+}
+
+/// Shimmer placeholder shown while the pathway data loads.
+class _PathwayListSkeleton extends StatelessWidget {
+  const _PathwayListSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppShimmer(
+      child: ListView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: 4,
+        itemBuilder: (_, _) => const AppCard(
+          margin: EdgeInsets.only(bottom: 14),
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ShimmerBox(width: 180, height: 16, borderRadius: 6),
+              SizedBox(height: 10),
+              ShimmerBox(width: 120, height: 12, borderRadius: 6),
+              SizedBox(height: 14),
+              ShimmerBox(height: 6, borderRadius: 4),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

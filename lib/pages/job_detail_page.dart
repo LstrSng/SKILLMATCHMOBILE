@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../models/job.dart' show formatSalaryPhp, displayJobType;
 import '../models/job_match_result.dart';
 import '../services/applications_api.dart';
 import '../services/coding_challenge_bank.dart';
@@ -624,9 +625,8 @@ class JobHeaderCard extends StatelessWidget {
       if (location.trim().isNotEmpty)
         _MetaPill(icon: Icons.location_on_outlined, label: location),
       if (salary.trim().isNotEmpty)
-        _MetaPill(icon: Icons.attach_money_rounded, label: salary),
-      if (jobType.trim().isNotEmpty)
-        _MetaPill(icon: Icons.schedule_rounded, label: jobType),
+        _MetaPill(icon: Icons.payments_outlined, label: formatSalaryPhp(salary)),
+      _MetaPill(icon: Icons.schedule_rounded, label: displayJobType(jobType)),
       if (postedDate.trim().isNotEmpty)
         _MetaPill(icon: Icons.calendar_today_outlined, label: postedDate),
     ];

@@ -470,6 +470,21 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 20),
 
+                if (profileCompletion < 1) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => AppNavigation.switchTab(AppTab.profile),
+                      icon: const Icon(Icons.person_outline_rounded, size: 18),
+                      label: const Text(
+                        'Complete Profile',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
                 // Skill Assessment Banner
                 if (!_cachedHasAnyAssessment) ...[
                   Container(

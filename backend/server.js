@@ -1520,6 +1520,8 @@ app.get("/api/applications", requireDb, requireAuth, async (req, res) => {
     const apps = await Application.find({ userId: req.user._id })
       .sort({ createdAt: -1 })
       .lean();
+    // Employers must see fresh statuses on every refresh, never a cached copy.
+    res.set("Cache-Control", "no-store");
     return res.json({ applications: apps });
   } catch (err) {
     console.error("List applications error:", err);
