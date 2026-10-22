@@ -7,6 +7,8 @@ import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/centered_form_width.dart';
+import '../widgets/add_skill_dialog.dart';
+import '../widgets/skill_level_meter.dart';
 import '../widgets/skill_years_stepper.dart';
 import 'main_navigation_page.dart';
 
@@ -154,6 +156,11 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
     });
   }
 
+  Future<void> _addOther() async {
+    final name = await showAddOtherSkillDialog(context, known: _skillOptions);
+    if (name != null) _addSkill(name);
+  }
+
   /// [suggestions] minus the skills already added (case-insensitive).
   List<String> _unpicked(List<String> suggestions) {
     final picked = _skills.map((s) => s.toLowerCase()).toSet();
@@ -238,6 +245,17 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
                         ),
                       ),
                     ],
+                    const SizedBox(height: 14),
+                    CenteredFormWidth(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Other skill (not in the list)'),
+                          onPressed: _addOther,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     CenteredFormWidth(child: _buildSelected(tokens)),
                   ],
@@ -843,6 +861,11 @@ class _SkillCard extends StatelessWidget {
               years: years,
               onChanged: onYears,
             ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: SkillLevelMeter(level: level, color: color),
           ),
         ],
       ),

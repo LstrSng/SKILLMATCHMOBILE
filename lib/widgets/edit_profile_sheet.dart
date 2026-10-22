@@ -8,6 +8,8 @@ import '../services/profile_api.dart';
 import '../services/competency.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import 'profile_avatar.dart';
+import 'add_skill_dialog.dart';
+import 'skill_level_meter.dart';
 import 'skill_years_stepper.dart';
 
 String _phoneDigitsOnly(String raw) {
@@ -668,7 +670,13 @@ class SkillsSelectorState extends State<SkillsSelector> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            onPressed: _searchFocus.requestFocus,
+            onPressed: () async {
+              final name = await showAddOtherSkillDialog(
+                context,
+                known: widget.options,
+              );
+              if (name != null) _addCustom(name);
+            },
             backgroundColor: tokens.cardBackground,
             side: BorderSide(color: tokens.primary),
           ),
@@ -859,6 +867,14 @@ class _SkillLevelRow extends StatelessWidget {
               skill: skill,
               years: years,
               onChanged: onChanged,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8, bottom: 8),
+            child: SkillLevelMeter(
+              level: level,
+              color: tokens.primary,
+              showEndLabels: false,
             ),
           ),
         ],
