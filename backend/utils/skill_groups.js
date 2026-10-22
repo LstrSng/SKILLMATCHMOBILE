@@ -91,7 +91,8 @@ export function toStoredSkills(names, levels) {
   const seen = new Set();
   const skills = { techStack: [], functional: [], enabling: [] };
   for (const raw of Array.isArray(names) ? names : []) {
-    const name = String(raw ?? "").trim();
+    // Custom skills are free text: collapse spaces and cap the length.
+    const name = String(raw ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
     if (!name || seen.has(name.toLowerCase())) continue;
     seen.add(name.toLowerCase());
     const level = validLevel(

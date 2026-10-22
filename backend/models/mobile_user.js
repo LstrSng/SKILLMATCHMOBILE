@@ -61,6 +61,15 @@ const mobileUserSchema = new mongoose.Schema({
         functional: { type: [String], default: [] },
         enabling: { type: [String], default: [] },
     },
+    // Years of experience per skill (the app derives each skill's 1-10
+    // level from these). An array because skill names can contain dots.
+    skillYears: {
+        type: [new mongoose.Schema(
+            { name: { type: String, required: true }, years: { type: Number, min: 0, max: 50 } },
+            { _id: false }
+        )],
+        default: [],
+    },
     education: { type: [educationItemSchema], default: [] },
     experience: { type: [experienceItemSchema], default: [] },
 

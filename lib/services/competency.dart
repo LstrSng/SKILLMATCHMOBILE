@@ -25,6 +25,42 @@ String skillLevelLabel(int rating) {
   return 'Expert';
 }
 
+/// Most years of experience that can be entered for one skill.
+const int kMaxSkillYears = 50;
+
+/// 1–10 rating derived from years of experience with a skill:
+/// <1 yr → 2, 1 → 3, 2 → 4, 3 → 5, 4–5 → 6, 6–7 → 7, 8–9 → 8,
+/// 10–14 → 9, 15+ → 10. Null/negative years (none yet) → 1.
+int ratingForYears(int? years) {
+  if (years == null || years < 0) return 1;
+  if (years < 1) return 2;
+  if (years <= 3) return years + 2;
+  if (years <= 5) return 6;
+  if (years <= 7) return 7;
+  if (years <= 9) return 8;
+  if (years <= 14) return 9;
+  return 10;
+}
+
+/// "Less than 1 year", "1 year", "5 years".
+String skillYearsLabel(int years) {
+  if (years < 1) return 'Less than 1 year';
+  return '$years year${years == 1 ? '' : 's'}';
+}
+
+/// Cleans a typed-in skill: collapses spaces, caps the length and, when it
+/// matches a known skill ignoring case, returns the known spelling. Empty
+/// when nothing usable was typed.
+String normalizeSkillName(String raw, [Iterable<String> known = const []]) {
+  var name = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (name.length > 60) name = name.substring(0, 60).trim();
+  final lower = name.toLowerCase();
+  for (final k in known) {
+    if (k.toLowerCase() == lower) return k;
+  }
+  return name;
+}
+
 /// Rating a skill gets when the applicant hasn't rated it.
 const int kUnratedSkillLevel = 5;
 

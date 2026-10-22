@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-
 import '../config/api_config.dart';
 import 'authed_http.dart';
 import 'job_roles_data.dart' show plainSkillName;
@@ -102,6 +101,17 @@ Future<Map<String, dynamic>> setMySkillLevel(String skill, int level) {
     orElse: () => '',
   );
   if (existing.isEmpty) skills.add(name);
-  levels[existing.isEmpty ? name : existing] = level.clamp(1, 10);
-  return updateMyProfile({'skills': skills, 'skillLevels': levels});
+  final key2 = existing.isEmpty ? name : existing;
+  levels[key2] = level.clamp(1, 10);
+  // A manual rating replaces any years entered earlier for this skill.
+  final years = <String, dynamic>{
+    if (user?['skillYears'] case final Map raw)
+      for (final e in raw.entries)
+        if (e.key.toString() != key2) e.key.toString(): e.value,
+  };
+  return updateMyProfile({
+    'skills': skills,
+    'skillLevels': levels,
+    'skillYears': years,
+  });
 }

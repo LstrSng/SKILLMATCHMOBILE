@@ -56,6 +56,7 @@ Future<Map<String, dynamic>?> showSkillsSheet(
       if (s.toString().trim().isNotEmpty) s.toString(),
   ];
   var levels = readSkillLevels(user);
+  var years = readSkillYears(user);
   final options = loadSkillOptions();
   return _showSectionSheet(
     context,
@@ -66,10 +67,12 @@ Future<Map<String, dynamic>?> showSkillsSheet(
         options: snap.data ?? const [],
         initialSelected: skills,
         initialLevels: levels,
+        initialYears: years,
         // Only add/remove refreshes the sheet (for the Save button);
-        // dragging a level slider stays inside the selector.
+        // changing years stays inside the selector.
         onChanged: (list) => setState(() => skills = list),
         onLevelsChanged: (map) => levels = map,
+        onYearsChanged: (map) => years = map,
       ),
     ),
     canSave: () => skills.isNotEmpty,
@@ -77,6 +80,10 @@ Future<Map<String, dynamic>?> showSkillsSheet(
       'skills': skills,
       'skillLevels': {
         for (final s in skills) s: levels[s] ?? kDefaultSkillLevel,
+      },
+      'skillYears': {
+        for (final s in skills)
+          if (years[s] != null) s: years[s],
       },
     }),
   );

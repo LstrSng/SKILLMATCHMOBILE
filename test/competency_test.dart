@@ -18,6 +18,22 @@ void main() {
     });
   });
 
+  test('derives the rating from years of experience', () {
+    expect(ratingForYears(null), 1);
+    expect(
+      [
+        for (final y in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 14, 15, 40])
+          ratingForYears(y),
+      ],
+      [2, 3, 4, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10],
+    );
+  });
+
+  test('normalizes typed skills', () {
+    expect(normalizeSkillName('  react   native '), 'react native');
+    expect(normalizeSkillName('python', ['Python']), 'Python');
+  });
+
   test('converts 1-10 ratings to PSF and enabling levels', () {
     expect(
       [for (var r = 1; r <= 10; r++) psfLevelForRating(r)],

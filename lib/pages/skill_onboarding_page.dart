@@ -7,7 +7,7 @@ import '../services/profile_api.dart';
 import '../services/session_store.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import '../widgets/centered_form_width.dart';
-import '../widgets/edit_profile_sheet.dart' show kDefaultSkillLevel;
+import '../widgets/skill_years_stepper.dart';
 import 'main_navigation_page.dart';
 
 bool _hasSkills(Map<String, dynamic>? user) {
@@ -111,7 +111,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
   final _searchFocus = FocusNode();
   List<String> _skillOptions = [];
   final List<String> _skills = [];
-  final Map<String, int> _levels = {};
+  final Map<String, int> _years = {};
   String _query = '';
   bool _saving = false;
 
@@ -138,7 +138,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
   }
 
   void _addSkill(String skill) {
-    final trimmed = skill.trim();
+    final trimmed = normalizeSkillName(skill, _skillOptions);
     if (trimmed.isEmpty) return;
     HapticFeedback.selectionClick();
     setState(() {
@@ -147,7 +147,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
       );
       if (!exists) {
         _skills.insert(0, trimmed);
-        _levels[trimmed] = kDefaultSkillLevel;
+        _years[trimmed] = 0;
       }
       _searchController.clear();
       _query = '';
@@ -164,14 +164,13 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
     HapticFeedback.lightImpact();
     setState(() {
       _skills.remove(skill);
-      _levels.remove(skill);
+      _years.remove(skill);
     });
   }
 
-  void _setLevel(String skill, int level) {
-    if (_levels[skill] == level) return;
-    HapticFeedback.selectionClick();
-    setState(() => _levels[skill] = level);
+  void _setYears(String skill, int years) {
+    if (_years[skill] == years) return;
+    setState(() => _years[skill] = years);
   }
 
   Future<void> _save() async {
@@ -181,9 +180,9 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
       await updateMyProfile({
         'skills': _skills,
         'skillLevels': {
-          for (final skill in _skills)
-            skill: _levels[skill] ?? kDefaultSkillLevel,
+          for (final skill in _skills) skill: ratingForYears(_years[skill]),
         },
+        'skillYears': {for (final skill in _skills) skill: _years[skill] ?? 0},
       });
       if (!mounted) return;
       widget.onDone();
@@ -296,7 +295,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
                 _searchFocus.requestFocus();
               },
               decoration: InputDecoration(
-                hintText: 'Search skills, e.g. Python, Figma, SQL',
+                hintText: 'Search skills, or type one that is not listed',
                 hintStyle: TextStyle(color: tokens.textFaint, fontSize: 15),
                 prefixIcon: Icon(Icons.search_rounded, color: tokens.primary),
                 suffixIcon: query.isEmpty
@@ -378,7 +377,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Search above and tap a skill to add it.\nThen rate how good you are from 1 to 10.',
+              'Search above and tap a skill to add it. If it is not\nin the list, type it and add it as your own.\nThen set how many years you have used it.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13.5,
@@ -422,7 +421,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
             ),
             const Spacer(),
             Text(
-              'Tap the bars to rate',
+              'Set your years',
               style: TextStyle(fontSize: 12, color: tokens.textSecondary),
             ),
           ],
@@ -432,8 +431,8 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
           (s) => _SkillCard(
             key: ValueKey(s),
             skill: s,
-            level: _levels[s] ?? kDefaultSkillLevel,
-            onLevel: (v) => _setLevel(s, v),
+            years: _years[s] ?? 0,
+            onYears: (v) => _setYears(s, v),
             onRemove: () => _removeSkill(s),
           ),
         ),
@@ -750,19 +749,20 @@ class _SkillCard extends StatelessWidget {
   const _SkillCard({
     super.key,
     required this.skill,
-    required this.level,
-    required this.onLevel,
+    required this.years,
+    required this.onYears,
     required this.onRemove,
   });
 
   final String skill;
-  final int level;
-  final ValueChanged<int> onLevel;
+  final int years;
+  final ValueChanged<int> onYears;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
+    final level = ratingForYears(years);
     final color = _levelColor(level);
 
     return Container(
@@ -835,91 +835,16 @@ class _SkillCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: _LevelMeter(level: level, color: color, onChanged: onLevel),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Beginner',
-                  style: TextStyle(fontSize: 11, color: tokens.textFaint),
-                ),
-                Text(
-                  'Expert',
-                  style: TextStyle(fontSize: 11, color: tokens.textFaint),
-                ),
-              ],
+            child: SkillYearsStepper(
+              skill: skill,
+              years: years,
+              onChanged: onYears,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Ten tappable/draggable bars; bars up to [level] are filled with [color].
-class _LevelMeter extends StatelessWidget {
-  const _LevelMeter({
-    required this.level,
-    required this.color,
-    required this.onChanged,
-  });
-
-  final int level;
-  final Color color;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.appColors;
-    return Semantics(
-      label: 'Skill level',
-      value: '$level out of 10',
-      increasedValue: '${(level + 1).clamp(1, 10)} out of 10',
-      decreasedValue: '${(level - 1).clamp(1, 10)} out of 10',
-      onIncrease: () => onChanged((level + 1).clamp(1, 10)),
-      onDecrease: () => onChanged((level - 1).clamp(1, 10)),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          void pick(double dx) {
-            final i = (dx / constraints.maxWidth * 10).floor() + 1;
-            onChanged(i.clamp(1, 10));
-          }
-
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: (d) => pick(d.localPosition.dx),
-            onHorizontalDragUpdate: (d) => pick(d.localPosition.dx),
-            child: SizedBox(
-              height: 28,
-              child: Row(
-                children: List.generate(10, (i) {
-                  final filled = i < level;
-                  return Expanded(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      margin: EdgeInsets.only(right: i == 9 ? 0 : 4),
-                      height: filled ? 28 : 20,
-                      decoration: BoxDecoration(
-                        color: filled ? color : tokens.surfaceMuted,
-                        borderRadius: BorderRadius.circular(6),
-                        border: filled
-                            ? null
-                            : Border.all(color: tokens.cardBorderSoft),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          );
-        },
       ),
     );
   }

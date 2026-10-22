@@ -239,6 +239,12 @@ function userPublic(u) {
     // database stores them grouped (see toStoredSkills).
     skills: storedSkills.names,
     skillLevels: storedSkills.levels,
+    skillYears: Object.fromEntries(
+      (Array.isArray(u.skillYears) ? u.skillYears : []).map((e) => [
+        e.name,
+        e.years,
+      ])
+    ),
     education,
     experience,
     yearsOfExperience:
@@ -1300,6 +1306,23 @@ app.put("/api/me", requireDb, requireAuth, async (req, res) => {
           : current.levels;
       // Stores skills grouped, each as "<name> (<level>/10)".
       Object.assign(patch, toStoredSkills(names, levels));
+    }
+    if (body.skillYears !== undefined || patch.skills) {
+      const source =
+        body.skillYears && typeof body.skillYears === "object"
+          ? body.skillYears
+          : Object.fromEntries(
+              (Array.isArray(req.user.skillYears) ? req.user.skillYears : []).map(
+                (e) => [e.name, e.years]
+              )
+            );
+      const names = readStoredSkills(patch.skills ? { skills: patch.skills } : req.user).names;
+      const keep = new Set(names.map((n) => n.toLowerCase()));
+      patch.skillYears = Object.entries(source)
+        .map(([name, years]) => ({ name: name.trim(), years: Math.round(Number(years)) }))
+        .filter(
+          (e) => keep.has(e.name.toLowerCase()) && Number.isFinite(e.years) && e.years >= 0 && e.years <= 50
+        );
     }
     if (body.education !== undefined) {
       const normalizeItem = (it) => ({

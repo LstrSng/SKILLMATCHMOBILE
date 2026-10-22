@@ -8,6 +8,7 @@ import '../services/profile_api.dart';
 import '../services/competency.dart';
 import 'package:skillmatch/theme/app_colors.dart';
 import 'profile_avatar.dart';
+import 'skill_years_stepper.dart';
 
 String _phoneDigitsOnly(String raw) {
   var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
@@ -243,9 +244,7 @@ class EditProfileSheetState extends State<EditProfileSheet> {
       _phoneError = phoneError;
       _saveError = null;
     });
-    if (firstNameError != null ||
-        lastNameError != null ||
-        phoneError != null) {
+    if (firstNameError != null || lastNameError != null || phoneError != null) {
       return;
     }
     final phone = phoneDigits.isEmpty ? '' : '+63$phoneDigits';
@@ -490,14 +489,18 @@ class EditProfileSheetState extends State<EditProfileSheet> {
 /// [options] instead of typing free text, so profile skills stay in the
 /// same vocabulary that job postings are matched against.
 ///
-/// When [onLevelsChanged] is set, each selected skill also gets a 1–10
-/// proficiency slider (new skills start at [kDefaultSkillLevel]).
+/// When [onLevelsChanged] is set, each selected skill also gets a years of
+/// experience stepper; its 1–10 level is derived from the years
+/// ([ratingForYears]). Skills without years keep their [initialLevels]
+/// rating until the user sets them.
 class SkillsSelector extends StatefulWidget {
   final List<String> options;
   final List<String> initialSelected;
   final ValueChanged<List<String>> onChanged;
   final Map<String, int> initialLevels;
+  final Map<String, int> initialYears;
   final ValueChanged<Map<String, int>>? onLevelsChanged;
+  final ValueChanged<Map<String, int>>? onYearsChanged;
 
   const SkillsSelector({
     super.key,
@@ -505,7 +508,9 @@ class SkillsSelector extends StatefulWidget {
     required this.initialSelected,
     required this.onChanged,
     this.initialLevels = const {},
+    this.initialYears = const {},
     this.onLevelsChanged,
+    this.onYearsChanged,
   });
 
   @override
@@ -518,7 +523,12 @@ class SkillsSelectorState extends State<SkillsSelector> {
     for (final s in widget.initialSelected)
       s: widget.initialLevels[s] ?? kDefaultSkillLevel,
   };
+  late final Map<String, int> _years = {
+    for (final s in widget.initialSelected)
+      if (widget.initialYears[s] != null) s: widget.initialYears[s]!,
+  };
   final _searchController = TextEditingController();
+  final _searchFocus = FocusNode();
   String _query = '';
 
   bool get _withLevels => widget.onLevelsChanged != null;
@@ -526,16 +536,22 @@ class SkillsSelectorState extends State<SkillsSelector> {
   void _notify() {
     widget.onChanged(_selected);
     widget.onLevelsChanged?.call(Map.of(_levels));
+    widget.onYearsChanged?.call(Map.of(_years));
   }
 
-  void _setLevel(String skill, int level) {
-    setState(() => _levels[skill] = level);
+  void _setYears(String skill, int years) {
+    setState(() {
+      _years[skill] = years;
+      _levels[skill] = ratingForYears(years);
+    });
     widget.onLevelsChanged?.call(Map.of(_levels));
+    widget.onYearsChanged?.call(Map.of(_years));
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -543,16 +559,18 @@ class SkillsSelectorState extends State<SkillsSelector> {
     setState(() {
       if (_selected.remove(skill)) {
         _levels.remove(skill);
+        _years.remove(skill);
       } else {
         _selected.add(skill);
-        _levels[skill] = kDefaultSkillLevel;
+        _years[skill] = 0;
+        _levels[skill] = ratingForYears(0);
       }
     });
     _notify();
   }
 
   void _addCustom(String skill) {
-    final trimmed = skill.trim();
+    final trimmed = normalizeSkillName(skill, widget.options);
     if (trimmed.isEmpty) return;
     final alreadyHave = _selected.any(
       (s) => s.toLowerCase() == trimmed.toLowerCase(),
@@ -560,7 +578,8 @@ class SkillsSelectorState extends State<SkillsSelector> {
     setState(() {
       if (!alreadyHave) {
         _selected.add(trimmed);
-        _levels[trimmed] = kDefaultSkillLevel;
+        _years[trimmed] = 0;
+        _levels[trimmed] = ratingForYears(0);
       }
       _searchController.clear();
       _query = '';
@@ -588,9 +607,14 @@ class SkillsSelectorState extends State<SkillsSelector> {
       children: [
         TextField(
           controller: _searchController,
+          focusNode: _searchFocus,
+          maxLength: 60,
+          buildCounter:
+              (_, {required currentLength, required isFocused, maxLength}) =>
+                  null,
           style: TextStyle(color: tokens.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Search or type your own skill',
+            hintText: 'Search, or type a skill that is not in the list',
             hintStyle: TextStyle(color: tokens.textFaint, fontSize: 14),
             prefixIcon: Icon(
               Icons.search,
@@ -628,6 +652,23 @@ class SkillsSelectorState extends State<SkillsSelector> {
               ),
             ),
             onPressed: () => _addCustom(trimmedQuery),
+            backgroundColor: tokens.cardBackground,
+            side: BorderSide(color: tokens.primary),
+          ),
+        ],
+        if (trimmedQuery.isEmpty) ...[
+          const SizedBox(height: 8),
+          ActionChip(
+            avatar: Icon(Icons.edit_outlined, size: 16, color: tokens.primary),
+            label: Text(
+              'Other skill (not in the list)',
+              style: TextStyle(
+                fontSize: 13,
+                color: tokens.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onPressed: _searchFocus.requestFocus,
             backgroundColor: tokens.cardBackground,
             side: BorderSide(color: tokens.primary),
           ),
@@ -687,7 +728,7 @@ class SkillsSelectorState extends State<SkillsSelector> {
         const SizedBox(height: 16),
         if (_selected.isNotEmpty && _withLevels) ...[
           Text(
-            'Rate each skill from 1 (beginner) to 10 (expert).',
+            'Set how many years you have used each skill — your level is set from that.',
             style: TextStyle(fontSize: 12, color: tokens.textSecondary),
           ),
           const SizedBox(height: 8),
@@ -695,7 +736,8 @@ class SkillsSelectorState extends State<SkillsSelector> {
             (s) => _SkillLevelRow(
               skill: s,
               level: _levels[s] ?? kDefaultSkillLevel,
-              onChanged: (v) => _setLevel(s, v),
+              years: _years[s],
+              onChanged: (v) => _setYears(s, v),
               onRemove: () => _toggle(s),
             ),
           ),
@@ -727,7 +769,20 @@ class SkillsSelectorState extends State<SkillsSelector> {
   }
 }
 
-/// Level given to a newly picked skill before the user adjusts it.
+/// Reads the years of experience per skill from a user map.
+Map<String, int> readSkillYears(Map<String, dynamic>? user) {
+  final raw = user?['skillYears'];
+  if (raw is! Map) return {};
+  final out = <String, int>{};
+  raw.forEach((k, v) {
+    final years = v is num ? v.round() : int.tryParse(v.toString());
+    if (years != null && years >= 0)
+      out[k.toString()] = years.clamp(0, kMaxSkillYears);
+  });
+  return out;
+}
+
+/// Level given to a skill with no years set and no earlier rating.
 const int kDefaultSkillLevel = 5;
 
 /// Reads the 1–10 skill levels from a user map (missing ones are omitted).
@@ -746,12 +801,14 @@ class _SkillLevelRow extends StatelessWidget {
   const _SkillLevelRow({
     required this.skill,
     required this.level,
+    required this.years,
     required this.onChanged,
     required this.onRemove,
   });
 
   final String skill;
   final int level;
+  final int? years;
   final ValueChanged<int> onChanged;
   final VoidCallback onRemove;
 
@@ -796,14 +853,13 @@ class _SkillLevelRow extends StatelessWidget {
               ),
             ],
           ),
-          Slider(
-            value: level.toDouble(),
-            min: 1,
-            max: 10,
-            divisions: 9,
-            label: '$level',
-            activeColor: tokens.primary,
-            onChanged: (v) => onChanged(v.round()),
+          Padding(
+            padding: const EdgeInsets.only(right: 8, bottom: 8),
+            child: SkillYearsStepper(
+              skill: skill,
+              years: years,
+              onChanged: onChanged,
+            ),
           ),
         ],
       ),
