@@ -541,6 +541,11 @@ class SkillsSelectorState extends State<SkillsSelector> {
     widget.onYearsChanged?.call(Map.of(_years));
   }
 
+  void _setLevel(String skill, int level) {
+    setState(() => _levels[skill] = level);
+    widget.onLevelsChanged?.call(Map.of(_levels));
+  }
+
   void _setYears(String skill, int years) {
     setState(() {
       _years[skill] = years;
@@ -663,7 +668,7 @@ class SkillsSelectorState extends State<SkillsSelector> {
           ActionChip(
             avatar: Icon(Icons.edit_outlined, size: 16, color: tokens.primary),
             label: Text(
-              'Other skill (not in the list)',
+              'Other skill',
               style: TextStyle(
                 fontSize: 13,
                 color: tokens.primary,
@@ -736,7 +741,7 @@ class SkillsSelectorState extends State<SkillsSelector> {
         const SizedBox(height: 16),
         if (_selected.isNotEmpty && _withLevels) ...[
           Text(
-            'Set how many years you have used each skill — your level is set from that.',
+            'Set the years you have used each skill. That sets your level, and you can tap the bars to adjust it.',
             style: TextStyle(fontSize: 12, color: tokens.textSecondary),
           ),
           const SizedBox(height: 8),
@@ -746,6 +751,7 @@ class SkillsSelectorState extends State<SkillsSelector> {
               level: _levels[s] ?? kDefaultSkillLevel,
               years: _years[s],
               onChanged: (v) => _setYears(s, v),
+              onLevelChanged: (v) => _setLevel(s, v),
               onRemove: () => _toggle(s),
             ),
           ),
@@ -811,12 +817,14 @@ class _SkillLevelRow extends StatelessWidget {
     required this.level,
     required this.years,
     required this.onChanged,
+    required this.onLevelChanged,
     required this.onRemove,
   });
 
   final String skill;
   final int level;
   final int? years;
+  final ValueChanged<int> onLevelChanged;
   final ValueChanged<int> onChanged;
   final VoidCallback onRemove;
 
@@ -875,6 +883,7 @@ class _SkillLevelRow extends StatelessWidget {
               level: level,
               color: tokens.primary,
               showEndLabels: false,
+              onChanged: onLevelChanged,
             ),
           ),
         ],

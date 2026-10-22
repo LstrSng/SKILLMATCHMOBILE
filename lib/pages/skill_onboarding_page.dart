@@ -114,6 +114,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
   List<String> _skillOptions = [];
   final List<String> _skills = [];
   final Map<String, int> _years = {};
+  final Map<String, int> _levels = {};
   String _query = '';
   bool _saving = false;
 
@@ -150,6 +151,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
       if (!exists) {
         _skills.insert(0, trimmed);
         _years[trimmed] = 0;
+        _levels[trimmed] = ratingForYears(0);
       }
       _searchController.clear();
       _query = '';
@@ -172,12 +174,24 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
     setState(() {
       _skills.remove(skill);
       _years.remove(skill);
+      _levels.remove(skill);
     });
   }
 
+  /// Changing the years resets the level to the one those years give.
   void _setYears(String skill, int years) {
     if (_years[skill] == years) return;
-    setState(() => _years[skill] = years);
+    setState(() {
+      _years[skill] = years;
+      _levels[skill] = ratingForYears(years);
+    });
+  }
+
+  /// The level can still be adjusted by hand after the years are set.
+  void _setLevel(String skill, int level) {
+    if (_levels[skill] == level) return;
+    HapticFeedback.selectionClick();
+    setState(() => _levels[skill] = level);
   }
 
   Future<void> _save() async {
@@ -187,7 +201,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
       await updateMyProfile({
         'skills': _skills,
         'skillLevels': {
-          for (final skill in _skills) skill: ratingForYears(_years[skill]),
+          for (final skill in _skills) skill: _levels[skill] ?? ratingForYears(_years[skill]),
         },
         'skillYears': {for (final skill in _skills) skill: _years[skill] ?? 0},
       });
@@ -251,7 +265,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
                         alignment: Alignment.centerLeft,
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Other skill (not in the list)'),
+                          label: const Text('Other skill'),
                           onPressed: _addOther,
                         ),
                       ),
@@ -439,7 +453,7 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
             ),
             const Spacer(),
             Text(
-              'Set your years',
+              'Tap the bars to adjust',
               style: TextStyle(fontSize: 12, color: tokens.textSecondary),
             ),
           ],
@@ -450,7 +464,9 @@ class _SkillOnboardingPageState extends State<SkillOnboardingPage> {
             key: ValueKey(s),
             skill: s,
             years: _years[s] ?? 0,
+            level: _levels[s] ?? ratingForYears(_years[s]),
             onYears: (v) => _setYears(s, v),
+            onLevel: (v) => _setLevel(s, v),
             onRemove: () => _removeSkill(s),
           ),
         ),
@@ -768,19 +784,22 @@ class _SkillCard extends StatelessWidget {
     super.key,
     required this.skill,
     required this.years,
+    required this.level,
     required this.onYears,
+    required this.onLevel,
     required this.onRemove,
   });
 
   final String skill;
   final int years;
+  final int level;
   final ValueChanged<int> onYears;
+  final ValueChanged<int> onLevel;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.appColors;
-    final level = ratingForYears(years);
     final color = _levelColor(level);
 
     return Container(
@@ -865,7 +884,11 @@ class _SkillCard extends StatelessWidget {
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: SkillLevelMeter(level: level, color: color),
+            child: SkillLevelMeter(
+              level: level,
+              color: color,
+              onChanged: onLevel,
+            ),
           ),
         ],
       ),

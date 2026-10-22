@@ -48,7 +48,6 @@ class _AddOtherSkillDialogState extends State<_AddOtherSkillDialog> {
         textCapitalization: TextCapitalization.words,
         textInputAction: TextInputAction.done,
         decoration: const InputDecoration(
-          hintText: 'Skill not in the list, e.g. Welding',
         ),
         onSubmitted: (_) => _submit(),
       ),
